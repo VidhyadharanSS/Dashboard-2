@@ -1,0 +1,130 @@
+📦 Ensuring static files are built...
+cd ui && pnpm run build
+
+> kite@0.0.0 build /home/crm-test/vidhyadharan-23381/lsoftest/kite/ui
+> tsc -b && vite build
+
+vite v7.3.1 building client environment for production...
+transforming...
+
+/fonts/ZohoPuvi/ZohoPuvi-Regular.otf referenced in /fonts/ZohoPuvi/ZohoPuvi-Regular.otf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+✓ 10351 modules transformed.
+rendering chunks...
+computing gzip size...
+../static/index.html                                  1.81 kB │ gzip:   0.71 kB
+../static/assets/icon-Bqtl2BAU.svg                   43.99 kB │ gzip:  20.27 kB
+../static/assets/codicon-ngg6Pgfi.ttf               121.97 kB
+../static/assets/editor.worker-BDzEcYpU.js          251.79 kB
+../static/assets/json.worker-CbPvaBPT.js            383.06 kB
+../static/assets/html.worker-BJUDQ4P_.js            693.15 kB
+../static/assets/css.worker-BL6kSyU1.js           1,030.35 kB
+../static/assets/ts.worker-DkzHzlUt.js            7,010.19 kB
+../static/assets/index-D0nW1ceV.css                 121.44 kB │ gzip:  20.70 kB
+../static/assets/monaco-BL0OXzgJ.css                146.36 kB │ gzip:  23.00 kB
+../static/assets/azcli-Y6nb8tq_.js                    0.71 kB │ gzip:   0.28 kB
+../static/assets/javascript-C9TaN-lF.js               0.80 kB │ gzip:   0.44 kB
+../static/assets/ini-Kd9XrMLS.js                      0.96 kB │ gzip:   0.50 kB
+../static/assets/csp-D-4FJmMZ.js                      1.28 kB │ gzip:   0.49 kB
+../static/assets/pla-DSh2-awV.js                      1.55 kB │ gzip:   0.61 kB
+../static/assets/scheme-BPhDTwHR.js                   1.63 kB │ gzip:   0.78 kB
+../static/assets/flow9-BeJ5waoc.js                    1.67 kB │ gzip:   0.81 kB
+../static/assets/sb-BBc9UKZt.js                       1.69 kB │ gzip:   0.79 kB
+../static/assets/bat-BwHxbl9M.js                      1.71 kB │ gzip:   0.83 kB
+../static/assets/dockerfile-BG73LgW2.js               1.73 kB │ gzip:   0.63 kB
+../static/assets/pascaligo-DtZ0uQbO.js                1.86 kB │ gzip:   0.87 kB
+../static/assets/xml-m0yHTIAO.js                      1.93 kB │ gzip:   0.74 kB
+../static/assets/lua-Cyyb5UIc.js                      1.99 kB │ gzip:   0.89 kB
+../static/assets/cameligo-Bf6VGUru.js                 2.05 kB │ gzip:   0.92 kB
+../static/assets/graphql-BxJiqAUM.js                  2.12 kB │ gzip:   0.99 kB
+../static/assets/objective-c-BDtDVThU.js              2.26 kB │ gzip:   1.02 kB
+../static/assets/lexon-OrD6JF1K.js                    2.30 kB │ gzip:   0.89 kB
+../static/assets/bicep-CFznDFnq.js                    2.40 kB │ gzip:   0.93 kB
+../static/assets/sparql-CJmd_6j2.js                   2.41 kB │ gzip:   1.12 kB
+../static/assets/mips-CiqrrVzr.js                     2.44 kB │ gzip:   1.03 kB
+../static/assets/go-acbASCJo.js                       2.52 kB │ gzip:   1.11 kB
+../static/assets/sophia-CnS9iZB_.js                   2.63 kB │ gzip:   1.17 kB
+../static/assets/typespec-Btyra-wh.js                 2.66 kB │ gzip:   1.05 kB
+../static/assets/m3-B8OfTtLu.js                       2.68 kB │ gzip:   1.28 kB
+../static/assets/fsharp-PahG7c26.js                   2.85 kB │ gzip:   1.28 kB
+../static/assets/pascal-vHIfCaH5.js                   2.86 kB │ gzip:   1.36 kB
+../static/assets/shell-DiJ1NA_G.js                    2.94 kB │ gzip:   1.16 kB
+../static/assets/r-j7ic8hl3.js                        2.99 kB │ gzip:   1.24 kB
+../static/assets/cssMode-DK3hHE_Y.js                  3.03 kB │ gzip:   1.15 kB
+../static/assets/qsharp-Bw9ernYp.js                   3.05 kB │ gzip:   1.37 kB
+../static/assets/java-CXBNlu9o.js                     3.08 kB │ gzip:   1.36 kB
+../static/assets/powershell-COWaemsV.js               3.13 kB │ gzip:   1.34 kB
+../static/assets/cypher-cTPe9QuQ.js                   3.25 kB │ gzip:   1.40 kB
+../static/assets/kotlin-s7OhZKlX.js                   3.26 kB │ gzip:   1.43 kB
+../static/assets/redis-Bu5POkcn.js                    3.42 kB │ gzip:   1.44 kB
+../static/assets/tcl-Dm6ycUr_.js                      3.43 kB │ gzip:   1.33 kB
+../static/assets/coffee-Bd8akH9Z.js                   3.45 kB │ gzip:   1.26 kB
+../static/assets/hcl-DtV1sZF8.js                      3.45 kB │ gzip:   1.45 kB
+../static/assets/liquid-CLkN8pG0.js                   3.48 kB │ gzip:   1.43 kB
+../static/assets/htmlMode-BFBbk3IS.js                 3.49 kB │ gzip:   1.27 kB
+../static/assets/yaml-C-s8Up6Q.js                     3.54 kB │ gzip:   1.29 kB
+../static/assets/markdown-BFxVWTOG.js                 3.65 kB │ gzip:   1.35 kB
+../static/assets/python-D72KBoXV.js                   3.72 kB │ gzip:   1.45 kB
+../static/assets/restructuredtext-CqXO7rUv.js         3.76 kB │ gzip:   1.33 kB
+../static/assets/less-9HpZscsL.js                     3.76 kB │ gzip:   1.38 kB
+../static/assets/apex-DNDY2TF8.js                     3.82 kB │ gzip:   1.73 kB
+../static/assets/rust-BzKRNQWT.js                     4.02 kB │ gzip:   1.79 kB
+../static/assets/dart-BOtBlQCF.js                     4.11 kB │ gzip:   1.61 kB
+../static/assets/mdx-HBTqIDdc.js                      4.32 kB │ gzip:   1.21 kB
+../static/assets/css-DdJfP1eB.js                      4.37 kB │ gzip:   1.34 kB
+../static/assets/csharp-Co3qMtFm.js                   4.39 kB │ gzip:   1.69 kB
+../static/assets/html-CoXYIn-Q.js                     4.53 kB │ gzip:   1.17 kB
+../static/assets/pug-8SOpv6rk.js                      4.69 kB │ gzip:   1.61 kB
+../static/assets/msdax-DmeGPVcC.js                    4.77 kB │ gzip:   1.91 kB
+../static/assets/swift-CnmFD0ga.js                    4.77 kB │ gzip:   2.00 kB
+../static/assets/typescript-BxyudTLY.js               4.90 kB │ gzip:   1.95 kB
+../static/assets/cpp-BbWJElDN.js                      5.16 kB │ gzip:   2.06 kB
+../static/assets/ecl-BEgZUVRK.js                      5.20 kB │ gzip:   2.19 kB
+../static/assets/vb-Db0cS2oM.js                       5.65 kB │ gzip:   2.02 kB
+../static/assets/twig-Csy3S7wG.js                     5.84 kB │ gzip:   1.49 kB
+../static/assets/scss-CBJaRo0y.js                     6.27 kB │ gzip:   1.71 kB
+../static/assets/handlebars-D_1uHgYE.js               6.29 kB │ gzip:   1.38 kB
+../static/assets/julia-cl7-CwDS.js                    7.01 kB │ gzip:   2.62 kB
+../static/assets/scala-D9hQfWCl.js                    7.18 kB │ gzip:   2.06 kB
+../static/assets/wgsl-BTesnYfV.js                     7.21 kB │ gzip:   2.72 kB
+../static/assets/st-CHwy0fLd.js                       7.26 kB │ gzip:   2.21 kB
+../static/assets/systemverilog-Bs9z6M-B.js            7.47 kB │ gzip:   2.72 kB
+../static/assets/postiats-CocnycG-.js                 7.72 kB │ gzip:   2.40 kB
+../static/assets/php-BBUBE1dy.js                      7.89 kB │ gzip:   2.04 kB
+../static/assets/perl-Ub6l9XKa.js                     8.12 kB │ gzip:   3.10 kB
+../static/assets/razor-TP4RZg25.js                    8.30 kB │ gzip:   2.06 kB
+../static/assets/ruby-zBfavPgS.js                     8.37 kB │ gzip:   2.54 kB
+../static/assets/protobuf-Brw8urJB.js                 8.91 kB │ gzip:   2.04 kB
+../static/assets/clojure-Dnu-v4kV.js                  9.51 kB │ gzip:   3.57 kB
+../static/assets/elixir-BkW5O-1t.js                  10.12 kB │ gzip:   2.50 kB
+../static/assets/sql-ClhHkBeG.js                     10.16 kB │ gzip:   3.79 kB
+../static/assets/mysql-C_tMU-Nz.js                   11.14 kB │ gzip:   4.01 kB
+../static/assets/redshift-Bs9aos_-.js                11.66 kB │ gzip:   4.30 kB
+../static/assets/jsonMode-BfNVox29.js                12.41 kB │ gzip:   4.57 kB
+../static/assets/pgsql-BlNEE0v7.js                   13.33 kB │ gzip:   4.46 kB
+../static/assets/abap-DLDM7-KI.js                    14.03 kB │ gzip:   5.27 kB
+../static/assets/freemarker2-5NkTfP1M.js             15.60 kB │ gzip:   3.91 kB
+../static/assets/powerquery-tScXyioY.js              16.80 kB │ gzip:   4.81 kB
+../static/assets/solidity-Db0IVjzk.js                18.46 kB │ gzip:   4.41 kB
+../static/assets/tsMode-CtXNfQns.js                  21.98 kB │ gzip:   6.25 kB
+../static/assets/lspLanguageFeatures-BipMMrXD.js     28.68 kB │ gzip:   7.74 kB
+../static/assets/lodash-DmkklJj9.js                  71.80 kB │ gzip:  26.50 kB
+../static/assets/recharts-D6w1PIMI.js               403.87 kB │ gzip: 111.76 kB
+../static/assets/index-BzYx2EDQ.js                1,575.44 kB │ gzip: 441.33 kB
+../static/assets/monaco-COyFGKE6.js               3,773.03 kB │ gzip: 974.09 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 22.99s
+🏗️ Building backend...
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X 'github.com/zxh326/kite/pkg/version.Version=v0.7.9-p3-2865610' -X 'github.com/zxh326/kite/pkg/version.BuildDate=2026-02-16T10:19:29Z' -X 'github.com/zxh326/kite/pkg/version.CommitID=2865610e812811941fff4aeaea5fd493b5146713'" -o kite .
+🚀 Starting kite server...
+./kite
+W0216 15:49:32.504237 1906651 common.go:86] KITE_ENCRYPT_KEY is not set, using default key, this is not secure for production!
+I0216 15:49:32.504296 1906651 logger.go:109] Logger initialized with timezone: Asia/Kolkata
+I0216 15:49:32.510508 1906651 cluster_manager.go:287] Cluster kubernetes-admin@kubernetes status changed, updating, enabled -> true
+I0216 15:49:32.842117 1906651 cluster_manager.go:102] Loaded K8s client for cluster: kubernetes-admin@kubernetes, version: v1.27.4
+I0216 15:49:32.842490 1906651 main.go:271] Kite server started on port 8081
+I0216 15:49:32.842500 1906651 main.go:272] Version: v0.7.9-p3-2865610, Build Date: 2026-02-16T10:19:29Z, Commit: 2865610e812811941fff4aeaea5fd493b5146713
+make: *** [Makefile:99: run] Hangup

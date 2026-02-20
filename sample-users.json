@@ -1,0 +1,16 @@
+{
+    "users": [
+        {
+            "username": "thiruvalluvan.k",
+            "email": "thiruvalluvan.k@zohocorp.com",
+            "name": "Thiruvalluvan K",
+            "password": "Welcome@123"
+        },
+        {
+            "username": "rahulraj.p",
+            "email": "rahulraj.p@zohocorp.com",
+            "name": "Rahul Raj P",
+            "password": "Welcome@123"
+        }
+    ]
+}

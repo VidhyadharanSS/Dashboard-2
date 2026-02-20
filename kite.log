@@ -1,0 +1,2257 @@
+W0217 19:48:48.161353 2296561 common.go:86] KITE_ENCRYPT_KEY is not set, using default key, this is not secure for production!
+I0217 19:48:48.161534 2296561 logger.go:109] Logger initialized with timezone: Asia/Kolkata
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+2026/02/17 19:48:48 listen tcp 127.0.0.1:6060: bind: address already in use
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/model/model.go:89
+[0.012ms] [rows:0] PRAGMA foreign_keys = ON
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.415ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="users"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.115ms] [rows:7] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "users" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.050ms] [rows:-] SELECT * FROM `users` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.035ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_username"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.023ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_email"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.023ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_name"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.020ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_provider"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.020ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_last_login_at"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.019ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_sub"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.021ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="clusters"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.080ms] [rows:2] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "clusters" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.033ms] [rows:-] SELECT * FROM `clusters` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.085ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "clusters" AND name = "idx_clusters_name"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.069ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="o_auth_providers"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.117ms] [rows:2] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "o_auth_providers" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.031ms] [rows:-] SELECT * FROM `o_auth_providers` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.023ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "o_auth_providers" AND name = "idx_o_auth_providers_name"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.020ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="roles"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.053ms] [rows:2] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "roles" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.022ms] [rows:-] SELECT * FROM `roles` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.018ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "roles" AND name = "idx_roles_name"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.020ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="roles"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.063ms] [rows:2] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "roles" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.020ms] [rows:-] SELECT * FROM `roles` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.016ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "roles" AND name = "idx_roles_name"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.014ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="role_assignments"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.047ms] [rows:3] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "role_assignments" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.017ms] [rows:-] SELECT * FROM `role_assignments` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:219
+[0.032ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "table" AND tbl_name = "role_assignments" AND (sql LIKE "%CONSTRAINT ""fk_roles_assignments"" %" OR sql LIKE "%CONSTRAINT fk_roles_assignments %" OR sql LIKE "%CONSTRAINT `fk_roles_assignments`%" OR sql LIKE "%CONSTRAINT [fk_roles_assignments]%" OR sql LIKE "%CONSTRAINT 	fk_roles_assignments	%")
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.026ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "role_assignments" AND name = "idx_role_assignments_role_id"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.015ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "role_assignments" AND name = "idx_role_assignments_subject"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.015ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="users"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.075ms] [rows:7] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "users" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.032ms] [rows:-] SELECT * FROM `users` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.020ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_username"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.017ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_email"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.016ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_name"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.015ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_provider"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.015ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_last_login_at"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.015ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "users" AND name = "idx_users_sub"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.013ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="resource_histories"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.054ms] [rows:4] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "resource_histories" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.024ms] [rows:-] SELECT * FROM `resource_histories` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:219
+[0.037ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "table" AND tbl_name = "resource_histories" AND (sql LIKE "%CONSTRAINT ""fk_resource_histories_operator"" %" OR sql LIKE "%CONSTRAINT fk_resource_histories_operator %" OR sql LIKE "%CONSTRAINT `fk_resource_histories_operator`%" OR sql LIKE "%CONSTRAINT [fk_resource_histories_operator]%" OR sql LIKE "%CONSTRAINT 	fk_resource_histories_operator	%")
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.024ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "resource_histories" AND name = "idx_resource_histories_lookup_with_time"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.015ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "resource_histories" AND name = "idx_resource_histories_operation_type"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.019ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "resource_histories" AND name = "idx_resource_histories_operator_id"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:32
+[0.016ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type='table' AND name="resource_templates"
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:117
+[0.047ms] [rows:2] SELECT sql FROM sqlite_master WHERE type IN ("table","index") AND tbl_name = "resource_templates" AND sql IS NOT NULL order by type = "table" desc
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:125
+[0.023ms] [rows:-] SELECT * FROM `resource_templates` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/go/pkg/mod/github.com/glebarez/sqlite@v1.11.0/migrator.go:293
+[0.015ms] [rows:-] SELECT count(*) FROM sqlite_master WHERE type = "index" AND tbl_name = "resource_templates" AND name = "idx_resource_templates_name"
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/model/rbac.go:81
+[0.105ms] [rows:1] SELECT * FROM `roles` WHERE name = "admin" ORDER BY `roles`.`id` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/model/rbac.go:84
+[0.054ms] [rows:1] SELECT * FROM `roles` WHERE name = "viewer" ORDER BY `roles`.`id` LIMIT 1
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/template_handler.go:87
+[0.031ms] [rows:1] SELECT count(*) FROM `resource_templates`
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/model/cluster.go:63
+[0.034ms] [rows:1] SELECT count(*) FROM `clusters`
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:36
+[0.198ms] [rows:1] SELECT * FROM `role_assignments` WHERE `role_assignments`.`role_id` IN (1,2)
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:36
+[0.444ms] [rows:2] SELECT * FROM `roles`
+
+2026/02/17 19:48:48 /home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/model/cluster.go:56
+[0.426ms] [rows:1] SELECT * FROM `clusters`
+I0217 19:48:48.170746 2296561 cluster_manager.go:287] Cluster kubernetes-admin@kubernetes status changed, updating, enabled -> true
+I0217 19:48:48.171438 2296561 envvar.go:172] "Feature gate default state" feature="ClientsPreferCBOR" enabled=false
+I0217 19:48:48.171457 2296561 envvar.go:172] "Feature gate default state" feature="InOrderInformers" enabled=true
+I0217 19:48:48.171464 2296561 envvar.go:172] "Feature gate default state" feature="InOrderInformersBatchProcess" enabled=true
+I0217 19:48:48.171470 2296561 envvar.go:172] "Feature gate default state" feature="InformerResourceVersion" enabled=true
+I0217 19:48:48.171476 2296561 envvar.go:172] "Feature gate default state" feature="WatchListClient" enabled=true
+I0217 19:48:48.171483 2296561 envvar.go:172] "Feature gate default state" feature="ClientsAllowCBOR" enabled=false
+I0217 19:48:48.205186 2296561 reflector.go:367] "Starting reflector" logger="controller-runtime.cache" type="*v1.Pod" resyncPeriod="9h12m16.421361462s" reflector="pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:289"
+I0217 19:48:48.205217 2296561 reflector.go:411] "Listing and watching" logger="controller-runtime.cache" type="*v1.Pod" reflector="pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:289"
+I0217 19:48:48.208070 2296561 reflector.go:429] "Data couldn't be fetched in watchlist mode. Falling back to regular list. This is expected if watchlist is not supported or disabled in kube-apiserver." logger="controller-runtime.cache" err="ListOptions.meta.k8s.io \"\" is invalid: sendInitialEvents: Forbidden: sendInitialEvents is forbidden for watch unless the WatchList feature gate is enabled"
+I0217 19:48:48.298115 2296561 reflector.go:446] "Caches populated" logger="controller-runtime.cache" type="*v1.Pod" reflector="pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:289"
+I0217 19:48:48.306085 2296561 reflector.go:367] "Starting reflector" logger="controller-runtime.cache" type="*v1.Service" resyncPeriod="9h11m36.308410614s" reflector="pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:289"
+I0217 19:48:48.306105 2296561 reflector.go:411] "Listing and watching" logger="controller-runtime.cache" type="*v1.Service" reflector="pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:289"
+I0217 19:48:48.308590 2296561 reflector.go:429] "Data couldn't be fetched in watchlist mode. Falling back to regular list. This is expected if watchlist is not supported or disabled in kube-apiserver." logger="controller-runtime.cache" err="ListOptions.meta.k8s.io \"\" is invalid: sendInitialEvents: Forbidden: sendInitialEvents is forbidden for watch unless the WatchList feature gate is enabled"
+I0217 19:48:48.322121 2296561 reflector.go:446] "Caches populated" logger="controller-runtime.cache" type="*v1.Service" reflector="pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:289"
+I0217 19:48:48.410534 2296561 cluster_manager.go:102] Loaded K8s client for cluster: kubernetes-admin@kubernetes, version: v1.27.4
+[GIN-debug] GET    /metrics                  --> main.setupAPIRouter.WrapH.func2 (6 handlers)
+[GIN-debug] GET    /healthz                  --> main.setupAPIRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/v1/init_check        --> github.com/zxh326/kite/pkg/handlers.InitCheck (6 handlers)
+[GIN-debug] GET    /api/v1/version           --> github.com/zxh326/kite/pkg/version.GetVersion (6 handlers)
+[GIN-debug] GET    /api/auth/providers       --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).GetProviders-fm (6 handlers)
+[GIN-debug] POST   /api/auth/login/password  --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).PasswordLogin-fm (6 handlers)
+[GIN-debug] GET    /api/auth/login           --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).Login-fm (6 handlers)
+[GIN-debug] GET    /api/auth/callback        --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).Callback-fm (6 handlers)
+[GIN-debug] POST   /api/auth/logout          --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).Logout-fm (6 handlers)
+[GIN-debug] POST   /api/auth/refresh         --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).RefreshToken-fm (6 handlers)
+[GIN-debug] GET    /api/auth/user            --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).GetUser-fm (7 handlers)
+[GIN-debug] POST   /api/users/sidebar_preference --> github.com/zxh326/kite/pkg/handlers.UpdateSidebarPreference (7 handlers)
+[GIN-debug] POST   /api/v1/admin/users/create_super_user --> github.com/zxh326/kite/pkg/handlers.CreateSuperUser (6 handlers)
+[GIN-debug] POST   /api/v1/admin/clusters/import --> github.com/zxh326/kite/pkg/cluster.(*ClusterManager).ImportClustersFromKubeconfig-fm (6 handlers)
+[GIN-debug] GET    /api/v1/admin/audit-logs  --> github.com/zxh326/kite/pkg/handlers.ListAuditLogs (8 handlers)
+[GIN-debug] GET    /api/v1/admin/oauth-providers/ --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).ListOAuthProviders-fm (8 handlers)
+[GIN-debug] POST   /api/v1/admin/oauth-providers/ --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).CreateOAuthProvider-fm (8 handlers)
+[GIN-debug] GET    /api/v1/admin/oauth-providers/:id --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).GetOAuthProvider-fm (8 handlers)
+[GIN-debug] PUT    /api/v1/admin/oauth-providers/:id --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).UpdateOAuthProvider-fm (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/oauth-providers/:id --> github.com/zxh326/kite/pkg/auth.(*AuthHandler).DeleteOAuthProvider-fm (8 handlers)
+[GIN-debug] GET    /api/v1/admin/clusters/   --> github.com/zxh326/kite/pkg/cluster.(*ClusterManager).GetClusterList-fm (8 handlers)
+[GIN-debug] POST   /api/v1/admin/clusters/   --> github.com/zxh326/kite/pkg/cluster.(*ClusterManager).CreateCluster-fm (8 handlers)
+[GIN-debug] PUT    /api/v1/admin/clusters/:id --> github.com/zxh326/kite/pkg/cluster.(*ClusterManager).UpdateCluster-fm (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/clusters/:id --> github.com/zxh326/kite/pkg/cluster.(*ClusterManager).DeleteCluster-fm (8 handlers)
+[GIN-debug] GET    /api/v1/admin/roles/      --> github.com/zxh326/kite/pkg/rbac.ListRoles (8 handlers)
+[GIN-debug] POST   /api/v1/admin/roles/      --> github.com/zxh326/kite/pkg/rbac.CreateRole (8 handlers)
+[GIN-debug] GET    /api/v1/admin/roles/:id   --> github.com/zxh326/kite/pkg/rbac.GetRole (8 handlers)
+[GIN-debug] PUT    /api/v1/admin/roles/:id   --> github.com/zxh326/kite/pkg/rbac.UpdateRole (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/roles/:id   --> github.com/zxh326/kite/pkg/rbac.DeleteRole (8 handlers)
+[GIN-debug] POST   /api/v1/admin/roles/:id/assign --> github.com/zxh326/kite/pkg/rbac.AssignRole (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/roles/:id/assign --> github.com/zxh326/kite/pkg/rbac.UnassignRole (8 handlers)
+[GIN-debug] GET    /api/v1/admin/system/logs/:filename --> github.com/zxh326/kite/pkg/handlers.StreamLogFile (8 handlers)
+[GIN-debug] GET    /api/v1/admin/users/      --> github.com/zxh326/kite/pkg/handlers.ListUsers (8 handlers)
+[GIN-debug] POST   /api/v1/admin/users/      --> github.com/zxh326/kite/pkg/handlers.CreatePasswordUser (8 handlers)
+[GIN-debug] POST   /api/v1/admin/users/batch --> github.com/zxh326/kite/pkg/handlers.BatchCreateUsers (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/users/batch --> github.com/zxh326/kite/pkg/handlers.BatchDeleteUsers (8 handlers)
+[GIN-debug] PUT    /api/v1/admin/users/:id   --> github.com/zxh326/kite/pkg/handlers.UpdateUser (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/users/:id   --> github.com/zxh326/kite/pkg/handlers.DeleteUser (8 handlers)
+[GIN-debug] POST   /api/v1/admin/users/:id/reset_password --> github.com/zxh326/kite/pkg/handlers.ResetPassword (8 handlers)
+[GIN-debug] POST   /api/v1/admin/users/:id/enable --> github.com/zxh326/kite/pkg/handlers.SetUserEnabled (8 handlers)
+[GIN-debug] GET    /api/v1/admin/apikeys/    --> github.com/zxh326/kite/pkg/handlers.ListAPIKeys (8 handlers)
+[GIN-debug] POST   /api/v1/admin/apikeys/    --> github.com/zxh326/kite/pkg/handlers.CreateAPIKey (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/apikeys/:id --> github.com/zxh326/kite/pkg/handlers.DeleteAPIKey (8 handlers)
+[GIN-debug] POST   /api/v1/admin/templates/  --> github.com/zxh326/kite/pkg/handlers.CreateTemplate (8 handlers)
+[GIN-debug] PUT    /api/v1/admin/templates/:id --> github.com/zxh326/kite/pkg/handlers.UpdateTemplate (8 handlers)
+[GIN-debug] DELETE /api/v1/admin/templates/:id --> github.com/zxh326/kite/pkg/handlers.DeleteTemplate (8 handlers)
+[GIN-debug] GET    /api/v1/clusters          --> github.com/zxh326/kite/pkg/cluster.(*ClusterManager).GetClusters-fm (7 handlers)
+[GIN-debug] GET    /api/v1/overview          --> github.com/zxh326/kite/pkg/handlers.GetOverview (8 handlers)
+[GIN-debug] GET    /api/v1/prometheus/resource-usage-history --> github.com/zxh326/kite/pkg/handlers.(*PromHandler).GetResourceUsageHistory-fm (8 handlers)
+[GIN-debug] GET    /api/v1/prometheus/pods/:namespace/:podName/metrics --> github.com/zxh326/kite/pkg/handlers.(*PromHandler).GetPodMetrics-fm (8 handlers)
+[GIN-debug] GET    /api/v1/logs/:namespace/:podName/ws --> github.com/zxh326/kite/pkg/handlers.(*LogsHandler).HandleLogsWebSocket-fm (8 handlers)
+[GIN-debug] GET    /api/v1/terminal/:namespace/:podName/ws --> github.com/zxh326/kite/pkg/handlers.(*TerminalHandler).HandleTerminalWebSocket-fm (8 handlers)
+[GIN-debug] GET    /api/v1/node-terminal/:nodeName/ws --> github.com/zxh326/kite/pkg/handlers.(*NodeTerminalHandler).HandleNodeTerminalWebSocket-fm (8 handlers)
+[GIN-debug] GET    /api/v1/search            --> github.com/zxh326/kite/pkg/handlers.(*SearchHandler).GlobalSearch-fm (8 handlers)
+[GIN-debug] POST   /api/v1/resources/apply   --> github.com/zxh326/kite/pkg/handlers.(*ResourceApplyHandler).ApplyResource-fm (8 handlers)
+[GIN-debug] GET    /api/v1/image/tags        --> github.com/zxh326/kite/pkg/handlers.GetImageTags (8 handlers)
+[GIN-debug] GET    /api/v1/templates         --> github.com/zxh326/kite/pkg/handlers.ListTemplates (8 handlers)
+[GIN-debug] GET    /api/v1/namespaces/:namespace/:kind/:name/proxy/*path --> github.com/zxh326/kite/pkg/handlers.(*ProxyHandler).HandleProxy-fm (8 handlers)
+[GIN-debug] GET    /api/v1/clusterroles      --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterroles/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterroles/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/clusterroles/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/clusterroles/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/clusterroles/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/clusterroles/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterroles/_all/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterroles/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumes --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumes/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumes/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/persistentvolumes/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/persistentvolumes/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/persistentvolumes/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/persistentvolumes/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumes/_all/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumes/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/ingresses         --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/ingresses/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/ingresses/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/ingresses/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/ingresses/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/ingresses/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/ingresses/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/ingresses/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/ingresses/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/roles             --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/roles/:namespace  --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/roles/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/roles/:namespace  --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/roles/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/roles/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/roles/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/roles/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/roles/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterrolebindings --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterrolebindings/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterrolebindings/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/clusterrolebindings/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/clusterrolebindings/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/clusterrolebindings/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/clusterrolebindings/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterrolebindings/_all/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/clusterrolebindings/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/podmetrics        --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/podmetrics/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/podmetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/podmetrics/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/podmetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/podmetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/podmetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/podmetrics/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/podmetrics/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/watch --> github.com/zxh326/kite/pkg/handlers/resources.(*PodHandler).Watch-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/pods/:namespace/:name/resize --> github.com/zxh326/kite/pkg/handlers/resources.(*PodHandler).Resize-fm (9 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/:name/files --> github.com/zxh326/kite/pkg/handlers/resources.(*PodHandler).ListFiles-fm (10 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/:name/files/preview --> github.com/zxh326/kite/pkg/handlers/resources.(*PodHandler).PreviewFile-fm (10 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/:name/files/download --> github.com/zxh326/kite/pkg/handlers/resources.(*PodHandler).DownloadFile-fm (10 handlers)
+[GIN-debug] PUT    /api/v1/pods/:namespace/:name/files/upload --> github.com/zxh326/kite/pkg/handlers/resources.(*PodHandler).UploadFile-fm (10 handlers)
+[GIN-debug] GET    /api/v1/pods              --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/pods/:namespace   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/pods/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/pods/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/pods/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/namespaces        --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/namespaces/_all   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/namespaces/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/namespaces/_all   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/namespaces/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/namespaces/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/namespaces/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/namespaces/_all/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/namespaces/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/replicasets       --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/replicasets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/replicasets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/replicasets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/replicasets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/replicasets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/replicasets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/replicasets/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/replicasets/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/cronjobs          --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/cronjobs/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/cronjobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/cronjobs/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/cronjobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/cronjobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/cronjobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/cronjobs/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/cronjobs/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/storageclasses    --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/storageclasses/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/storageclasses/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/storageclasses/_all --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/storageclasses/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/storageclasses/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/storageclasses/_all/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/storageclasses/_all/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/storageclasses/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpoints         --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpoints/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpoints/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/endpoints/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/endpoints/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/endpoints/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/endpoints/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpoints/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpoints/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/statefulsets      --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/statefulsets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/statefulsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/statefulsets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/statefulsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/statefulsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/statefulsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/statefulsets/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/statefulsets/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] POST   /api/v1/statefulsets/:namespace/:name/restart --> github.com/zxh326/kite/pkg/handlers/resources.registerNamespaceScopeRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/daemonsets        --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/daemonsets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/daemonsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/daemonsets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/daemonsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/daemonsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/daemonsets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/daemonsets/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/daemonsets/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/serviceaccounts   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/serviceaccounts/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/serviceaccounts/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/serviceaccounts/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/serviceaccounts/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/serviceaccounts/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/serviceaccounts/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/serviceaccounts/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/serviceaccounts/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/gateways          --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/gateways/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/gateways/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/gateways/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/gateways/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/gateways/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/gateways/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/gateways/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/gateways/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodes/_all/watch  --> github.com/zxh326/kite/pkg/handlers/resources.(*NodeHandler).Watch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodes             --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodes/_all        --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodes/_all/:name  --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/nodes/_all        --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/nodes/_all/:name  --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/nodes/_all/:name  --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/nodes/_all/:name  --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodes/_all/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodes/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/services          --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/services/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/services/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/services/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/services/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/services/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/services/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/services/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/services/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpointslices    --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpointslices/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpointslices/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/endpointslices/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/endpointslices/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/endpointslices/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/endpointslices/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpointslices/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/endpointslices/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/rolebindings      --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/rolebindings/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/rolebindings/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/rolebindings/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/rolebindings/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/rolebindings/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/rolebindings/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/rolebindings/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/rolebindings/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/httproutes        --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/httproutes/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/httproutes/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/httproutes/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/httproutes/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/httproutes/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/httproutes/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/httproutes/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/httproutes/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/horizontalpodautoscalers --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/horizontalpodautoscalers/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/horizontalpodautoscalers/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/horizontalpodautoscalers/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/horizontalpodautoscalers/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/horizontalpodautoscalers/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/horizontalpodautoscalers/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/horizontalpodautoscalers/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/horizontalpodautoscalers/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/configmaps        --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/configmaps/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/configmaps/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/configmaps/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/configmaps/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/configmaps/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/configmaps/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/configmaps/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/configmaps/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/crds              --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/crds/_all         --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/crds/_all/:name   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/crds/_all         --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/crds/_all/:name   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/crds/_all/:name   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/crds/_all/:name   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/crds/_all/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/crds/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/events/resources  --> github.com/zxh326/kite/pkg/handlers/resources.(*EventHandler).ListResourceEvents-fm (9 handlers)
+[GIN-debug] GET    /api/v1/events            --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/events/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/events/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/events/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/events/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/events/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/events/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/events/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/events/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/deployments       --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/deployments/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/deployments/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/deployments/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/deployments/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/deployments/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/deployments/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/deployments/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/deployments/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] POST   /api/v1/deployments/:namespace/:name/restart --> github.com/zxh326/kite/pkg/handlers/resources.registerNamespaceScopeRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/nodemetrics       --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodemetrics/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodemetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/nodemetrics/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/nodemetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/nodemetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/nodemetrics/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodemetrics/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/nodemetrics/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/secrets           --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/secrets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/secrets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/secrets/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/secrets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/secrets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/secrets/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/secrets/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/secrets/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumeclaims --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumeclaims/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumeclaims/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/persistentvolumeclaims/:namespace --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/persistentvolumeclaims/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/persistentvolumeclaims/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/persistentvolumeclaims/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumeclaims/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumeclaims/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/jobs              --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/jobs/:namespace   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/jobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Get-fm (9 handlers)
+[GIN-debug] POST   /api/v1/jobs/:namespace   --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Create-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/jobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/jobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Delete-fm (9 handlers)
+[GIN-debug] PATCH  /api/v1/jobs/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Patch-fm (9 handlers)
+[GIN-debug] GET    /api/v1/jobs/:namespace/:name/history --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.ListHistory-fm (9 handlers)
+[GIN-debug] GET    /api/v1/jobs/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.resourceHandler.Describe-fm (9 handlers)
+[GIN-debug] GET    /api/v1/pods/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/deployments/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/statefulsets/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/daemonsets/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/configmaps/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/secrets/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/persistentvolumeclaims/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/httproutes/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/horizontalpodautoscalers/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/services/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/ingresses/:namespace/:name/related --> github.com/zxh326/kite/pkg/handlers/resources.RegisterRoutes.func1 (9 handlers)
+[GIN-debug] GET    /api/v1/:crd              --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/:crd/_all         --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/:crd/_all/:name   --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Get-fm (9 handlers)
+[GIN-debug] GET    /api/v1/:crd/_all/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Describe-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/:crd/_all/:name   --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/:crd/_all/:name   --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Delete-fm (9 handlers)
+[GIN-debug] GET    /api/v1/:crd/:namespace   --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).List-fm (9 handlers)
+[GIN-debug] GET    /api/v1/:crd/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Get-fm (9 handlers)
+[GIN-debug] GET    /api/v1/:crd/:namespace/:name/describe --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Describe-fm (9 handlers)
+[GIN-debug] PUT    /api/v1/:crd/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Update-fm (9 handlers)
+[GIN-debug] DELETE /api/v1/:crd/:namespace/:name --> github.com/zxh326/kite/pkg/handlers/resources.(*CRHandler).Delete-fm (9 handlers)
+[GIN-debug] GET    /assets/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (7 handlers)
+[GIN-debug] HEAD   /assets/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (7 handlers)
+I0217 19:48:48.419555 2296561 main.go:274] Kite server started on port 8081
+I0217 19:48:48.419577 2296561 main.go:275] Version: dev, Build Date: unknown, Commit: unknown
+F0217 19:48:48.419873 2296561 main.go:271] Failed to start server: listen tcp :8081: bind: address already in use
+goroutine 106 [running]:
+k8s.io/klog/v2/internal/dbg.Stacks(0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/internal/dbg/dbg.go:35 +0x89
+k8s.io/klog/v2.(*loggingT).output(0x6ead2e0, 0x3, 0x0, 0xc0002f4380, 0x1, {0x5d1ac35?, 0x1?}, 0xc0024d6f58?, 0x0)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:948 +0x7af
+k8s.io/klog/v2.(*loggingT).printfDepth(0x6ead2e0, 0x3, 0x0, {0x0, 0x0}, 0x1, {0x40138d5, 0x1a}, {0xc0013d73c0, 0x1, ...})
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:760 +0x1f0
+k8s.io/klog/v2.(*loggingT).printf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:737
+k8s.io/klog/v2.Fatalf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:1666
+main.main.func2()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:271 +0xfa
+created by main.main in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:269 +0x6f6
+
+goroutine 1 [chan receive]:
+main.main()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:280 +0x948
+
+goroutine 47 [IO wait]:
+internal/poll.runtime_pollWait(0x77c295240000, 0x72)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/netpoll.go:351 +0x85
+internal/poll.(*pollDesc).wait(0xc00071e180?, 0xc000872000?, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.(*pollDesc).waitRead(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc00071e180, {0xc000872000, 0xa000, 0xa000})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_unix.go:165 +0x279
+net.(*netFD).Read(0xc00071e180, {0xc000872000?, 0xc000872053?, 0x5?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/fd_posix.go:68 +0x25
+net.(*conn).Read(0xc00080a058, {0xc000872000?, 0x77c24c3df0c8?, 0x77c2953ba6c8?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/net.go:196 +0x45
+crypto/tls.(*atLeastReader).Read(0xc000d5e7f8, {0xc000872000?, 0x9fa8?, 0xe?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:816 +0x3b
+bytes.(*Buffer).ReadFrom(0xc0003afb28, {0x540f1a0, 0xc000d5e7f8})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bytes/buffer.go:217 +0x98
+crypto/tls.(*Conn).readFromUntil(0xc0003af888, {0x540f4a0, 0xc00080a058}, 0x14ae794?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:838 +0xde
+crypto/tls.(*Conn).readRecordOrCCS(0xc0003af888, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:627 +0x3db
+crypto/tls.(*Conn).readRecord(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:589
+crypto/tls.(*Conn).Read(0xc0003af888, {0xc0007a7000, 0x1000, 0x1ead2e0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:1392 +0x145
+bufio.(*Reader).Read(0xc0008109c0, {0xc000000ba4, 0x9, 0x1ecadae?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bufio/bufio.go:245 +0x197
+io.ReadAtLeast({0x540e0a0, 0xc0008109c0}, {0xc000000ba4, 0x9, 0x9}, 0x9)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+io.ReadFull(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:354
+golang.org/x/net/http2.readFrameHeader({0xc000000ba4, 0x9, 0xc000000011?}, {0x540e0a0?, 0xc0008109c0?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:242 +0x65
+golang.org/x/net/http2.(*Framer).ReadFrameHeader(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:505 +0x6b
+golang.org/x/net/http2.(*Framer).ReadFrame(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:564 +0x18
+golang.org/x/net/http2.(*clientConnReadLoop).run(0xc000659fa8)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2258 +0xca
+golang.org/x/net/http2.(*ClientConn).readLoop(0xc000702a80)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2127 +0x52
+created by golang.org/x/net/http2.(*Transport).newClientConn in goroutine 46
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:880 +0xda5
+
+goroutine 57 [select]:
+database/sql.(*DB).connectionOpener(0xc000534dd0, {0x542edb0, 0xc000548500})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1261 +0x87
+created by database/sql.OpenDB in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:841 +0x130
+
+goroutine 15 [select]:
+database/sql.(*DB).connectionCleaner(0xc000534dd0, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1104 +0x9c
+created by database/sql.(*DB).startCleanerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1091 +0x105
+
+goroutine 16 [select]:
+github.com/zxh326/kite/pkg/rbac.SyncRolesConfig()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:78 +0xce
+created by github.com/zxh326/kite/pkg/rbac.InitRBAC.func1 in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:24 +0x25
+
+goroutine 66 [select]:
+github.com/zxh326/kite/pkg/cluster.NewClusterManager.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:339 +0xca
+created by github.com/zxh326/kite/pkg/cluster.NewClusterManager in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:335 +0xb9
+
+goroutine 117 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000dae480, 0xc000280640, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000dae480, 0x22656d69546e6f69?, 0x733a66222c7d7b3a?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 104 [sleep]:
+time.Sleep(0xdf8475800)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/time.go:363 +0x165
+github.com/zxh326/kite/pkg/handlers.NewPromHandler.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:28 +0x38
+created by github.com/zxh326/kite/pkg/handlers.NewPromHandler in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:26 +0x89
+
+goroutine 69 [select]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).Start(0xc0005bfc20, {0x542edb0, 0xc0001bb360})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/internal.go:471 +0xb1a
+github.com/zxh326/kite/pkg/kube.NewClient.func3()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:102 +0x27
+created by github.com/zxh326/kite/pkg/kube.NewClient in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:101 +0x42c
+
+goroutine 70 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6b00)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 71 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6bb0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 72 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6c60)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 73 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).Start(0xc000300c80, {0x542edb0, 0xc0002e04b0})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:229 +0x49
+sigs.k8s.io/controller-runtime/pkg/cluster.(*cluster).Start(0x148f065?, {0x542edb0?, 0xc0002e04b0?})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cluster/internal.go:104 +0x6a
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1(0xc000257de0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:260 +0xd9
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile in goroutine 72
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:244 +0x191
+
+goroutine 99 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6e70)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 75 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019bdb8, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000c00008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019bd90, 0xc0008f2c40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc00064dc80?}, 0xc00064dcb0?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc000657d68, {0x5415640, 0xc00064dcb0}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc0000c0d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019bc30, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0004384d0, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 73
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 88 [select]:
+reflect.rselect({0xc000bcef00, 0x3, 0xc0004b3cc0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019adc0?, 0x3, 0xc0004d9fd0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 86
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 77 [select]:
+reflect.rselect({0xc0000baf00, 0x3, 0x1?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019bce0?, 0x3, 0xc0004d87d0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 75
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 116 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc000a94690, {0x542edb0, 0xc00024a230}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 79 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0002e0b40, {0x542edb0, 0xc0002e0c30})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 80 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 81 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc00064dc80}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0002e0780}, {0x77c24c0450c0, 0xc00019bd90}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc00064dc80?}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0002e0780?}, {0x77c24c0450c0?, 0xc00019bd90?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x541eb98, 0xc0002e0780}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00088c380?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00088c380}, 0xc000655ea8, {0x5415660, 0xc0002e0c80}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0002e0c80?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 83 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 84 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc0002221e0, {0x542edb0, 0xc0004e9180}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 85 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000805b00, 0xc0002a0b40, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000805b00, 0xc0004ddf98?, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 98 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000805b48, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000805b38?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000805b30, {0xc000c7c048, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000c7c048?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000805b00}, {0xc000c7c048, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc000d5e690, {0xc00238d400, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0002e0730, 0x0, {0x541f340, 0xc0012583c0})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc000d58440)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0002e0780)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
+
+goroutine 86 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019ae98, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000bd8008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019ae70, 0xc00261e7d0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc000bd52f0?}, 0xc000bd5320?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc002489d68, {0x5415640, 0xc000bd5320}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc000bd3d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019ad10, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0002f0000, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 95 [syscall]:
+os/signal.signal_recv()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sigqueue.go:152 +0x29
+os/signal.loop()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal_unix.go:23 +0x13
+created by os/signal.Notify.func1.1 in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal.go:152 +0x1f
+
+goroutine 100 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6dc0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 90 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0004e92c0, {0x542edb0, 0xc0004e93b0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 91 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 92 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc000bd52f0}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0004e98b0}, {0x77c24c0450c0, 0xc00019ae70}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc000bd52f0?}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0004e98b0?}, {0x77c24c0450c0?, 0xc00019ae70?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x541eb98, 0xc0004e98b0}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00005d420?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00005d420}, 0xc0007c1ea8, {0x5415660, 0xc0004e9450}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0004e9450?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 105 [select]:
+github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...].func1()
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:86 +0xf5
+created by github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...] in goroutine 1
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:82 +0x32a
+
+goroutine 102 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6d10)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 101
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 115 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 94 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000dae4c8, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000dae4b8?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000dae4b0, {0xc000a937c8, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000a937c8?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000dae480}, {0xc000a937c8, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc001975b18, {0xc001f20000, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0004e9590, 0x0, {0x541f340, 0xc00145d500})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc00182cb40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0004e98b0)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
+goroutine 106 [running]:
+k8s.io/klog/v2/internal/dbg.Stacks(0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/internal/dbg/dbg.go:35 +0x89
+k8s.io/klog/v2.(*loggingT).output(0x6ead2e0, 0x3, 0x0, 0xc0002f4380, 0x1, {0x5d1ac35?, 0x1?}, 0xc0024d6f58?, 0x0)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:948 +0x7af
+k8s.io/klog/v2.(*loggingT).printfDepth(0x6ead2e0, 0x3, 0x0, {0x0, 0x0}, 0x1, {0x40138d5, 0x1a}, {0xc0013d73c0, 0x1, ...})
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:760 +0x1f0
+k8s.io/klog/v2.(*loggingT).printf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:737
+k8s.io/klog/v2.Fatalf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:1666
+main.main.func2()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:271 +0xfa
+created by main.main in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:269 +0x6f6
+
+goroutine 1 [chan receive]:
+main.main()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:280 +0x948
+
+goroutine 47 [IO wait]:
+internal/poll.runtime_pollWait(0x77c295240000, 0x72)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/netpoll.go:351 +0x85
+internal/poll.(*pollDesc).wait(0xc00071e180?, 0xc000872000?, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.(*pollDesc).waitRead(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc00071e180, {0xc000872000, 0xa000, 0xa000})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_unix.go:165 +0x279
+net.(*netFD).Read(0xc00071e180, {0xc000872000?, 0xc000872053?, 0x5?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/fd_posix.go:68 +0x25
+net.(*conn).Read(0xc00080a058, {0xc000872000?, 0x77c24c3df0c8?, 0x77c2953ba6c8?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/net.go:196 +0x45
+crypto/tls.(*atLeastReader).Read(0xc000d5e7f8, {0xc000872000?, 0x9fa8?, 0xe?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:816 +0x3b
+bytes.(*Buffer).ReadFrom(0xc0003afb28, {0x540f1a0, 0xc000d5e7f8})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bytes/buffer.go:217 +0x98
+crypto/tls.(*Conn).readFromUntil(0xc0003af888, {0x540f4a0, 0xc00080a058}, 0x14ae794?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:838 +0xde
+crypto/tls.(*Conn).readRecordOrCCS(0xc0003af888, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:627 +0x3db
+crypto/tls.(*Conn).readRecord(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:589
+crypto/tls.(*Conn).Read(0xc0003af888, {0xc0007a7000, 0x1000, 0x1ead2e0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:1392 +0x145
+bufio.(*Reader).Read(0xc0008109c0, {0xc000000ba4, 0x9, 0x1ecadae?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bufio/bufio.go:245 +0x197
+io.ReadAtLeast({0x540e0a0, 0xc0008109c0}, {0xc000000ba4, 0x9, 0x9}, 0x9)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+io.ReadFull(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:354
+golang.org/x/net/http2.readFrameHeader({0xc000000ba4, 0x9, 0xc000000011?}, {0x540e0a0?, 0xc0008109c0?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:242 +0x65
+golang.org/x/net/http2.(*Framer).ReadFrameHeader(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:505 +0x6b
+golang.org/x/net/http2.(*Framer).ReadFrame(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:564 +0x18
+golang.org/x/net/http2.(*clientConnReadLoop).run(0xc000659fa8)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2258 +0xca
+golang.org/x/net/http2.(*ClientConn).readLoop(0xc000702a80)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2127 +0x52
+created by golang.org/x/net/http2.(*Transport).newClientConn in goroutine 46
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:880 +0xda5
+
+goroutine 57 [select]:
+database/sql.(*DB).connectionOpener(0xc000534dd0, {0x542edb0, 0xc000548500})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1261 +0x87
+created by database/sql.OpenDB in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:841 +0x130
+
+goroutine 15 [select]:
+database/sql.(*DB).connectionCleaner(0xc000534dd0, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1104 +0x9c
+created by database/sql.(*DB).startCleanerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1091 +0x105
+
+goroutine 16 [select]:
+github.com/zxh326/kite/pkg/rbac.SyncRolesConfig()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:78 +0xce
+created by github.com/zxh326/kite/pkg/rbac.InitRBAC.func1 in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:24 +0x25
+
+goroutine 66 [select]:
+github.com/zxh326/kite/pkg/cluster.NewClusterManager.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:339 +0xca
+created by github.com/zxh326/kite/pkg/cluster.NewClusterManager in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:335 +0xb9
+
+goroutine 117 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000dae480, 0xc000280640, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000dae480, 0x22656d69546e6f69?, 0x733a66222c7d7b3a?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 104 [sleep]:
+time.Sleep(0xdf8475800)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/time.go:363 +0x165
+github.com/zxh326/kite/pkg/handlers.NewPromHandler.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:28 +0x38
+created by github.com/zxh326/kite/pkg/handlers.NewPromHandler in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:26 +0x89
+
+goroutine 69 [select]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).Start(0xc0005bfc20, {0x542edb0, 0xc0001bb360})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/internal.go:471 +0xb1a
+github.com/zxh326/kite/pkg/kube.NewClient.func3()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:102 +0x27
+created by github.com/zxh326/kite/pkg/kube.NewClient in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:101 +0x42c
+
+goroutine 70 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6b00)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 71 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6bb0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 72 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6c60)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 73 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).Start(0xc000300c80, {0x542edb0, 0xc0002e04b0})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:229 +0x49
+sigs.k8s.io/controller-runtime/pkg/cluster.(*cluster).Start(0x148f065?, {0x542edb0?, 0xc0002e04b0?})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cluster/internal.go:104 +0x6a
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1(0xc000257de0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:260 +0xd9
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile in goroutine 72
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:244 +0x191
+
+goroutine 99 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6e70)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 75 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019bdb8, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000c00008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019bd90, 0xc0008f2c40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc00064dc80?}, 0xc00064dcb0?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc000657d68, {0x5415640, 0xc00064dcb0}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc0000c0d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019bc30, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0004384d0, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 73
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 88 [select]:
+reflect.rselect({0xc000bcef00, 0x3, 0xc0004b3cc0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019adc0?, 0x3, 0xc0004d9fd0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 86
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 77 [select]:
+reflect.rselect({0xc0000baf00, 0x3, 0x1?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019bce0?, 0x3, 0xc0004d87d0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 75
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 116 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc000a94690, {0x542edb0, 0xc00024a230}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 79 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0002e0b40, {0x542edb0, 0xc0002e0c30})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 80 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 81 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc00064dc80}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0002e0780}, {0x77c24c0450c0, 0xc00019bd90}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc00064dc80?}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0002e0780?}, {0x77c24c0450c0?, 0xc00019bd90?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x541eb98, 0xc0002e0780}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00088c380?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00088c380}, 0xc000655ea8, {0x5415660, 0xc0002e0c80}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0002e0c80?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 83 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 84 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc0002221e0, {0x542edb0, 0xc0004e9180}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 85 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000805b00, 0xc0002a0b40, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000805b00, 0xc0004ddf98?, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 98 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000805b48, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000805b38?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000805b30, {0xc000c7c048, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000c7c048?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000805b00}, {0xc000c7c048, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc000d5e690, {0xc00238d400, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0002e0730, 0x0, {0x541f340, 0xc0012583c0})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc000d58440)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0002e0780)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
+
+goroutine 86 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019ae98, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000bd8008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019ae70, 0xc00261e7d0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc000bd52f0?}, 0xc000bd5320?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc002489d68, {0x5415640, 0xc000bd5320}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc000bd3d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019ad10, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0002f0000, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 95 [syscall]:
+os/signal.signal_recv()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sigqueue.go:152 +0x29
+os/signal.loop()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal_unix.go:23 +0x13
+created by os/signal.Notify.func1.1 in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal.go:152 +0x1f
+
+goroutine 100 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6dc0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 90 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0004e92c0, {0x542edb0, 0xc0004e93b0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 91 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 92 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc000bd52f0}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0004e98b0}, {0x77c24c0450c0, 0xc00019ae70}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc000bd52f0?}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0004e98b0?}, {0x77c24c0450c0?, 0xc00019ae70?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x541eb98, 0xc0004e98b0}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00005d420?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00005d420}, 0xc0007c1ea8, {0x5415660, 0xc0004e9450}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0004e9450?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 105 [select]:
+github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...].func1()
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:86 +0xf5
+created by github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...] in goroutine 1
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:82 +0x32a
+
+goroutine 102 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6d10)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 101
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 115 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 94 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000dae4c8, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000dae4b8?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000dae4b0, {0xc000a937c8, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000a937c8?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000dae480}, {0xc000a937c8, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc001975b18, {0xc001f20000, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0004e9590, 0x0, {0x541f340, 0xc00145d500})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc00182cb40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0004e98b0)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
+goroutine 106 [running]:
+k8s.io/klog/v2/internal/dbg.Stacks(0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/internal/dbg/dbg.go:35 +0x89
+k8s.io/klog/v2.(*loggingT).output(0x6ead2e0, 0x3, 0x0, 0xc0002f4380, 0x1, {0x5d1ac35?, 0x1?}, 0xc0024d6f58?, 0x0)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:948 +0x7af
+k8s.io/klog/v2.(*loggingT).printfDepth(0x6ead2e0, 0x3, 0x0, {0x0, 0x0}, 0x1, {0x40138d5, 0x1a}, {0xc0013d73c0, 0x1, ...})
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:760 +0x1f0
+k8s.io/klog/v2.(*loggingT).printf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:737
+k8s.io/klog/v2.Fatalf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:1666
+main.main.func2()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:271 +0xfa
+created by main.main in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:269 +0x6f6
+
+goroutine 1 [chan receive]:
+main.main()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:280 +0x948
+
+goroutine 47 [IO wait]:
+internal/poll.runtime_pollWait(0x77c295240000, 0x72)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/netpoll.go:351 +0x85
+internal/poll.(*pollDesc).wait(0xc00071e180?, 0xc000872000?, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.(*pollDesc).waitRead(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc00071e180, {0xc000872000, 0xa000, 0xa000})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_unix.go:165 +0x279
+net.(*netFD).Read(0xc00071e180, {0xc000872000?, 0xc000872053?, 0x5?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/fd_posix.go:68 +0x25
+net.(*conn).Read(0xc00080a058, {0xc000872000?, 0x77c24c3df0c8?, 0x77c2953ba6c8?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/net.go:196 +0x45
+crypto/tls.(*atLeastReader).Read(0xc000d5e7f8, {0xc000872000?, 0x9fa8?, 0xe?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:816 +0x3b
+bytes.(*Buffer).ReadFrom(0xc0003afb28, {0x540f1a0, 0xc000d5e7f8})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bytes/buffer.go:217 +0x98
+crypto/tls.(*Conn).readFromUntil(0xc0003af888, {0x540f4a0, 0xc00080a058}, 0x14ae794?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:838 +0xde
+crypto/tls.(*Conn).readRecordOrCCS(0xc0003af888, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:627 +0x3db
+crypto/tls.(*Conn).readRecord(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:589
+crypto/tls.(*Conn).Read(0xc0003af888, {0xc0007a7000, 0x1000, 0x1ead2e0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:1392 +0x145
+bufio.(*Reader).Read(0xc0008109c0, {0xc000000ba4, 0x9, 0x1ecadae?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bufio/bufio.go:245 +0x197
+io.ReadAtLeast({0x540e0a0, 0xc0008109c0}, {0xc000000ba4, 0x9, 0x9}, 0x9)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+io.ReadFull(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:354
+golang.org/x/net/http2.readFrameHeader({0xc000000ba4, 0x9, 0xc000000011?}, {0x540e0a0?, 0xc0008109c0?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:242 +0x65
+golang.org/x/net/http2.(*Framer).ReadFrameHeader(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:505 +0x6b
+golang.org/x/net/http2.(*Framer).ReadFrame(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:564 +0x18
+golang.org/x/net/http2.(*clientConnReadLoop).run(0xc000659fa8)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2258 +0xca
+golang.org/x/net/http2.(*ClientConn).readLoop(0xc000702a80)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2127 +0x52
+created by golang.org/x/net/http2.(*Transport).newClientConn in goroutine 46
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:880 +0xda5
+
+goroutine 57 [select]:
+database/sql.(*DB).connectionOpener(0xc000534dd0, {0x542edb0, 0xc000548500})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1261 +0x87
+created by database/sql.OpenDB in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:841 +0x130
+
+goroutine 15 [select]:
+database/sql.(*DB).connectionCleaner(0xc000534dd0, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1104 +0x9c
+created by database/sql.(*DB).startCleanerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1091 +0x105
+
+goroutine 16 [select]:
+github.com/zxh326/kite/pkg/rbac.SyncRolesConfig()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:78 +0xce
+created by github.com/zxh326/kite/pkg/rbac.InitRBAC.func1 in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:24 +0x25
+
+goroutine 66 [select]:
+github.com/zxh326/kite/pkg/cluster.NewClusterManager.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:339 +0xca
+created by github.com/zxh326/kite/pkg/cluster.NewClusterManager in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:335 +0xb9
+
+goroutine 117 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000dae480, 0xc000280640, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000dae480, 0x22656d69546e6f69?, 0x733a66222c7d7b3a?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 104 [sleep]:
+time.Sleep(0xdf8475800)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/time.go:363 +0x165
+github.com/zxh326/kite/pkg/handlers.NewPromHandler.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:28 +0x38
+created by github.com/zxh326/kite/pkg/handlers.NewPromHandler in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:26 +0x89
+
+goroutine 69 [select]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).Start(0xc0005bfc20, {0x542edb0, 0xc0001bb360})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/internal.go:471 +0xb1a
+github.com/zxh326/kite/pkg/kube.NewClient.func3()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:102 +0x27
+created by github.com/zxh326/kite/pkg/kube.NewClient in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:101 +0x42c
+
+goroutine 70 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6b00)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 71 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6bb0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 72 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6c60)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 73 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).Start(0xc000300c80, {0x542edb0, 0xc0002e04b0})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:229 +0x49
+sigs.k8s.io/controller-runtime/pkg/cluster.(*cluster).Start(0x148f065?, {0x542edb0?, 0xc0002e04b0?})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cluster/internal.go:104 +0x6a
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1(0xc000257de0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:260 +0xd9
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile in goroutine 72
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:244 +0x191
+
+goroutine 99 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6e70)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 75 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019bdb8, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000c00008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019bd90, 0xc0008f2c40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc00064dc80?}, 0xc00064dcb0?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc000657d68, {0x5415640, 0xc00064dcb0}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc0000c0d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019bc30, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0004384d0, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 73
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 88 [select]:
+reflect.rselect({0xc000bcef00, 0x3, 0xc0004b3cc0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019adc0?, 0x3, 0xc0004d9fd0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 86
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 77 [select]:
+reflect.rselect({0xc0000baf00, 0x3, 0x1?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019bce0?, 0x3, 0xc0004d87d0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 75
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 116 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc000a94690, {0x542edb0, 0xc00024a230}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 79 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0002e0b40, {0x542edb0, 0xc0002e0c30})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 80 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 81 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc00064dc80}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0002e0780}, {0x77c24c0450c0, 0xc00019bd90}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc00064dc80?}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0002e0780?}, {0x77c24c0450c0?, 0xc00019bd90?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x541eb98, 0xc0002e0780}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00088c380?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00088c380}, 0xc000655ea8, {0x5415660, 0xc0002e0c80}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0002e0c80?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 83 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 84 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc0002221e0, {0x542edb0, 0xc0004e9180}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 85 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000805b00, 0xc0002a0b40, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000805b00, 0xc0004ddf98?, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 98 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000805b48, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000805b38?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000805b30, {0xc000c7c048, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000c7c048?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000805b00}, {0xc000c7c048, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc000d5e690, {0xc00238d400, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0002e0730, 0x0, {0x541f340, 0xc0012583c0})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc000d58440)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0002e0780)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
+
+goroutine 86 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019ae98, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000bd8008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019ae70, 0xc00261e7d0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc000bd52f0?}, 0xc000bd5320?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc002489d68, {0x5415640, 0xc000bd5320}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc000bd3d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019ad10, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0002f0000, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 95 [syscall]:
+os/signal.signal_recv()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sigqueue.go:152 +0x29
+os/signal.loop()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal_unix.go:23 +0x13
+created by os/signal.Notify.func1.1 in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal.go:152 +0x1f
+
+goroutine 100 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6dc0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 90 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0004e92c0, {0x542edb0, 0xc0004e93b0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 91 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 92 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc000bd52f0}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0004e98b0}, {0x77c24c0450c0, 0xc00019ae70}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc000bd52f0?}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0004e98b0?}, {0x77c24c0450c0?, 0xc00019ae70?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x541eb98, 0xc0004e98b0}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00005d420?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00005d420}, 0xc0007c1ea8, {0x5415660, 0xc0004e9450}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0004e9450?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 105 [select]:
+github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...].func1()
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:86 +0xf5
+created by github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...] in goroutine 1
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:82 +0x32a
+
+goroutine 102 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6d10)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 101
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 115 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 94 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000dae4c8, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000dae4b8?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000dae4b0, {0xc000a937c8, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000a937c8?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000dae480}, {0xc000a937c8, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc001975b18, {0xc001f20000, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0004e9590, 0x0, {0x541f340, 0xc00145d500})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc00182cb40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0004e98b0)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
+goroutine 106 [running]:
+k8s.io/klog/v2/internal/dbg.Stacks(0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/internal/dbg/dbg.go:35 +0x89
+k8s.io/klog/v2.(*loggingT).output(0x6ead2e0, 0x3, 0x0, 0xc0002f4380, 0x1, {0x5d1ac35?, 0x1?}, 0xc0024d6f58?, 0x0)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:948 +0x7af
+k8s.io/klog/v2.(*loggingT).printfDepth(0x6ead2e0, 0x3, 0x0, {0x0, 0x0}, 0x1, {0x40138d5, 0x1a}, {0xc0013d73c0, 0x1, ...})
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:760 +0x1f0
+k8s.io/klog/v2.(*loggingT).printf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:737
+k8s.io/klog/v2.Fatalf(...)
+	/home/crm-test/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:1666
+main.main.func2()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:271 +0xfa
+created by main.main in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:269 +0x6f6
+
+goroutine 1 [chan receive]:
+main.main()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/main.go:280 +0x948
+
+goroutine 47 [IO wait]:
+internal/poll.runtime_pollWait(0x77c295240000, 0x72)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/netpoll.go:351 +0x85
+internal/poll.(*pollDesc).wait(0xc00071e180?, 0xc000872000?, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.(*pollDesc).waitRead(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc00071e180, {0xc000872000, 0xa000, 0xa000})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/internal/poll/fd_unix.go:165 +0x279
+net.(*netFD).Read(0xc00071e180, {0xc000872000?, 0xc000872053?, 0x5?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/fd_posix.go:68 +0x25
+net.(*conn).Read(0xc00080a058, {0xc000872000?, 0x77c24c3df0c8?, 0x77c2953ba6c8?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/net.go:196 +0x45
+crypto/tls.(*atLeastReader).Read(0xc000d5e7f8, {0xc000872000?, 0x9fa8?, 0xe?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:816 +0x3b
+bytes.(*Buffer).ReadFrom(0xc0003afb28, {0x540f1a0, 0xc000d5e7f8})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bytes/buffer.go:217 +0x98
+crypto/tls.(*Conn).readFromUntil(0xc0003af888, {0x540f4a0, 0xc00080a058}, 0x14ae794?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:838 +0xde
+crypto/tls.(*Conn).readRecordOrCCS(0xc0003af888, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:627 +0x3db
+crypto/tls.(*Conn).readRecord(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:589
+crypto/tls.(*Conn).Read(0xc0003af888, {0xc0007a7000, 0x1000, 0x1ead2e0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/crypto/tls/conn.go:1392 +0x145
+bufio.(*Reader).Read(0xc0008109c0, {0xc000000ba4, 0x9, 0x1ecadae?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/bufio/bufio.go:245 +0x197
+io.ReadAtLeast({0x540e0a0, 0xc0008109c0}, {0xc000000ba4, 0x9, 0x9}, 0x9)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+io.ReadFull(...)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:354
+golang.org/x/net/http2.readFrameHeader({0xc000000ba4, 0x9, 0xc000000011?}, {0x540e0a0?, 0xc0008109c0?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:242 +0x65
+golang.org/x/net/http2.(*Framer).ReadFrameHeader(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:505 +0x6b
+golang.org/x/net/http2.(*Framer).ReadFrame(0xc000000b60)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/frame.go:564 +0x18
+golang.org/x/net/http2.(*clientConnReadLoop).run(0xc000659fa8)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2258 +0xca
+golang.org/x/net/http2.(*ClientConn).readLoop(0xc000702a80)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2127 +0x52
+created by golang.org/x/net/http2.(*Transport).newClientConn in goroutine 46
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:880 +0xda5
+
+goroutine 57 [select]:
+database/sql.(*DB).connectionOpener(0xc000534dd0, {0x542edb0, 0xc000548500})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1261 +0x87
+created by database/sql.OpenDB in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:841 +0x130
+
+goroutine 15 [select]:
+database/sql.(*DB).connectionCleaner(0xc000534dd0, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1104 +0x9c
+created by database/sql.(*DB).startCleanerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/database/sql/sql.go:1091 +0x105
+
+goroutine 16 [select]:
+github.com/zxh326/kite/pkg/rbac.SyncRolesConfig()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:78 +0xce
+created by github.com/zxh326/kite/pkg/rbac.InitRBAC.func1 in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/rbac/manager.go:24 +0x25
+
+goroutine 66 [select]:
+github.com/zxh326/kite/pkg/cluster.NewClusterManager.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:339 +0xca
+created by github.com/zxh326/kite/pkg/cluster.NewClusterManager in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/cluster/cluster_manager.go:335 +0xb9
+
+goroutine 117 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000dae480, 0xc000280640, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000dae480, 0x22656d69546e6f69?, 0x733a66222c7d7b3a?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 104 [sleep]:
+time.Sleep(0xdf8475800)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/time.go:363 +0x165
+github.com/zxh326/kite/pkg/handlers.NewPromHandler.func1()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:28 +0x38
+created by github.com/zxh326/kite/pkg/handlers.NewPromHandler in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/handlers/prom_handler.go:26 +0x89
+
+goroutine 69 [select]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).Start(0xc0005bfc20, {0x542edb0, 0xc0001bb360})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/internal.go:471 +0xb1a
+github.com/zxh326/kite/pkg/kube.NewClient.func3()
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:102 +0x27
+created by github.com/zxh326/kite/pkg/kube.NewClient in goroutine 1
+	/home/crm-test/vidhyadharan-23381/lsoftest/kite/pkg/kube/client.go:101 +0x42c
+
+goroutine 70 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6b00)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 71 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6bb0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 72 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6c60)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 73 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).Start(0xc000300c80, {0x542edb0, 0xc0002e04b0})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:229 +0x49
+sigs.k8s.io/controller-runtime/pkg/cluster.(*cluster).Start(0x148f065?, {0x542edb0?, 0xc0002e04b0?})
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cluster/internal.go:104 +0x6a
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1(0xc000257de0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:260 +0xd9
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile in goroutine 72
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:244 +0x191
+
+goroutine 99 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6e70)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 75 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019bdb8, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000c00008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019bd90, 0xc0008f2c40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc00064dc80?}, 0xc00064dcb0?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc000657d68, {0x5415640, 0xc00064dcb0}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc00064dc80}, 0xc0000c0d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019be40, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019bc30, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0004384d0, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 73
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 88 [select]:
+reflect.rselect({0xc000bcef00, 0x3, 0xc0004b3cc0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019adc0?, 0x3, 0xc0004d9fd0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 86
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 77 [select]:
+reflect.rselect({0xc0000baf00, 0x3, 0x1?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/select.go:616 +0x3ce
+reflect.Select({0xc00019bce0?, 0x3, 0xc0004d87d0?})
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/reflect/value.go:2949 +0x5ca
+sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...].func2()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:34 +0x4f
+created by sigs.k8s.io/controller-runtime/pkg/internal/syncs.MergeChans[...] in goroutine 75
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/syncs/syncs.go:32 +0x3cc
+
+goroutine 116 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc000a94690, {0x542edb0, 0xc00024a230}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 79 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0002e0b40, {0x542edb0, 0xc0002e0c30})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 80 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 81 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc00064dc80}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0002e0780}, {0x77c24c0450c0, 0xc00019bd90}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc00064dc80?}, {0xc000a933f0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0002e0780?}, {0x77c24c0450c0?, 0xc00019bd90?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x541eb98, 0xc0002e0780}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc0002221e0, {0x542ed78, 0xc00064dc80}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00088c380?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00088c380}, 0xc000655ea8, {0x5415660, 0xc0002e0c80}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0002e0c80?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc0002221e0, {0x542ed78, 0xc00064dc80})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 75
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 83 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 84 [select]:
+k8s.io/client-go/tools/cache.(*Reflector).startResync(0xc0002221e0, {0x542edb0, 0xc0004e9180}, 0xc0002e3dc0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:460 +0x12d
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync.func2()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:490 +0x25
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 85 [select]:
+golang.org/x/net/http2.(*clientStream).writeRequest(0xc000805b00, 0xc0002a0b40, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1566 +0xc85
+golang.org/x/net/http2.(*clientStream).doRequest(0xc000805b00, 0xc0004ddf98?, 0x0?)
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1427 +0x18
+created by golang.org/x/net/http2.(*ClientConn).roundTrip in goroutine 81
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:1333 +0x485
+
+goroutine 98 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000805b48, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000805b38?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000805b30, {0xc000c7c048, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000c7c048?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000805b00}, {0xc000c7c048, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc000d5e690, {0xc00238d400, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0002e0730, 0x0, {0x541f340, 0xc0012583c0})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc000d58440)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0002e0780)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 81
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
+
+goroutine 86 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc00019ae98, 0x1)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000bd8008?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+k8s.io/client-go/tools/cache.(*RealFIFO).PopBatch(0xc00019ae70, 0xc00261e7d0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/the_real_fifo.go:279 +0x8b
+k8s.io/client-go/tools/cache.(*controller).processLoop(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:234 +0x162
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542ed78?, 0xc000bd52f0?}, 0xc000bd5320?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc002489d68, {0x5415640, 0xc000bd5320}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext({0x542ed78, 0xc000bd52f0}, 0xc000bd3d68, 0x3b9aca00, 0x0, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:223 +0x8f
+k8s.io/apimachinery/pkg/util/wait.UntilWithContext(...)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:172
+k8s.io/client-go/tools/cache.(*controller).RunWithContext(0xc00019af20, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:199 +0x41e
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext(0xc00019ad10, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:579 +0x39a
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Cache).Start(0xc0002f0000, 0x0?)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:114 +0xe3
+sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked.func1()
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:248 +0x75
+created by sigs.k8s.io/controller-runtime/pkg/cache/internal.(*Informers).startInformerLocked in goroutine 1
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/cache/internal/informers.go:246 +0x87
+
+goroutine 95 [syscall]:
+os/signal.signal_recv()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sigqueue.go:152 +0x29
+os/signal.loop()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal_unix.go:23 +0x13
+created by os/signal.Notify.func1.1 in goroutine 1
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/os/signal/signal.go:152 +0x1f
+
+goroutine 100 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6dc0)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 69
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 90 [chan receive]:
+k8s.io/client-go/tools/cache.(*sharedProcessor).run(0xc0004e92c0, {0x542edb0, 0xc0004e93b0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/shared_informer.go:891 +0x65
+k8s.io/client-go/tools/cache.(*sharedIndexInformer).RunWithContext.(*Group).StartWithContext.func4()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 91 [chan receive]:
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:167 +0x2c
+created by k8s.io/client-go/tools/cache.(*controller).RunWithContext in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/controller.go:166 +0xdf
+
+goroutine 92 [select]:
+k8s.io/client-go/tools/cache.handleAnyWatch({0x542ed78, 0xc000bd52f0}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98, 0xc0004e98b0}, {0x77c24c0450c0, 0xc00019ae70}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:904 +0x2b3
+k8s.io/client-go/tools/cache.handleWatch({0x542ed78?, 0xc000bd52f0?}, {0xc001407bc0?, 0x0?, 0xc0001ce700?}, {0x541eb98?, 0xc0004e98b0?}, {0x77c24c0450c0?, 0xc00019ae70?}, {0x5468b00, ...}, ...)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:862 +0xea
+k8s.io/client-go/tools/cache.(*Reflector).watch(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x541eb98, 0xc0004e98b0}, 0xc0002f43f0)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:552 +0x60e
+k8s.io/client-go/tools/cache.(*Reflector).watchWithResync(0xc000a94690, {0x542ed78, 0xc000bd52f0}, {0x0, 0x0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:492 +0x186
+k8s.io/client-go/tools/cache.(*Reflector).ListAndWatchWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:447 +0x472
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:369 +0x2e
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1({0x0?, 0x0?})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x13
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1({0x542fdf0?, 0xc00005d420?}, 0x3?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:255 +0x51
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext({0x542fdf0, 0xc00005d420}, 0xc0007c1ea8, {0x5415660, 0xc0004e9450}, 0x1)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:256 +0xe5
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil(0x54366d8?, {0x5415660?, 0xc0004e9450?}, 0x19?, 0x12?)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/backoff.go:233 +0x46
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext(0xc000a94690, {0x542ed78, 0xc000bd52f0})
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/tools/cache/reflector.go:368 +0x22b
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:63 +0x1f
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1()
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:72 +0x4c
+created by k8s.io/apimachinery/pkg/util/wait.(*Group).Start in goroutine 86
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/wait/wait.go:70 +0x73
+
+goroutine 105 [select]:
+github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...].func1()
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:86 +0xf5
+created by github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...] in goroutine 1
+	/home/crm-test/go/pkg/mod/github.com/hashicorp/golang-lru/v2@v2.0.7/expirable/expirable_lru.go:82 +0x32a
+
+goroutine 102 [chan receive]:
+sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile(0xc0004a6d10)
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:220 +0x45
+created by sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1 in goroutine 101
+	/home/crm-test/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0xbf
+
+goroutine 115 [select]:
+context.(*cancelCtx).propagateCancel.func2()
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:521 +0x98
+created by context.(*cancelCtx).propagateCancel in goroutine 92
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/context/context.go:520 +0x409
+
+goroutine 94 [sync.Cond.Wait]:
+sync.runtime_notifyListWait(0xc000dae4c8, 0x0)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/sema.go:606 +0x159
+sync.(*Cond).Wait(0xc000dae4b8?)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/sync/cond.go:71 +0x73
+golang.org/x/net/http2.(*pipe).Read(0xc000dae4b0, {0xc000a937c8, 0x4, 0x4})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/pipe.go:76 +0xdb
+golang.org/x/net/http2.transportResponseBody.Read({0x147f9df?}, {0xc000a937c8?, 0x3ce9400?, 0x1483301?})
+	/home/crm-test/go/pkg/mod/golang.org/x/net@v0.48.0/http2/transport.go:2560 +0x59
+io.ReadAtLeast({0x77c24d569400, 0xc000dae480}, {0xc000a937c8, 0x4, 0x4}, 0x4)
+	/home/crm-test/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/io/io.go:335 +0x8e
+k8s.io/apimachinery/pkg/util/framer.(*lengthDelimitedFrameReader).Read(0xc001975b18, {0xc001f20000, 0x400, 0x400})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/framer/framer.go:76 +0x7f
+k8s.io/apimachinery/pkg/runtime/serializer/streaming.(*decoder).Decode(0xc0004e9590, 0x0, {0x541f340, 0xc00145d500})
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/runtime/serializer/streaming/streaming.go:77 +0xa3
+k8s.io/client-go/rest/watch.(*Decoder).Decode(0xc00182cb40)
+	/home/crm-test/go/pkg/mod/k8s.io/client-go@v0.35.0/rest/watch/decoder.go:49 +0x4b
+k8s.io/apimachinery/pkg/watch.(*StreamWatcher).receive(0xc0004e98b0)
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:114 +0xf8
+created by k8s.io/apimachinery/pkg/watch.NewStreamWatcherWithLogger in goroutine 92
+	/home/crm-test/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/watch/streamwatcher.go:85 +0x149
