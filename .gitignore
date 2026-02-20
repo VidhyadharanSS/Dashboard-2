@@ -42,4 +42,12 @@ docs/node_modules
 docs/.vitepress/cache
 
 kite
-!charts/kite
+!charts/kitego1.26.0.linux-amd64.tar.gz
+dev.db
+*.log
+kite
+logs/
+go1.26.0.linux-amd64.tar.gz
+dev.db
+kite
+*.log
