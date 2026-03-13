@@ -116,6 +116,8 @@ export function ResourceTopology({
     const [offset, setOffset] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [hoveredNode, setHoveredNode] = useState<string | null>(null)
+    const [showLegend, setShowLegend] = useState(false)
     const dragStartRef = useRef<Position>({ x: 0, y: 0 })
     const containerRef = useRef<HTMLDivElement>(null)
     const contentRef = useRef<HTMLDivElement>(null)
@@ -208,6 +210,27 @@ export function ResourceTopology({
     const handleZoomOut = () => setZoom(prev => Math.max(prev * 0.8, 0.2))
     const handleReset = () => { setZoom(1); setOffset({ x: 0, y: 0 }) }
 
+    // Compute which nodes are connected to the hovered node
+    const connectedNodes = useMemo(() => {
+        if (!hoveredNode || !related?.links) return new Set<string>()
+        const connected = new Set<string>()
+        connected.add(hoveredNode)
+        related.links.forEach(link => {
+            if (link.source === hoveredNode) connected.add(link.target)
+            if (link.target === hoveredNode) connected.add(link.source)
+        })
+        return connected
+    }, [hoveredNode, related?.links])
+
+    // Unique resource types for legend
+    const uniqueTypes = useMemo(() => {
+        if (!related) return []
+        const types = new Set<string>()
+        types.add(resource)
+        related.nodes?.forEach(n => types.add(n.type.toLowerCase()))
+        return Array.from(types)
+    }, [related, resource])
+
     const totalNodes = (related?.nodes?.length || 0) + 1
 
     if (isLoading) {
@@ -253,11 +276,30 @@ export function ResourceTopology({
                 </Button>
             </div>
 
-            {/* Stats badge */}
-            <div className="absolute top-3 right-3 z-50">
+            {/* Stats badge + Legend toggle */}
+            <div className="absolute top-3 right-3 z-50 flex flex-col items-end gap-1.5">
                 <Badge variant="secondary" className="text-xs shadow-md">
                     {totalNodes} resource{totalNodes !== 1 ? 's' : ''} · {related?.links?.length || 0} link{(related?.links?.length || 0) !== 1 ? 's' : ''}
                 </Badge>
+                <Button variant="secondary" size="sm" className="h-7 text-xs shadow-md px-2" onClick={() => setShowLegend(l => !l)}>
+                    {showLegend ? 'Hide' : 'Show'} Legend
+                </Button>
+                {showLegend && (
+                    <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg p-3 min-w-[140px]">
+                        <div className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Resource Types</div>
+                        <div className="flex flex-col gap-1.5">
+                            {uniqueTypes.map(type => {
+                                const colors = RESOURCE_COLORS[type] || DEFAULT_COLOR
+                                return (
+                                    <div key={type} className="flex items-center gap-2">
+                                        <div className={`w-3 h-3 rounded-sm border ${colors.border} ${colors.bg}`} />
+                                        <span className="text-xs capitalize">{type.replace(/s$/, '')}</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Zoom level indicator */}
@@ -287,7 +329,7 @@ export function ResourceTopology({
                 >
                     <div className="p-10 min-w-full min-h-full inline-block">
                         {/* Connection Lines */}
-                        {related && <TopologyLines links={related.links || []} positions={nodePositions} />}
+                        {related && <TopologyLines links={related.links || []} positions={nodePositions} hoveredNode={hoveredNode} connectedNodes={connectedNodes} />}
 
                         {/* Layered nodes */}
                         <div className="flex flex-col items-center justify-start gap-12 relative z-10">
@@ -299,6 +341,9 @@ export function ResourceTopology({
                                             id={node.id}
                                             node={node}
                                             isRoot={node.id === rootId}
+                                            isHighlighted={hoveredNode ? connectedNodes.has(node.id) : true}
+                                            isDimmed={hoveredNode !== null && !connectedNodes.has(node.id)}
+                                            onHover={setHoveredNode}
                                         />
                                     ))}
                                 </div>
@@ -316,7 +361,14 @@ export function ResourceTopology({
     )
 }
 
-function TopologyNode({ id, node, isRoot }: { id: string, node: NodeType; isRoot: boolean }) {
+function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, onHover }: {
+    id: string
+    node: NodeType
+    isRoot: boolean
+    isHighlighted?: boolean
+    isDimmed?: boolean
+    onHover?: (id: string | null) => void
+}) {
     const { user } = useAuth()
     const path = useMemo(() => {
         if (isStandardK8sResource(node.type as ResourceType)) {
@@ -345,12 +397,16 @@ function TopologyNode({ id, node, isRoot }: { id: string, node: NodeType; isRoot
     const nodeContent = (
         <div
             id={id}
+            onMouseEnter={() => onHover?.(id)}
+            onMouseLeave={() => onHover?.(null)}
             className={`
                 relative flex flex-col items-center p-3 pt-4 rounded-xl border-2 transition-all duration-200 group z-20 min-w-[110px] max-w-[130px] cursor-pointer select-none
                 ${isRoot
                     ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25 scale-110 ring-4 ring-primary/20'
                     : `${colors.bg} ${colors.border} hover:shadow-lg hover:border-primary/50 hover:scale-105 bg-background dark:bg-card`
                 }
+                ${isDimmed ? 'opacity-30 scale-95' : ''}
+                ${isHighlighted && !isRoot && !isDimmed ? 'ring-2 ring-primary/30' : ''}
             `}
         >
             {/* Icon */}
@@ -416,9 +472,14 @@ function TopologyNode({ id, node, isRoot }: { id: string, node: NodeType; isRoot
     )
 }
 
-function TopologyLines({ links, positions }: { links: TopologyLink[], positions: Record<string, Position> }) {
+function TopologyLines({ links, positions, hoveredNode, connectedNodes }: {
+    links: TopologyLink[]
+    positions: Record<string, Position>
+    hoveredNode: string | null
+    connectedNodes: Set<string>
+}) {
     const connections = useMemo(() => {
-        const lines: { x1: number, y1: number, x2: number, y2: number, label?: string, isCurved: boolean }[] = []
+        const lines: { x1: number, y1: number, x2: number, y2: number, label?: string, isCurved: boolean, source: string, target: string }[] = []
 
         links.forEach(link => {
             const pos1 = positions[link.source]
@@ -432,6 +493,8 @@ function TopologyLines({ links, positions }: { links: TopologyLink[], positions:
                     y2: pos2.y,
                     label: link.label,
                     isCurved: Math.abs(pos1.x - pos2.x) > 50,
+                    source: link.source,
+                    target: link.target,
                 })
             }
         })
@@ -461,6 +524,8 @@ function TopologyLines({ links, positions }: { links: TopologyLink[], positions:
                 >
                     <polygon points="0 0, 8 3, 0 6" className="fill-blue-500" />
                 </marker>
+                {/* Animated flow dot for highlighted connections */}
+                <circle id="flow-dot" r="3" className="fill-primary" />
             </defs>
             {connections.map((line, idx) => {
                 const mx = (line.x1 + line.x2) / 2
@@ -469,23 +534,37 @@ function TopologyLines({ links, positions }: { links: TopologyLink[], positions:
                     ? `M ${line.x1} ${line.y1} Q ${mx} ${line.y1} ${line.x2} ${line.y2}`
                     : `M ${line.x1} ${line.y1} L ${line.x2} ${line.y2}`
 
+                const isHighlighted = hoveredNode !== null &&
+                    connectedNodes.has(line.source) && connectedNodes.has(line.target)
+                const isDimmed = hoveredNode !== null && !isHighlighted
+
                 return (
-                    <g key={idx}>
+                    <g key={idx} style={{ opacity: isDimmed ? 0.1 : 1, transition: 'opacity 0.2s ease' }}>
                         <path
                             d={pathD}
                             stroke="currentColor"
-                            strokeWidth="1.5"
+                            strokeWidth={isHighlighted ? 2.5 : 1.5}
                             fill="none"
-                            className="text-blue-500/25"
-                            markerEnd="url(#arrowhead)"
+                            className={isHighlighted ? 'text-primary' : 'text-blue-500/25'}
+                            markerEnd={isHighlighted ? 'url(#arrowhead-highlight)' : 'url(#arrowhead)'}
                             strokeDasharray="none"
+                            style={{ transition: 'all 0.2s ease' }}
                         />
+                        {/* Animated flow indicator on highlighted lines */}
+                        {isHighlighted && (
+                            <>
+                                <path id={`path-${idx}`} d={pathD} fill="none" stroke="none" />
+                                <circle r="3" className="fill-primary">
+                                    <animateMotion dur="2s" repeatCount="indefinite" path={pathD} />
+                                </circle>
+                            </>
+                        )}
                         {line.label && (
                             <text
                                 x={mx}
-                                y={my - 4}
+                                y={my - 6}
                                 textAnchor="middle"
-                                className="text-[8px] fill-muted-foreground/50 font-medium pointer-events-none"
+                                className={`text-[9px] font-medium pointer-events-none ${isHighlighted ? 'fill-primary' : 'fill-muted-foreground/50'}`}
                             >
                                 {line.label}
                             </text>

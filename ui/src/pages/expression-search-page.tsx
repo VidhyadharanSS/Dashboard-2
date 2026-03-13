@@ -21,7 +21,7 @@ import {
 } from '@tabler/icons-react'
 import { AlertCircle, CheckCircle2, Clock, Filter, Loader2 } from 'lucide-react'
 
-import { evaluate, EXPRESSION_EXAMPLES, ExpressionExample } from '@/lib/expression-engine'
+import { evaluate, EXPRESSION_EXAMPLES, ExpressionExample, extractFieldPaths, getSuggestions } from '@/lib/expression-engine'
 import { fetchResources } from '@/lib/api'
 import { ResourceType } from '@/types/api'
 import { Badge } from '@/components/ui/badge'
@@ -221,6 +221,44 @@ export function ExpressionSearchPage() {
         inputRef.current?.focus()
     }, [])
 
+    // Auto-complete field paths from loaded resources
+    const fieldPaths = useMemo(() => {
+        if (allItems.length === 0) return []
+        // Sample up to 3 resources to extract paths
+        const samples = allItems.slice(0, 3).map(item => item.raw)
+        const pathSet = new Set<string>()
+        samples.forEach(s => extractFieldPaths(s, '', 4).forEach(p => pathSet.add(p)))
+        return Array.from(pathSet).sort()
+    }, [allItems])
+
+    // Auto-complete suggestions
+    const [showSuggestions, setShowSuggestions] = useState(false)
+    const [selectedSuggestion, setSelectedSuggestion] = useState(0)
+    const suggestions = useMemo(() => {
+        if (!showSuggestions || !expression.trim()) return []
+        return getSuggestions(expression, fieldPaths)
+    }, [showSuggestions, expression, fieldPaths])
+
+    const applySuggestion = useCallback((suggestion: string) => {
+        const parts = expression.trim().split(/\s+/)
+        parts[parts.length - 1] = suggestion
+        setExpression(parts.join(' ') + ' ')
+        setShowSuggestions(false)
+        inputRef.current?.focus()
+    }, [expression])
+
+    // Pagination for results
+    const [resultsPage, setResultsPage] = useState(1)
+    const RESULTS_PER_PAGE = 50
+    const paginatedItems = useMemo(() => {
+        const start = (resultsPage - 1) * RESULTS_PER_PAGE
+        return filteredItems.slice(start, start + RESULTS_PER_PAGE)
+    }, [filteredItems, resultsPage])
+    const totalPages = Math.ceil(filteredItems.length / RESULTS_PER_PAGE)
+
+    // Reset page on filter change
+    useEffect(() => { setResultsPage(1) }, [expression, selectedTypes, selectedNamespace])
+
     const hasExpression = expression.trim().length > 0
 
     return (
@@ -232,7 +270,7 @@ export function ExpressionSearchPage() {
                     Advanced Search
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                    Filter Kubernetes resources using expression-based queries
+                    Filter Kubernetes resources using expression-based queries — supports <code className="text-xs bg-muted px-1 rounded">in</code>, <code className="text-xs bg-muted px-1 rounded">regex</code>, <code className="text-xs bg-muted px-1 rounded">exists()</code>, <code className="text-xs bg-muted px-1 rounded">.age</code>, and more
                 </p>
             </div>
 
@@ -324,7 +362,7 @@ export function ExpressionSearchPage() {
                     </div>
                 </div>
 
-                {/* Expression Input */}
+                {/* Expression Input with Autocomplete */}
                 <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                         <IconSearch className="h-4 w-4 text-muted-foreground" />
@@ -332,8 +370,20 @@ export function ExpressionSearchPage() {
                     <Input
                         ref={inputRef}
                         value={expression}
-                        onChange={(e) => setExpression(e.target.value)}
-                        placeholder="Search resources by query"
+                        onChange={(e) => { setExpression(e.target.value); setShowSuggestions(true); setSelectedSuggestion(0) }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        onKeyDown={(e) => {
+                            if (showSuggestions && suggestions.length > 0) {
+                                if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedSuggestion(p => Math.min(p + 1, suggestions.length - 1)) }
+                                if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedSuggestion(p => Math.max(p - 1, 0)) }
+                                if (e.key === 'Tab' || (e.key === 'Enter' && suggestions[selectedSuggestion])) {
+                                    e.preventDefault(); applySuggestion(suggestions[selectedSuggestion])
+                                }
+                                if (e.key === 'Escape') { setShowSuggestions(false) }
+                            }
+                        }}
+                        placeholder='e.g. status.phase in ("Pending", "Failed") && metadata.name.matches("web-.*")'
                         className={`pl-9 pr-10 h-12 text-base font-mono transition-all ${expressionError
                             ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive'
                             : hasExpression
@@ -348,6 +398,21 @@ export function ExpressionSearchPage() {
                         >
                             <IconX className="h-4 w-4" />
                         </button>
+                    )}
+
+                    {/* Autocomplete dropdown */}
+                    {showSuggestions && suggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {suggestions.map((s, idx) => (
+                                <button
+                                    key={s}
+                                    onMouseDown={(e) => { e.preventDefault(); applySuggestion(s) }}
+                                    className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-accent transition-colors ${idx === selectedSuggestion ? 'bg-accent' : ''}`}
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
                     )}
                 </div>
 
@@ -377,7 +442,18 @@ export function ExpressionSearchPage() {
 
             {/* Results Table */}
             {hasExpression && !expressionError ? (
-                <ResultsTable items={filteredItems} isLoading={isLoading} onRowClick={handleRowClick} />
+                <>
+                    <ResultsTable items={paginatedItems} isLoading={isLoading} onRowClick={handleRowClick} />
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 mt-2">
+                            <Button variant="outline" size="sm" disabled={resultsPage <= 1} onClick={() => setResultsPage(p => p - 1)}>Previous</Button>
+                            <span className="text-xs text-muted-foreground">
+                                Page {resultsPage} of {totalPages} ({filteredItems.length} total)
+                            </span>
+                            <Button variant="outline" size="sm" disabled={resultsPage >= totalPages} onClick={() => setResultsPage(p => p + 1)}>Next</Button>
+                        </div>
+                    )}
+                </>
             ) : !hasExpression ? (
                 <ExamplesPanel onApply={applyExample} />
             ) : null}
@@ -515,12 +591,15 @@ function ExampleCard({
             onClick={() => onApply(example)}
             className="text-left rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/40 transition-all p-3.5 group cursor-pointer"
         >
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-1.5">
                 <div className="flex items-center gap-1.5">
                     <Icon className="h-3.5 w-3.5 text-primary" />
                     <span className="text-xs font-semibold text-muted-foreground">{example.label}</span>
                 </div>
             </div>
+            {example.description && (
+                <p className="text-xs text-muted-foreground mb-1.5">{example.description}</p>
+            )}
             <code className="text-xs font-mono text-foreground/80 group-hover:text-foreground break-all leading-relaxed">
                 {example.expression}
             </code>

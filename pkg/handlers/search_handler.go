@@ -124,39 +124,33 @@ func getResourceOrder(resourceType string) int {
 }
 
 // sortResults sorts the search results with a more robust scoring algorithm
+// using fuzzy matching for better relevance ranking
 func sortResults(results []common.SearchResult, query string) {
 	if len(results) <= 1 {
 		return
 	}
 
 	query = strings.ToLower(query)
-	
-	// Pre-calculate scores for all results to avoid redundant string operations
+
+	// Pre-calculate scores for all results
 	scores := make(map[string]int)
 	for _, r := range results {
 		score := 0
-		nameLower := strings.ToLower(r.Name)
-		
-		// 1. Name matches (Highest priority)
-		if nameLower == query {
-			score += 1000
-		} else if strings.HasPrefix(nameLower, query) {
-			score += 500
-		} else if strings.Contains(nameLower, query) {
-			score += 200
-		}
-		
+
+		// 1. Name matches using fuzzy scoring
+		_, nameScore := utils.FuzzyMatch(r.Name, query)
+		score += nameScore
+
 		// 2. Namespace match (Bonus)
 		if strings.ToLower(r.Namespace) == query {
 			score += 300
 		} else if strings.HasPrefix(strings.ToLower(r.Namespace), query) {
 			score += 100
 		}
-		
+
 		// 3. Resource type weighting (Tie-breaker)
-		// Lower order (more important) gets higher score
 		score += (10 - getResourceOrder(r.ResourceType)) * 10
-		
+
 		scores[r.ID] = score
 	}
 
@@ -164,11 +158,11 @@ func sortResults(results []common.SearchResult, query string) {
 	sort.Slice(results, func(i, j int) bool {
 		scoreI := scores[results[i].ID]
 		scoreJ := scores[results[j].ID]
-		
+
 		if scoreI != scoreJ {
 			return scoreI > scoreJ
 		}
-		
+
 		// If scores are equal, sort alphabetically by name
 		return results[i].Name < results[j].Name
 	})

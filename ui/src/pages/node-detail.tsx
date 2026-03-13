@@ -15,6 +15,8 @@ import {
   useResource,
   useResources,
 } from '@/lib/api'
+import { useAuth } from '@/contexts/auth-context'
+import { usePermissions } from '@/hooks/use-permissions'
 import {
   enrichNodeConditionsWithHealth,
   formatCPU,
@@ -44,6 +46,10 @@ export function NodeDetail(props: { name: string }) {
   const [isSavingYaml, setIsSavingYaml] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const { canAccess } = usePermissions()
+  const isAdmin = user?.isAdmin() ?? false
+  const canExecNode = canAccess('nodes', 'exec')
 
   const {
     data,
@@ -555,15 +561,25 @@ export function NodeDetail(props: { name: string }) {
             label: 'Monitor',
             content: <NodeMonitoring name={name} />,
           },
-          {
+          ...(isAdmin || canExecNode ? [{
             value: 'Terminal',
-            label: 'Terminal',
+            label: (
+              <span className="flex items-center gap-1.5">
+                Terminal
+                <Badge variant="secondary" className="text-[9px] px-1 py-0">Admin</Badge>
+              </span>
+            ),
             content: (
               <div className="space-y-6">
-                <Terminal type="node" nodeName={name} />
+                <Terminal
+                  type="node"
+                  nodeName={name}
+                  requireConfirmation={true}
+                  permissionDeniedMessage={!isAdmin && !canExecNode ? `You need admin privileges or 'exec' permission on nodes to access node terminals. This is a privileged operation that provides host-level access.` : undefined}
+                />
               </div>
             ),
-          },
+          }] : []),
           {
             value: 'events',
             label: 'Events',

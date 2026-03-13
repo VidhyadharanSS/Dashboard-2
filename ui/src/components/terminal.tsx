@@ -74,6 +74,10 @@ interface TerminalProps {
   containers?: any[]
   initContainers?: any[]
   type?: 'pod' | 'node'
+  /** If true, shows a confirmation dialog before connecting (for node terminals) */
+  requireConfirmation?: boolean
+  /** Permission gate message if user doesn't have access */
+  permissionDeniedMessage?: string
 }
 
 export function Terminal({
@@ -84,6 +88,8 @@ export function Terminal({
   containers: _containers = [],
   initContainers = [],
   type = 'pod',
+  requireConfirmation = false,
+  permissionDeniedMessage,
 }: TerminalProps) {
   const containers = useMemo(() => {
     return toSimpleContainer(initContainers, _containers)
@@ -93,6 +99,9 @@ export function Terminal({
   const [selectedContainer, setSelectedContainer] = useState<string>('')
   const [isConnected, setIsConnected] = useState(false)
   const [reconnectFlag, setReconnectFlag] = useState(false)
+  const [confirmed, setConfirmed] = useState(!requireConfirmation)
+  const [connectionDuration, setConnectionDuration] = useState(0)
+  const connectionTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [terminalTheme, setTerminalTheme] = useState<TerminalTheme>(() => {
     const saved = localStorage.getItem('terminal-theme')
@@ -243,8 +252,27 @@ export function Terminal({
     setSelectedPod(podName || '')
   }, [])
 
+  // Track connection duration
+  useEffect(() => {
+    if (isConnected) {
+      setConnectionDuration(0)
+      connectionTimerRef.current = setInterval(() => {
+        setConnectionDuration(prev => prev + 1)
+      }, 1000)
+    } else {
+      if (connectionTimerRef.current) {
+        clearInterval(connectionTimerRef.current)
+        connectionTimerRef.current = null
+      }
+    }
+    return () => {
+      if (connectionTimerRef.current) clearInterval(connectionTimerRef.current)
+    }
+  }, [isConnected])
+
   // Unified terminal and websocket lifecycle
   useEffect(() => {
+    if (!confirmed) return
     if (type === 'pod') {
       if (!pods || pods.length === 0) if (!selectedPod) return
       if (!selectedContainer) return
@@ -492,6 +520,7 @@ export function Terminal({
       if (pingTimerRef.current) clearInterval(pingTimerRef.current)
     }
   }, [
+    confirmed,
     selectedPod,
     selectedContainer,
     namespace,
@@ -501,6 +530,16 @@ export function Terminal({
     fontSize,
     cursorStyle,
   ])
+
+  // Format connection duration
+  const formatDuration = (secs: number) => {
+    const h = Math.floor(secs / 3600)
+    const m = Math.floor((secs % 3600) / 60)
+    const s = secs % 60
+    if (h > 0) return `${h}h ${m}m`
+    if (m > 0) return `${m}m ${s}s`
+    return `${s}s`
+  }
 
   // Clear terminal
   const clearTerminal = useCallback(() => {
@@ -524,6 +563,48 @@ export function Terminal({
     }
   }, [])
 
+  // Permission denied gate
+  if (permissionDeniedMessage) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100dvh-180px)] border rounded-md bg-muted/10">
+        <div className="rounded-full bg-destructive/10 p-4 mb-4">
+          <IconTerminal size={32} className="text-destructive" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
+        <p className="text-sm text-muted-foreground text-center max-w-md">{permissionDeniedMessage}</p>
+      </div>
+    )
+  }
+
+  // Confirmation gate for node terminals
+  if (!confirmed) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100dvh-180px)] border rounded-md bg-muted/10">
+        <div className="rounded-full bg-amber-500/10 p-4 mb-4">
+          <IconTerminal size={32} className="text-amber-500" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Node Terminal Access</h3>
+        <p className="text-sm text-muted-foreground text-center max-w-md mb-1">
+          You are about to open a <strong>privileged terminal</strong> on node <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{nodeName}</code>.
+        </p>
+        <p className="text-xs text-muted-foreground text-center max-w-md mb-4">
+          This creates a privileged pod with host access. The pod will be automatically cleaned up when the session ends.
+          All commands are audited.
+        </p>
+        <div className="flex gap-3">
+          <Button
+            variant="default"
+            onClick={() => setConfirmed(true)}
+            className="gap-2"
+          >
+            <IconTerminal size={16} />
+            Connect to Node
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       className={`flex flex-col bg-background border border-border rounded-md overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[100] border-none rounded-none' : 'h-[calc(100dvh-180px)]'
@@ -536,7 +617,14 @@ export function Terminal({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <IconTerminal size={18} className="text-primary" />
-            <span className="font-semibold text-sm">Terminal</span>
+            <span className="font-semibold text-sm">
+              {type === 'node' ? 'Node Terminal' : 'Terminal'}
+            </span>
+            {isConnected && connectionDuration > 0 && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {formatDuration(connectionDuration)}
+              </span>
+            )}
           </div>
 
           <div className="w-px h-4 bg-border" />

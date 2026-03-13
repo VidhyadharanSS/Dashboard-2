@@ -269,9 +269,18 @@ export function LogViewer({
     return result
   }, [rawLogs, errorOnly, filterTerm])
 
-  const errorCount = useMemo(() => {
-    return rawLogs.filter((l) => l.className.includes('ansi-log-error')).length
+  // Log level statistics for the status bar
+  const logStats = useMemo(() => {
+    let errors = 0, warns = 0, infos = 0
+    for (const l of rawLogs) {
+      if (l.className.includes('ansi-log-error')) errors++
+      else if (l.className.includes('ansi-log-warn')) warns++
+      else if (l.className.includes('ansi-log-info')) infos++
+    }
+    return { errors, warns, infos }
   }, [rawLogs])
+
+  const errorCount = logStats.errors
 
   const matchCount = useMemo(() => {
     if (!filterTerm.trim()) return 0
@@ -610,6 +619,31 @@ export function LogViewer({
               onChange={(e) => setFilterTerm(e.target.value)}
               className="h-8 w-[140px] lg:w-[220px] pl-8 pr-3 text-xs bg-background/50 focus-visible:ring-1 focus-visible:ring-primary shadow-sm"
             />
+          </div>
+
+          {/* Log Level Stats */}
+          <div className="flex items-center gap-1.5 h-8">
+            {logStats.errors > 0 && (
+              <button
+                onClick={() => { setErrorOnly(true) }}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                {logStats.errors} ERR
+              </button>
+            )}
+            {logStats.warns > 0 && (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                {logStats.warns} WARN
+              </span>
+            )}
+            {logStats.infos > 0 && (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                {logStats.infos} INFO
+              </span>
+            )}
           </div>
 
           {/* Error Mode Toggle */}
