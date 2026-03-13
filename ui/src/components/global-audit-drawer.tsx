@@ -51,7 +51,6 @@ import {
     exportAuditLogs,
     getBookmarkedAuditIds,
     toggleAuditBookmark,
-    isAuditBookmarked,
 } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -377,6 +376,14 @@ export function GlobalAuditDrawer() {
     const { user } = useAuth()
     const isAdmin = user?.isAdmin() ?? false
     const [isOpen, setIsOpen] = useState(false)
+
+    // Listen for keyboard shortcut toggle event from KeyboardShortcutsDialog
+    useEffect(() => {
+        const handler = () => setIsOpen(prev => !prev)
+        window.addEventListener('toggle-audit-drawer', handler)
+        return () => window.removeEventListener('toggle-audit-drawer', handler)
+    }, [])
+
     const [opFilter, setOpFilter] = useState<string>('all')
     const [searchText, setSearchText] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')

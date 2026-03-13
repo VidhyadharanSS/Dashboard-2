@@ -10,11 +10,14 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 
 import { CreateResourceDialog } from './create-resource-dialog'
 import { DynamicBreadcrumb } from './dynamic-breadcrumb'
+import { FavoritesQuickAccess } from './favorites-quick-access'
 import { GlobalAuditDrawer } from './global-audit-drawer'
+import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 import { LanguageToggle } from './language-toggle'
 import { LiveEventDrawer } from './live-event-drawer'
 import { ModeToggle } from './mode-toggle'
 import { NamespaceQuickSwitch } from './namespace-quick-switch'
+import { ResourceCompareDialog } from './resource-compare-dialog'
 import { Search } from './search'
 import { UserMenu } from './user-menu'
 
@@ -23,6 +26,7 @@ export function SiteHeader() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,6 +55,9 @@ export function SiteHeader() {
 
           <div className="ml-auto flex items-center gap-2">
             <Search />
+
+            {/* Favorites quick access */}
+            <FavoritesQuickAccess />
 
             {/* Live cluster event drawer */}
             <LiveEventDrawer />
@@ -97,6 +104,15 @@ export function SiteHeader() {
       <CreateResourceDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+      />
+
+      {/* Keyboard shortcuts dialog — global */}
+      <KeyboardShortcutsDialog />
+
+      {/* Resource comparison dialog */}
+      <ResourceCompareDialog
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
       />
     </>
   )

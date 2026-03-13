@@ -14,6 +14,7 @@ import {
   OverviewData,
   PodMetrics,
   TopologyResponse,
+  ResourceHistory,
   ResourceHistoryResponse,
   ResourcesTypeMap,
   ResourceTemplate,

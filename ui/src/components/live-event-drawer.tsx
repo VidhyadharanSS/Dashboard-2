@@ -8,8 +8,6 @@ import {
     IconInfoCircle,
     IconRefresh,
     IconSearch,
-    IconVolume,
-    IconVolumeOff,
     IconX,
 } from '@tabler/icons-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -56,6 +54,14 @@ export function LiveEventDrawer() {
     const { pinned } = usePinnedNamespaces()
 
     const [isOpen, setIsOpen] = useState(false)
+
+    // Listen for keyboard shortcut toggle event from KeyboardShortcutsDialog
+    useEffect(() => {
+        const handler = () => setIsOpen(prev => !prev)
+        window.addEventListener('toggle-events-drawer', handler)
+        return () => window.removeEventListener('toggle-events-drawer', handler)
+    }, [])
+
     const [nsFilter, setNsFilter] = useState<string>('_all')
     const [typeFilter, setTypeFilter] = useState<'all' | 'Warning' | 'Normal'>('all')
     const [searchText, setSearchText] = useState('')

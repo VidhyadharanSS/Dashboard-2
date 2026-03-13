@@ -7,6 +7,7 @@ import { usePermissions } from '@/hooks/use-permissions'
 import NetworkUsageChart from '@/components/chart/network-usage-chart'
 import ResourceUtilizationChart from '@/components/chart/resource-utilization'
 import { ClusterStatsCards } from '@/components/cluster-stats-cards'
+import { ClusterHealthScore } from '@/components/dashboard/cluster-health-score'
 import { RecentEvents } from '@/components/recent-events'
 import { ResourceCharts } from '@/components/resources-charts'
 import { SettingsHint } from '@/components/settings-hint'
@@ -71,14 +72,15 @@ export function Overview() {
         <QuickActionsWidget />
       </div>
 
-      {/* Resource Usage & Recent Events */}
-      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
+      {/* Resource Usage, Health Score & Recent Events */}
+      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-3">
         <ResourceCharts
           data={overview?.resource}
           isLoading={isLoading}
           error={error}
           isError={isError}
         />
+        <ClusterHealthScore overview={overview} isLoading={isLoading} />
         <RecentEvents />
       </div>
 
