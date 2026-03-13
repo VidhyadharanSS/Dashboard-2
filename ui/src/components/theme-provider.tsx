@@ -32,12 +32,16 @@ function resolveInitialTheme(storageKey: string, defaultTheme: Theme): 'light' |
   const stored = localStorage.getItem(storageKey) as Theme | null
   if (stored === 'light' || stored === 'dark') return stored
 
-  // Legacy 'system' or no stored value → resolve from OS preference
-  const resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  // Fallback to defaultTheme if no value is stored, or handle legacy 'system'
+  const fallback = stored === 'system' ? 'system' : defaultTheme
+
+  const resolved = fallback === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : fallback
+
   localStorage.setItem(storageKey, resolved)
   return resolved
 }
-
 export function ThemeProvider({
   children,
   defaultTheme = 'light',

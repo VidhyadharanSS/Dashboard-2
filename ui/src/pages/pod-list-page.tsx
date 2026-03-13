@@ -24,34 +24,70 @@ export function PodListPage() {
   const { t } = useTranslation()
   const [nodeNameFilter, setNodeNameFilter] = useState<string[] | null>(null)
 
-  // Define column helper outside of any hooks
   const columnHelper = createColumnHelper<PodWithMetrics>()
 
-
-  // Define columns for the pod table
   const columns = useMemo(
     () => [
       columnHelper.accessor('metadata.name', {
         header: t('common.name'),
-        cell: ({ row }) => (
-          <div className="font-medium text-blue-500 hover:underline">
-            <Link
-              to={`/pods/${row.original.metadata?.namespace || ''}/${row.original.metadata?.name || ''}`}
-            >
-              {row.original.metadata!.name}
-            </Link>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const status = getPodStatus(row.original).reason
+          const isUnhealthy =
+            status === 'Error' ||
+            status === 'CrashLoopBackOff' ||
+            status === 'OOMKilled' ||
+            status === 'ImagePullBackOff' ||
+            status === 'ErrImagePull' ||
+            status === 'Failed'
+          // Show the primary container image as a sub-label
+          const firstContainer = row.original.spec?.containers?.[0]
+          const image = firstContainer?.image || ''
+          const shortImage = image.includes('/')
+            ? image.split('/').pop() || image
+            : image
+
+          return (
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div
+                className={`font-medium hover:underline truncate ${isUnhealthy ? 'text-red-500' : 'text-blue-500'}`}
+              >
+                <Link
+                  to={`/pods/${row.original.metadata?.namespace || ''}/${row.original.metadata?.name || ''}`}
+                >
+                  {row.original.metadata!.name}
+                </Link>
+              </div>
+              {shortImage && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[240px] font-mono cursor-default">
+                      {shortImage}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-sm font-mono text-xs break-all"
+                  >
+                    {image}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          )
+        },
       }),
       columnHelper.accessor((row) => row.status?.containerStatuses, {
         id: 'containers',
         header: t('pods.ready'),
         cell: ({ row }) => {
-          const status = getPodStatus(row.original)
+          const s = getPodStatus(row.original)
+          const isHealthy = s.readyContainers === s.totalContainers && s.totalContainers > 0
           return (
-            <div>
-              {status.readyContainers} / {status.totalContainers}
-            </div>
+            <span
+              className={`font-medium tabular-nums text-sm ${isHealthy ? 'text-green-600 dark:text-green-400' : s.readyContainers === 0 && s.totalContainers > 0 ? 'text-red-500' : 'text-amber-500'}`}
+            >
+              {s.readyContainers}/{s.totalContainers}
+            </span>
           )
         },
       }),
@@ -62,7 +98,18 @@ export function PodListPage() {
         cell: ({ row }) => {
           const status = getPodStatus(row.original).reason
           return (
-            <Badge variant="outline" className="text-muted-foreground px-1.5 shrink-0">
+            <Badge
+              variant="outline"
+              className={`px-1.5 shrink-0 ${
+                status === 'Running'
+                  ? 'border-green-500/40 text-green-600 dark:text-green-400'
+                  : status === 'Completed' || status === 'Succeeded'
+                    ? 'border-muted text-muted-foreground'
+                    : status === 'Pending' || status === 'ContainerCreating'
+                      ? 'border-amber-500/40 text-amber-600'
+                      : 'border-red-500/40 text-red-500'
+              }`}
+            >
               <PodStatusIcon status={status} />
               {status}
             </Badge>
@@ -73,10 +120,17 @@ export function PodListPage() {
         id: 'restarts',
         header: t('pods.restarts'),
         cell: ({ row }) => {
-          const status = getPodStatus(row.original)
+          const s = getPodStatus(row.original)
+          // Highlight high restart counts
+          const highRestarts =
+            s.restartCount > 10
+              ? 'text-red-500 font-semibold'
+              : s.restartCount > 3
+                ? 'text-amber-500'
+                : 'text-muted-foreground'
           return (
-            <span className="text-muted-foreground text-sm">
-              {status.restartString}
+            <span className={`text-sm tabular-nums ${highRestarts}`}>
+              {s.restartString}
             </span>
           )
         },
@@ -98,48 +152,40 @@ export function PodListPage() {
       columnHelper.accessor((row) => row.status?.podIP, {
         id: 'podIP',
         header: 'IP',
-        cell: ({ getValue }) => {
-          const ip = getValue() || '-'
-          return (
-            <span className="text-muted-foreground text-sm font-mono">
-              {ip}
-            </span>
-          )
-        },
+        cell: ({ getValue }) => (
+          <span className="text-muted-foreground text-sm font-mono">
+            {getValue() || '-'}
+          </span>
+        ),
       }),
       columnHelper.accessor((row) => row.spec?.nodeName, {
         id: 'nodeName',
         header: t('pods.node'),
         enableColumnFilter: true,
-        cell: ({ row }) => {
-          if (row.original.spec?.nodeName) {
-            return (
-              <div className="font-medium text-blue-500 hover:underline">
-                <Link to={`/nodes/${row.original.spec?.nodeName}`}>
-                  {row.original.spec?.nodeName}
-                </Link>
-              </div>
-            )
-          }
-          return '-'
-        },
+        cell: ({ row }) =>
+          row.original.spec?.nodeName ? (
+            <div className="font-medium text-blue-500 hover:underline truncate max-w-[160px]">
+              <Link to={`/nodes/${row.original.spec.nodeName}`}>
+                {row.original.spec.nodeName}
+              </Link>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          ),
       }),
       columnHelper.accessor((row) => row.metadata?.creationTimestamp, {
         id: 'creationTimestamp',
         header: t('common.created'),
-        cell: ({ getValue }) => {
-          const dateStr = formatDate(getValue() || '')
-          return (
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="text-muted-foreground text-sm">
-                  {getAge(getValue() || '')}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{dateStr}</TooltipContent>
-            </Tooltip>
-          )
-        },
+        cell: ({ getValue }) => (
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="text-muted-foreground text-sm">
+                {getAge(getValue() || '')}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{formatDate(getValue() || '')}</TooltipContent>
+          </Tooltip>
+        ),
       }),
       columnHelper.display({
         id: 'actions',
@@ -159,24 +205,25 @@ export function PodListPage() {
               name={row.original.metadata?.name || ''}
             />
           </div>
-        )
+        ),
       }),
     ],
     [columnHelper, t]
   )
 
-  // Custom filter for pod search & node label filter
   const podSearchFilter = useCallback(
     (pod: Pod, query: string) => {
-      // Apply node label filter first if present
-      if (nodeNameFilter && !nodeNameFilter.includes(pod.spec?.nodeName || '')) {
+      if (
+        nodeNameFilter &&
+        !nodeNameFilter.includes(pod.spec?.nodeName || '')
+      ) {
         return false
       }
-
       return (
-        pod.metadata?.name?.toLowerCase().includes(query) ||
+        (pod.metadata?.name?.toLowerCase() || '').includes(query) ||
         (pod.spec?.nodeName?.toLowerCase() || '').includes(query) ||
-        (pod.status?.podIP?.toLowerCase() || '').includes(query)
+        (pod.status?.podIP?.toLowerCase() || '').includes(query) ||
+        (pod.metadata?.namespace?.toLowerCase() || '').includes(query)
       )
     },
     [nodeNameFilter]

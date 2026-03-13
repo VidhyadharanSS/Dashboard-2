@@ -38,13 +38,14 @@ type TerminalSession struct {
 
 func NewTerminalSession(client *K8sClient, conn *websocket.Conn, namespace, podName, container string) *TerminalSession {
 	return &TerminalSession{
-		k8sClient:  client,
-		conn:       conn,
-		sizeChan:   make(chan *remotecommand.TerminalSize, 10),
-		namespace:  namespace,
-		podName:    podName,
-		container:  container,
-		readBuffer: nil, // Initialize empty buffer
+		k8sClient:     client,
+		conn:          conn,
+		sizeChan:      make(chan *remotecommand.TerminalSize, 10),
+		namespace:     namespace,
+		podName:       podName,
+		container:     container,
+		readBuffer:    nil,
+		lastHeartbeat: time.Now(),
 	}
 }
 
@@ -74,6 +75,13 @@ func (session *TerminalSession) Start(ctx context.Context, subResource string) e
 		session.SendErrorMessage(fmt.Sprintf("All shells failed. Last error: %v", lastErr))
 	}
 	return lastErr
+}
+
+// StartWithCommand executes a specific command in the container via the "exec" subresource.
+// Used by the node terminal handler to run the nsenter shell-entry command directly,
+// rather than trying multiple shell fallbacks via "attach".
+func (session *TerminalSession) StartWithCommand(ctx context.Context, command []string) error {
+	return session.execute(ctx, "exec", command)
 }
 
 func (session *TerminalSession) execute(ctx context.Context, subResource string, command []string) error {
