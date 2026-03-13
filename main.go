@@ -117,6 +117,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 	adminAPI.Use(authHandler.RequireAuth(), authHandler.RequireAdmin())
 	{
 		adminAPI.GET("/audit-logs", handlers.ListAuditLogs)
+		adminAPI.GET("/audit-logs/export", handlers.ExportAuditLogs)
 		oauthProviderAPI := adminAPI.Group("/oauth-providers")
 		{
 			oauthProviderAPI.GET("/", authHandler.ListOAuthProviders)
@@ -201,6 +202,11 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 
 		resourceApplyHandler := handlers.NewResourceApplyHandler()
 		api.POST("/resources/apply", resourceApplyHandler.ApplyResource)
+
+		api.GET("/audit-logs", handlers.ListAuditLogsForUser)
+		api.GET("/audit-logs/stats", handlers.GetAuditStats)
+		api.GET("/audit-logs/timeline", handlers.GetAuditTimeline)
+		api.GET("/audit-logs/:id", handlers.GetAuditLogDetail)
 
 		api.GET("/image/tags", handlers.GetImageTags)
 		api.GET("/templates", handlers.ListTemplates)

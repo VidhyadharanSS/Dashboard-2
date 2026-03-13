@@ -1583,7 +1583,9 @@ export const fetchAuditLogs = async (
   cluster?: string,
   resourceType?: string,
   resourceName?: string,
-  namespace?: string
+  namespace?: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<AuditLogResponse> => {
   const params = new URLSearchParams({
     page: String(page),
@@ -1610,6 +1612,12 @@ export const fetchAuditLogs = async (
   if (namespace) {
     params.set('namespace', namespace)
   }
+  if (startDate) {
+    params.set('startDate', startDate)
+  }
+  if (endDate) {
+    params.set('endDate', endDate)
+  }
   return fetchAPI<AuditLogResponse>(`/admin/audit-logs?${params.toString()}`)
 }
 
@@ -1623,7 +1631,9 @@ export const useAuditLogs = (
   resourceType?: string,
   resourceName?: string,
   namespace?: string,
-  options?: { staleTime?: number; refetchInterval?: number; enabled?: boolean }
+  options?: { staleTime?: number; refetchInterval?: number; enabled?: boolean },
+  startDate?: string,
+  endDate?: string
 ) => {
   return useQuery<AuditLogResponse, Error>({
     queryKey: [
@@ -1637,6 +1647,8 @@ export const useAuditLogs = (
       resourceType,
       resourceName,
       namespace,
+      startDate,
+      endDate,
     ],
     queryFn: () =>
       fetchAuditLogs(
@@ -1648,12 +1660,208 @@ export const useAuditLogs = (
         cluster,
         resourceType,
         resourceName,
-        namespace
+        namespace,
+        startDate,
+        endDate
       ),
     staleTime: options?.staleTime || 20000,
     refetchInterval: options?.refetchInterval,
     enabled: options?.enabled,
   })
+}
+
+// Fetch single audit entry detail (with YAML diffs)
+export const fetchAuditLogDetail = async (id: number): Promise<ResourceHistory> => {
+  return fetchAPI<ResourceHistory>(`/audit-logs/${id}`)
+}
+
+export const useAuditLogDetail = (id: number | null, options?: { enabled?: boolean }) => {
+  return useQuery<ResourceHistory, Error>({
+    queryKey: ['audit-log-detail', id],
+    queryFn: () => fetchAuditLogDetail(id!),
+    enabled: (options?.enabled ?? true) && id !== null && id > 0,
+    staleTime: 60000,
+  })
+}
+
+// Audit timeline histogram data
+export interface AuditTimelineBucket {
+  timestamp: string
+  create: number
+  update: number
+  delete: number
+  patch: number
+  apply: number
+  total: number
+}
+
+export const fetchAuditTimeline = async (days: number = 7): Promise<AuditTimelineBucket[]> => {
+  return fetchAPI<AuditTimelineBucket[]>(`/audit-logs/timeline?days=${days}`)
+}
+
+export const useAuditTimeline = (days: number = 7, options?: { enabled?: boolean; refetchInterval?: number }) => {
+  return useQuery<AuditTimelineBucket[], Error>({
+    queryKey: ['audit-timeline', days],
+    queryFn: () => fetchAuditTimeline(days),
+    staleTime: 30000,
+    refetchInterval: options?.refetchInterval,
+    enabled: options?.enabled,
+  })
+}
+
+// Bookmark audit entries (stored in localStorage for simplicity)
+export function getBookmarkedAuditIds(): number[] {
+  try {
+    const stored = localStorage.getItem('audit-bookmarks')
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+export function toggleAuditBookmark(id: number): boolean {
+  const bookmarks = getBookmarkedAuditIds()
+  const idx = bookmarks.indexOf(id)
+  if (idx >= 0) {
+    bookmarks.splice(idx, 1)
+  } else {
+    bookmarks.push(id)
+  }
+  localStorage.setItem('audit-bookmarks', JSON.stringify(bookmarks))
+  return idx < 0 // returns true if added, false if removed
+}
+
+export function isAuditBookmarked(id: number): boolean {
+  return getBookmarkedAuditIds().includes(id)
+}
+
+// User-level audit logs (non-admin, RBAC-filtered, for header drawer)
+export const fetchUserAuditLogs = async (
+  page = 1,
+  size = 50,
+  search?: string,
+  operation?: string,
+  resourceType?: string,
+  namespace?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<AuditLogResponse> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  })
+  if (search) params.set('search', search)
+  if (operation) params.set('operation', operation)
+  if (resourceType) params.set('resourceType', resourceType)
+  if (namespace) params.set('namespace', namespace)
+  if (startDate) params.set('startDate', startDate)
+  if (endDate) params.set('endDate', endDate)
+  return fetchAPI<AuditLogResponse>(`/audit-logs?${params.toString()}`)
+}
+
+export const useUserAuditLogs = (
+  page = 1,
+  size = 50,
+  search?: string,
+  operation?: string,
+  resourceType?: string,
+  namespace?: string,
+  startDate?: string,
+  endDate?: string,
+  options?: { staleTime?: number; refetchInterval?: number; enabled?: boolean }
+) => {
+  return useQuery<AuditLogResponse, Error>({
+    queryKey: [
+      'user-audit-logs',
+      page,
+      size,
+      search,
+      operation,
+      resourceType,
+      namespace,
+      startDate,
+      endDate,
+    ],
+    queryFn: () =>
+      fetchUserAuditLogs(
+        page,
+        size,
+        search,
+        operation,
+        resourceType,
+        namespace,
+        startDate,
+        endDate
+      ),
+    staleTime: options?.staleTime || 15000,
+    refetchInterval: options?.refetchInterval,
+    enabled: options?.enabled,
+  })
+}
+
+// Audit stats (operation counts)
+export interface AuditStatsItem {
+  operationType: string
+  count: number
+}
+
+export interface AuditStatsResponse {
+  allTime: AuditStatsItem[]
+  last24h: AuditStatsItem[]
+  totalAll: number
+  total24h: number
+}
+
+export const fetchAuditStats = async (): Promise<AuditStatsResponse> => {
+  return fetchAPI<AuditStatsResponse>('/audit-logs/stats')
+}
+
+export const useAuditStats = (options?: { enabled?: boolean; refetchInterval?: number }) => {
+  return useQuery<AuditStatsResponse, Error>({
+    queryKey: ['audit-stats'],
+    queryFn: fetchAuditStats,
+    staleTime: 30000,
+    refetchInterval: options?.refetchInterval,
+    enabled: options?.enabled,
+  })
+}
+
+// Export audit logs (admin only) — downloads as a file via fetch to avoid popup blockers
+export const exportAuditLogs = async (params?: {
+  operation?: string
+  cluster?: string
+  search?: string
+  startDate?: string
+  endDate?: string
+}) => {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', '1')
+  searchParams.set('size', '10000')
+  if (params?.operation) searchParams.set('operation', params.operation)
+  if (params?.cluster) searchParams.set('cluster', params.cluster)
+  if (params?.search) searchParams.set('search', params.search)
+  if (params?.startDate) searchParams.set('startDate', params.startDate)
+  if (params?.endDate) searchParams.set('endDate', params.endDate)
+
+  const url = withSubPath(`${API_BASE_URL}/admin/audit-logs/export?${searchParams.toString()}`)
+  try {
+    const response = await fetch(url, { credentials: 'include' })
+    if (!response.ok) throw new Error('Export failed')
+    const blob = await response.blob()
+    const blobUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(blobUrl)
+    }, 100)
+  } catch (err) {
+    // Fallback to window.open
+    window.open(url, '_blank')
+  }
 }
 
 // Resource History API

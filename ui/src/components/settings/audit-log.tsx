@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { IconAlertCircle, IconEye } from '@tabler/icons-react'
+import { IconAlertCircle, IconDownload, IconEye } from '@tabler/icons-react'
 import {
   ColumnDef,
   getCoreRowModel,
@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { ResourceHistory } from '@/types/api'
-import { useAuditLogs, useClusterList, useUserList } from '@/lib/api'
+import { useAuditLogs, useClusterList, useUserList, exportAuditLogs } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ResourceTableView } from '@/components/resource-table-view'
 import { YamlDiffViewer } from '@/components/yaml-diff-viewer'
 
@@ -41,6 +42,8 @@ export function AuditLog() {
   const [searchQuery, setSearchQuery] = useState('')
   const [operationFilter, setOperationFilter] = useState('')
   const [clusterFilter, setClusterFilter] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [selectedHistory, setSelectedHistory] =
     useState<ResourceHistory | null>(null)
   const [isDiffOpen, setIsDiffOpen] = useState(false)
@@ -59,7 +62,13 @@ export function AuditLog() {
     operatorId,
     searchQuery,
     operationFilter || undefined,
-    showCluster ? clusterFilter || undefined : undefined
+    showCluster ? clusterFilter || undefined : undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    startDate || undefined,
+    endDate || undefined
   )
 
   useEffect(() => {
@@ -294,7 +303,7 @@ export function AuditLog() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Input
               placeholder={t(
                 'auditLog.filters.search',
@@ -302,13 +311,13 @@ export function AuditLog() {
               )}
               value={searchQuery}
               onChange={(event) => handleSearchChange(event.target.value)}
-              className="w-64"
+              className="w-56"
             />
             <Select
               value={operationFilter || 'all'}
               onValueChange={handleOperationChange}
             >
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="w-40">
                 <SelectValue
                   placeholder={t(
                     'auditLog.filters.operation',
@@ -342,7 +351,7 @@ export function AuditLog() {
                 value={clusterFilter || 'all'}
                 onValueChange={handleClusterChange}
               >
-                <SelectTrigger className="w-56">
+                <SelectTrigger className="w-48">
                   <SelectValue
                     placeholder={t('auditLog.filters.cluster', 'All clusters')}
                   />
@@ -363,7 +372,7 @@ export function AuditLog() {
               value={operatorId ? String(operatorId) : 'all'}
               onValueChange={handleUserFilterChange}
             >
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-48">
                 <SelectValue
                   placeholder={t('auditLog.filters.user', 'All users')}
                 />
@@ -379,6 +388,50 @@ export function AuditLog() {
                 ))}
               </SelectContent>
             </Select>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value)
+                setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+              }}
+              placeholder="Start date"
+              className="w-36"
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value)
+                setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+              }}
+              placeholder="End date"
+              className="w-36"
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() =>
+                      exportAuditLogs({
+                        operation: operationFilter || undefined,
+                        cluster: clusterFilter || undefined,
+                        search: searchQuery || undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
+                      })
+                    }
+                  >
+                    <IconDownload className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('auditLog.actions.export', 'Export CSV')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </CardHeader>
