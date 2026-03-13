@@ -22,7 +22,7 @@ type AppearanceProviderProps = {
 
 export function AppearanceProvider({
   children,
-  defaultTheme = 'system',
+  defaultTheme = 'light',
   themeStorageKey = 'vite-ui-theme',
   defaultColorTheme = 'default',
   colorThemeStorageKey = 'vite-ui-color-theme',

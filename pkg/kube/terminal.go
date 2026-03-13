@@ -204,7 +204,7 @@ func (session *TerminalSession) SendErrorMessage(errMsg string) {
 
 func (session *TerminalSession) checkHeartbeat(ctx context.Context) {
 	session.lastHeartbeat = time.Now()
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -212,7 +212,11 @@ func (session *TerminalSession) checkHeartbeat(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if time.Since(session.lastHeartbeat) > 1*time.Minute {
+			// Allow up to 90s without heartbeat (3x the 15s keepalive interval + buffer
+			// for proxy latency). This prevents false disconnects through slow proxies.
+			if time.Since(session.lastHeartbeat) > 90*time.Second {
+				klog.Warningf("Terminal heartbeat timeout for %s/%s (last heartbeat %v ago)",
+					session.namespace, session.podName, time.Since(session.lastHeartbeat))
 				if err := session.conn.Close(); err != nil {
 					klog.Errorf("WebSocket close error: %v", err)
 				}

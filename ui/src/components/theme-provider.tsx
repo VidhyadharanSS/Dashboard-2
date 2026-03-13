@@ -16,58 +16,58 @@ type ThemeProviderState = {
 }
 
 const initialState: ThemeProviderState = {
-  theme: 'system',
+  theme: 'light',
   setTheme: () => null,
   actualTheme: 'light',
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
+/**
+ * Resolve the initial theme.
+ * If the stored value is 'system' (legacy), resolve it to the OS preference
+ * and persist the resolved value so 'system' is never used again.
+ */
+function resolveInitialTheme(storageKey: string, defaultTheme: Theme): 'light' | 'dark' {
+  const stored = localStorage.getItem(storageKey) as Theme | null
+  if (stored === 'light' || stored === 'dark') return stored
+
+  // Legacy 'system' or no stored value → resolve from OS preference
+  const resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  localStorage.setItem(storageKey, resolved)
+  return resolved
+}
+
 export function ThemeProvider({
   children,
-  defaultTheme = 'system',
+  defaultTheme = 'light',
   storageKey = 'vite-ui-theme',
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
-  const [actualTheme, setActualTheme] = useState<Omit<Theme, 'system'>>(
-    theme === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      : theme
+    () => resolveInitialTheme(storageKey, defaultTheme)
   )
 
-  // Watch for system theme changes when theme is 'system'
+  // actualTheme is always the same as theme now (no 'system')
+  const actualTheme = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme
+
   useEffect(() => {
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      const handleChange = () => {
-        const root = window.document.documentElement
-        root.classList.remove('light', 'dark')
-
-        const systemTheme = mediaQuery.matches ? 'dark' : 'light'
-        root.classList.add(systemTheme)
-        setActualTheme(systemTheme)
-      }
-
-      handleChange()
-      mediaQuery.addEventListener('change', handleChange)
-      return () => mediaQuery.removeEventListener('change', handleChange)
-    }
     const root = window.document.documentElement
     root.classList.remove('light', 'dark')
-    setActualTheme(theme)
-    root.classList.add(theme)
-  }, [theme])
+    root.classList.add(actualTheme as string)
+  }, [actualTheme])
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
+    setTheme: (newTheme: Theme) => {
+      // If someone passes 'system', resolve it immediately
+      const resolved: 'light' | 'dark' = newTheme === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : newTheme
+      localStorage.setItem(storageKey, resolved)
+      setTheme(resolved)
     },
     actualTheme,
   }

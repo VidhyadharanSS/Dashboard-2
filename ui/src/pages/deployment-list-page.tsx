@@ -8,8 +8,13 @@ import { toast } from 'sonner'
 import * as api from '@/lib/api'
 
 import { getDeploymentStatus } from '@/lib/k8s'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getAge } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { DeploymentStatusIcon } from '@/components/deployment-status-icon'
 import { DeploymentCreateDialog } from '@/components/editors/deployment-create-dialog'
 import { DescribeDialog } from '@/components/describe-dialog'
@@ -29,16 +34,32 @@ export function DeploymentListPage() {
     () => [
       columnHelper.accessor('metadata.name', {
         header: t('common.name'),
-        cell: ({ row }) => (
-          <div className="font-medium text-blue-500 hover:underline">
-            <Link
-              to={`/deployments/${row.original.metadata!.namespace}/${row.original.metadata!.name
-                }`}
-            >
-              {row.original.metadata!.name}
-            </Link>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const containers = row.original.spec?.template?.spec?.containers || []
+          const image = containers[0]?.image || ''
+          const shortImage = image.includes('/') ? image.split('/').pop() || image : image
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="font-medium text-blue-500 hover:underline">
+                <Link
+                  to={`/deployments/${row.original.metadata!.namespace}/${row.original.metadata!.name}`}
+                >
+                  {row.original.metadata!.name}
+                </Link>
+              </div>
+              {shortImage && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[220px] font-mono cursor-default">
+                      {shortImage}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-sm font-mono text-xs break-all">{image}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          )
+        },
       }),
       columnHelper.accessor((row) => row.status?.readyReplicas ?? 0, {
         id: 'ready',
@@ -47,10 +68,11 @@ export function DeploymentListPage() {
           const status = row.original.status
           const ready = status?.readyReplicas || 0
           const desired = status?.replicas || 0
+          const isHealthy = ready === desired && desired > 0
           return (
-            <div>
-              {ready} / {desired}
-            </div>
+            <span className={`font-medium tabular-nums ${isHealthy ? 'text-green-600 dark:text-green-400' : ready === 0 && desired > 0 ? 'text-red-500' : 'text-amber-500'}`}>
+              {ready}/{desired}
+            </span>
           )
         },
       }),
@@ -84,9 +106,13 @@ export function DeploymentListPage() {
         header: t('common.created'),
         cell: ({ getValue }) => {
           const dateStr = formatDate(getValue() || '')
-
           return (
-            <span className="text-muted-foreground text-sm">{dateStr}</span>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="text-muted-foreground text-sm">{getAge(getValue() || '')}</span>
+              </TooltipTrigger>
+              <TooltipContent>{dateStr}</TooltipContent>
+            </Tooltip>
           )
         },
       }),
@@ -94,7 +120,7 @@ export function DeploymentListPage() {
         id: 'actions',
         header: t('common.actions'),
         cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-1">
             <QuickYamlDialog
               resourceType="deployments"
               namespace={row.original.metadata?.namespace}

@@ -26,7 +26,7 @@ type WebSocketKeepalive struct {
 func NewWebSocketKeepalive(conn *websocket.Conn) *WebSocketKeepalive {
 	return &WebSocketKeepalive{
 		conn:         conn,
-		interval:     30 * time.Second, // Send ping every 30 seconds
+		interval:     15 * time.Second, // Ping every 15s to survive proxy idle timeouts (typically 30-60s)
 		pongTimeout:  10 * time.Second, // Expect pong within 10 seconds
 		stopChan:     make(chan struct{}),
 		stoppedChan:  make(chan struct{}),

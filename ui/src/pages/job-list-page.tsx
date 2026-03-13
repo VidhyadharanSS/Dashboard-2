@@ -1,10 +1,18 @@
 import { useCallback, useMemo } from 'react'
+import { IconCircleCheckFilled, IconLoader, IconX } from '@tabler/icons-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Job } from 'kubernetes-types/batch/v1'
 import { Link } from 'react-router-dom'
 
-import { formatDate } from '@/lib/utils'
+import { formatDate, getAge } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { DescribeDialog } from '@/components/describe-dialog'
+import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 
 export function JobListPage() {
@@ -16,17 +24,32 @@ export function JobListPage() {
     () => [
       columnHelper.accessor('metadata.name', {
         header: 'Name',
-        cell: ({ row }) => (
-          <div className="font-medium text-blue-500 hover:underline">
-            <Link
-              to={`/jobs/${row.original.metadata!.namespace}/${
-                row.original.metadata!.name
-              }`}
-            >
-              {row.original.metadata!.name}
-            </Link>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const containers = row.original.spec?.template?.spec?.containers || []
+          const image = containers[0]?.image || ''
+          const shortImage = image.includes('/') ? image.split('/').pop() || image : image
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="font-medium text-blue-500 hover:underline">
+                <Link
+                  to={`/jobs/${row.original.metadata!.namespace}/${row.original.metadata!.name}`}
+                >
+                  {row.original.metadata!.name}
+                </Link>
+              </div>
+              {shortImage && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[220px] font-mono cursor-default">
+                      {shortImage}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-sm font-mono text-xs break-all">{image}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          )
+        },
       }),
       columnHelper.accessor('status.conditions', {
         header: 'Status',
@@ -38,17 +61,25 @@ export function JobListPage() {
           const failedCondition = conditions.find((c) => c.type === 'Failed')
 
           let status = 'Running'
-          let variant: 'default' | 'destructive' | 'secondary' = 'secondary'
 
           if (completedCondition?.status === 'True') {
             status = 'Complete'
-            variant = 'default'
           } else if (failedCondition?.status === 'True') {
             status = 'Failed'
-            variant = 'destructive'
           }
 
-          return <Badge variant={variant}>{status}</Badge>
+          return (
+            <Badge variant="outline" className="text-muted-foreground px-1.5 w-fit">
+              {status === 'Complete' ? (
+                <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
+              ) : status === 'Failed' ? (
+                <IconX className="text-red-500 h-3.5 w-3.5" />
+              ) : (
+                <IconLoader className="animate-spin h-3.5 w-3.5" />
+              )}
+              {status}
+            </Badge>
+          )
         },
       }),
       columnHelper.accessor((row) => row.status, {
@@ -88,14 +119,38 @@ export function JobListPage() {
         },
       }),
       columnHelper.accessor('metadata.creationTimestamp', {
-        header: 'Created',
+        header: 'Age',
         cell: ({ getValue }) => {
           const dateStr = formatDate(getValue() || '')
-
           return (
-            <span className="text-muted-foreground text-sm">{dateStr}</span>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="text-muted-foreground text-sm">{getAge(getValue() || '')}</span>
+              </TooltipTrigger>
+              <TooltipContent>{dateStr}</TooltipContent>
+            </Tooltip>
           )
         },
+      }),
+      columnHelper.display({
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <QuickYamlDialog
+              resourceType="jobs"
+              namespace={row.original.metadata?.namespace}
+              name={row.original.metadata?.name || ''}
+              triggerVariant="ghost"
+              triggerSize="icon"
+            />
+            <DescribeDialog
+              resourceType="jobs"
+              namespace={row.original.metadata?.namespace}
+              name={row.original.metadata?.name || ''}
+            />
+          </div>
+        ),
       }),
     ],
     [columnHelper]

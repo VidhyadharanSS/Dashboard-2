@@ -115,6 +115,15 @@ func (h *NodeTerminalHandler) HandleNodeTerminalWebSocket(c *gin.Context) {
 			logger.Audit(user.Key(), "node-terminal-end", "nodes", "", cs.Name, fmt.Sprintf("Session ended on node %s after %s from IP %s", nodeName, duration.Round(time.Second), clientIP))
 		}()
 
+		// ─── Start WebSocket keepalive EARLY ───
+		// Must start keepalive BEFORE the pod readiness wait, because the
+		// corporate proxy (HTTP_PROXY) or reverse proxy (nginx) will kill
+		// the idle WebSocket connection if no data flows during the ~90s
+		// pod creation window.
+		keepalive := kube.NewWebSocketKeepalive(conn)
+		keepalive.Start(ctx)
+		defer keepalive.Stop()
+
 		// ─── Wait for pod readiness ───
 		if err := h.waitForPodReady(ctx, cs, conn, nodeAgentName); err != nil {
 			log.Printf("Failed to wait for pod ready: %v", err)
@@ -122,11 +131,6 @@ func (h *NodeTerminalHandler) HandleNodeTerminalWebSocket(c *gin.Context) {
 			logger.Audit(user.Key(), "node-terminal-error", "nodes", "", cs.Name, fmt.Sprintf("Pod readiness timeout on node %s: %v", nodeName, err))
 			return
 		}
-
-		// ─── Start terminal session with WebSocket keepalive ───
-		keepalive := kube.NewWebSocketKeepalive(conn)
-		keepalive.Start(ctx)
-		defer keepalive.Stop()
 
 		session := kube.NewTerminalSession(cs.K8sClient, conn, "kube-system", nodeAgentName, common.NodeTerminalPodName)
 		if err := session.Start(ctx, "attach"); err != nil {

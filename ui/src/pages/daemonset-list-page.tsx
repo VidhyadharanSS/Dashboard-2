@@ -8,8 +8,15 @@ import { toast } from 'sonner'
 
 import * as api from '@/lib/api'
 
-import { formatDate } from '@/lib/utils'
+import { formatDate, getAge } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { DescribeDialog } from '@/components/describe-dialog'
+import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 
 export function DaemonSetListPage() {
@@ -45,16 +52,32 @@ export function DaemonSetListPage() {
     () => [
       columnHelper.accessor('metadata.name', {
         header: t('common.name'),
-        cell: ({ row }) => (
-          <div className="font-medium text-blue-500 hover:underline">
-            <Link
-              to={`/daemonsets/${row.original.metadata!.namespace}/${row.original.metadata!.name
-                }`}
-            >
-              {row.original.metadata!.name}
-            </Link>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const containers = row.original.spec?.template?.spec?.containers || []
+          const image = containers[0]?.image || ''
+          const shortImage = image.includes('/') ? image.split('/').pop() || image : image
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="font-medium text-blue-500 hover:underline">
+                <Link
+                  to={`/daemonsets/${row.original.metadata!.namespace}/${row.original.metadata!.name}`}
+                >
+                  {row.original.metadata!.name}
+                </Link>
+              </div>
+              {shortImage && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[220px] font-mono cursor-default">
+                      {shortImage}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-sm font-mono text-xs break-all">{image}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          )
+        },
       }),
       columnHelper.accessor('status.desiredNumberScheduled', {
         header: t('common.desired'),
@@ -108,11 +131,35 @@ export function DaemonSetListPage() {
         header: t('common.created'),
         cell: ({ getValue }) => {
           const dateStr = formatDate(getValue() || '')
-
           return (
-            <span className="text-muted-foreground text-sm">{dateStr}</span>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="text-muted-foreground text-sm">{getAge(getValue() || '')}</span>
+              </TooltipTrigger>
+              <TooltipContent>{dateStr}</TooltipContent>
+            </Tooltip>
           )
         },
+      }),
+      columnHelper.display({
+        id: 'actions',
+        header: t('common.actions'),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <QuickYamlDialog
+              resourceType="daemonsets"
+              namespace={row.original.metadata?.namespace}
+              name={row.original.metadata?.name || ''}
+              triggerVariant="ghost"
+              triggerSize="icon"
+            />
+            <DescribeDialog
+              resourceType="daemonsets"
+              namespace={row.original.metadata?.namespace}
+              name={row.original.metadata?.name || ''}
+            />
+          </div>
+        ),
       }),
     ],
     [columnHelper, t]

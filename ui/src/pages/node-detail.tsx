@@ -561,12 +561,15 @@ export function NodeDetail(props: { name: string }) {
             label: 'Monitor',
             content: <NodeMonitoring name={name} />,
           },
+          // Node terminal: only shown to admin users or those with explicit 'exec' permission on 'nodes'.
+          // The backend also independently enforces rbac.CanAccess(user, "nodes", "exec", cluster, "")
+          // so even if someone tampers with the frontend, the backend will reject the connection.
           ...(isAdmin || canExecNode ? [{
             value: 'Terminal',
             label: (
               <span className="flex items-center gap-1.5">
                 Terminal
-                <Badge variant="secondary" className="text-[9px] px-1 py-0">Admin</Badge>
+                <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/40 text-amber-600">Admin</Badge>
               </span>
             ),
             content: (
@@ -575,7 +578,6 @@ export function NodeDetail(props: { name: string }) {
                   type="node"
                   nodeName={name}
                   requireConfirmation={true}
-                  permissionDeniedMessage={!isAdmin && !canExecNode ? `You need admin privileges or 'exec' permission on nodes to access node terminals. This is a privileged operation that provides host-level access.` : undefined}
                 />
               </div>
             ),

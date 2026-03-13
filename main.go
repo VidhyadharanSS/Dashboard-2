@@ -273,11 +273,17 @@ func main() {
 	setupStatic(r)
 
 	srv := &http.Server{
-		Addr:         ":" + common.Port,
-		Handler:      r.Handler(),
-		ReadTimeout:  60 * time.Second,  // Prevent slow-read attacks and handle long-polling
-		WriteTimeout: 60 * time.Second,  // Prevent slow-write attacks
-		IdleTimeout:  120 * time.Second, // Keep connections alive longer for WebSockets through proxies
+		Addr:    ":" + common.Port,
+		Handler: r.Handler(),
+		// Do NOT set ReadTimeout / WriteTimeout — they kill long-lived WebSocket
+		// and SSE connections when behind a reverse proxy (nginx, zero-trust, etc.).
+		// Instead, each handler manages its own deadline:
+		//   - Node terminal:  2h via context.WithTimeout
+		//   - Pod terminal:   Kept alive by WebSocket keepalive pings
+		//   - Log streaming:  Kept alive by SSE heartbeats
+		// ReadHeaderTimeout prevents slow-loris attacks without affecting body reads.
+		ReadHeaderTimeout: 30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

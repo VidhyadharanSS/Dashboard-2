@@ -390,6 +390,11 @@ function isRestartableInitContainer(container: {
   return container.restartPolicy === 'Always'
 }
 
+/**
+ * Converts raw container specs into a simplified list.
+ * Main containers are listed FIRST so they are auto-selected by default,
+ * followed by init containers (clearly labeled).
+ */
 export function toSimpleContainer(
   initContainers?: Container[],
   containers?: Container[]

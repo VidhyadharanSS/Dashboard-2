@@ -58,9 +58,11 @@ const getWebSocketUrl = (path: string) => {
 }
 
 const toSimpleContainer = (initContainers: any[] = [], containers: any[] = []) => {
+  // Main containers first so the first main container is auto-selected,
+  // followed by init containers at the end.
   return [
-    ...initContainers.map((c: any) => ({ ...c, isInit: true })),
     ...containers.map((c: any) => ({ ...c, isInit: false })),
+    ...initContainers.map((c: any) => ({ ...c, isInit: true })),
   ]
 }
 
@@ -368,13 +370,15 @@ export function Terminal({
         }
       }
 
+      // Aggressive keepalive: send ping every 15s to keep the connection alive
+      // through corporate proxies (which often have 30-60s idle timeouts).
       if (pingTimerRef.current) clearInterval(pingTimerRef.current)
       pingTimerRef.current = setInterval(() => {
         if (websocket.readyState === WebSocket.OPEN) {
           const pingMessage = JSON.stringify({ type: 'ping' })
           websocket.send(pingMessage)
         }
-      }, 30000)
+      }, 15000)
 
       terminal.writeln(`\x1b[32mConnected to ${type} terminal!\x1b[0m\r\n`)
     }
