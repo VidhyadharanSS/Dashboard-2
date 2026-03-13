@@ -118,6 +118,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 	{
 		adminAPI.GET("/audit-logs", handlers.ListAuditLogs)
 		adminAPI.GET("/audit-logs/export", handlers.ExportAuditLogs)
+		adminAPI.GET("/audit-logs/:id", handlers.GetAuditLogDetailAdmin)
 		oauthProviderAPI := adminAPI.Group("/oauth-providers")
 		{
 			oauthProviderAPI.GET("/", authHandler.ListOAuthProviders)
@@ -252,8 +253,21 @@ func main() {
 	if !common.DisableGZIP {
 		klog.Info("GZIP compression is enabled")
 	}
-	// Always apply gzip for speed as requested
-	r.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/metrics"})))
+	// Apply gzip for speed but EXCLUDE streaming endpoints:
+	//   - /metrics          (Prometheus scrape)
+	//   - /system/logs/     (SSE log streaming — gzip buffers chunks, breaking EventSource)
+	//   - /terminal/        (WebSocket — already framed, gzip adds latency)
+	//   - /node-terminal/   (WebSocket)
+	//   - /logs/            (SSE + WebSocket log streaming)
+	//   - /watch            (SSE resource watch)
+	r.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPathsRegexs([]string{
+		`/metrics`,
+		`/system/logs/`,
+		`/terminal/`,
+		`/node-terminal/`,
+		`/logs/.*/ws`,
+		`.*/watch\?`,
+	})))
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORS())
 	r.Use(middleware.SecurityHeaders())

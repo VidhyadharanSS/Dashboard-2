@@ -242,6 +242,29 @@ func GetAuditStats(c *gin.Context) {
 	})
 }
 
+// GetAuditLogDetailAdmin returns a single audit entry including YAML diffs.
+// Admin-only — no cluster context or RBAC filtering required.
+func GetAuditLogDetailAdmin(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var entry model.ResourceHistory
+	if err := model.DB.Preload("Operator").Where("id = ?", id).First(&entry).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, entry)
+}
+
 // GetAuditLogDetail returns a single audit entry including YAML diffs.
 // Available to any authenticated user (RBAC-filtered).
 func GetAuditLogDetail(c *gin.Context) {

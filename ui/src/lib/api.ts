@@ -1672,8 +1672,9 @@ export const useAuditLogs = (
 }
 
 // Fetch single audit entry detail (with YAML diffs)
+// Uses the admin endpoint so it works from the Settings page without cluster context.
 export const fetchAuditLogDetail = async (id: number): Promise<ResourceHistory> => {
-  return fetchAPI<ResourceHistory>(`/audit-logs/${id}`)
+  return fetchAPI<ResourceHistory>(`/admin/audit-logs/${id}`)
 }
 
 export const useAuditLogDetail = (id: number | null, options?: { enabled?: boolean }) => {

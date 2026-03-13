@@ -186,7 +186,7 @@ func (h *NodeTerminalHandler) createNodeAgent(ctx context.Context, cs *cluster.C
 				"app":               podName,
 				"kite.io/component": "node-terminal",
 				"kite.io/node":      nodeName,
-				"kite.io/created-by": username,
+				"kite.io/created-by": sanitizeLabelValue(username),
 			},
 			Annotations: map[string]string{
 				"kite.io/session-start": time.Now().UTC().Format(time.RFC3339),
@@ -335,6 +335,37 @@ func (h *NodeTerminalHandler) sendErrorMessage(conn *websocket.Conn, message str
 	if err := websocket.JSON.Send(conn, msg); err != nil {
 		log.Printf("Failed to send error message: %v", err)
 	}
+}
+
+// sanitizeLabelValue converts a string into a valid Kubernetes label value.
+// K8s labels must match: (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?
+// Max 63 characters. Characters like '@' are replaced with '_'.
+func sanitizeLabelValue(s string) string {
+	if s == "" {
+		return ""
+	}
+
+	// Replace all invalid characters with underscore
+	var b strings.Builder
+	for _, c := range s {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' {
+			b.WriteRune(c)
+		} else {
+			b.WriteRune('_')
+		}
+	}
+	result := b.String()
+
+	// Truncate to 63 characters
+	if len(result) > 63 {
+		result = result[:63]
+	}
+
+	// Must start and end with an alphanumeric character
+	result = strings.TrimLeft(result, "-_.")
+	result = strings.TrimRight(result, "-_.")
+
+	return result
 }
 
 func (h *NodeTerminalHandler) sendMessage(conn *websocket.Conn, msgType, message string) {

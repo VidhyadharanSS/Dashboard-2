@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { ResourceHistory } from '@/types/api'
-import { useAuditLogs, useClusterList, useUserList, exportAuditLogs } from '@/lib/api'
+import { useAuditLogs, useAuditLogDetail, useClusterList, useUserList, exportAuditLogs } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,8 +46,15 @@ export function AuditLog() {
   const [endDate, setEndDate] = useState('')
   const [selectedHistory, setSelectedHistory] =
     useState<ResourceHistory | null>(null)
+  const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null)
   const [isDiffOpen, setIsDiffOpen] = useState(false)
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false)
+
+  // Fetch full audit detail (with YAML diffs) only when a specific entry is selected
+  const { data: auditDetail, isLoading: isLoadingDetail } = useAuditLogDetail(
+    selectedHistoryId,
+    { enabled: selectedHistoryId !== null && selectedHistoryId > 0 && isDiffOpen }
+  )
 
   const { data: usersData } = useUserList(1, 200)
   const { data: clusters = [] } = useClusterList()
@@ -238,9 +245,9 @@ export function AuditLog() {
               size="sm"
               onClick={() => {
                 setSelectedHistory(item)
+                setSelectedHistoryId(item.id)
                 setIsDiffOpen(true)
               }}
-              disabled={!item.resourceYaml && !item.previousYaml}
             >
               <IconEye className="w-4 h-4 mr-1" />
               {t('auditLog.actions.viewDiff', 'View Diff')}
@@ -272,8 +279,13 @@ export function AuditLog() {
     }
     if (error) {
       return (
-        <div className="py-10 text-center text-destructive">
-          {t('auditLog.loadFailed', 'Failed to load audit logs')}
+        <div className="py-10 text-center">
+          <p className="text-destructive font-medium">
+            {t('auditLog.loadFailed', 'Failed to load audit logs')}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+            {error.message || 'An unknown error occurred. Check that you have admin access.'}
+          </p>
         </div>
       )
     }
@@ -465,11 +477,12 @@ export function AuditLog() {
             setIsDiffOpen(open)
             if (!open) {
               setSelectedHistory(null)
+              setSelectedHistoryId(null)
             }
           }}
-          original={selectedHistory.previousYaml || ''}
-          modified={selectedHistory.resourceYaml || ''}
-          title={t('auditLog.diffTitle', 'YAML Diff')}
+          original={(auditDetail?.previousYaml || selectedHistory.previousYaml) || ''}
+          modified={(auditDetail?.resourceYaml || selectedHistory.resourceYaml) || ''}
+          title={`${t('auditLog.diffTitle', 'YAML Diff')} — ${selectedHistory.resourceType}/${selectedHistory.resourceName}`}
           height={560}
         />
       )}

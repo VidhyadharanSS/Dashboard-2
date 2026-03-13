@@ -265,9 +265,9 @@ export function ResourceTableView<T>({
                       {pageSize}
                     </SelectItem>
                   ))}
-                  {resolvedAllPageSize > 0 && (
+                  {resolvedAllPageSize > 0 && resolvedAllPageSize > 100 && (
                     <SelectItem value={`${resolvedAllPageSize}`}>
-                      All
+                      All ({resolvedAllPageSize})
                     </SelectItem>
                   )}
                 </SelectContent>
