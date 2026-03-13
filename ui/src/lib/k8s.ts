@@ -15,6 +15,7 @@ export function getPodStatus(pod?: Pod): PodStatus {
       readyContainers: 0,
       totalContainers: 0,
       reason: 'Unknown',
+      restartCount: 0,
       restartString: '0',
     }
   }
@@ -186,6 +187,7 @@ export function getPodStatus(pod?: Pod): PodStatus {
     readyContainers,
     totalContainers,
     reason,
+    restartCount: restarts,
     restartString: restartsStr,
   }
 }

@@ -11,6 +11,7 @@ export type PodStatus = {
   readyContainers: number
   totalContainers: number
   reason: string
+  restartCount: number
   restartString: string
 }
 
