@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { ResourceHistory } from '@/types/api'
-import { useAuditLogs, useAuditLogDetail, useClusterList, useUserList, exportAuditLogs } from '@/lib/api'
+import { useAuditLogs, useAuditLogDetail, useClusterList, useUserList, exportAuditLogs, applyResource } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ResourceTableView } from '@/components/resource-table-view'
 import { YamlDiffViewer } from '@/components/yaml-diff-viewer'
+import { toast } from 'sonner'
 
 export function AuditLog() {
   const { t } = useTranslation()
@@ -49,9 +50,10 @@ export function AuditLog() {
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null)
   const [isDiffOpen, setIsDiffOpen] = useState(false)
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false)
+  const [isRollingBack, setIsRollingBack] = useState(false)
 
   // Fetch full audit detail (with YAML diffs) only when a specific entry is selected
-  const { data: auditDetail, isLoading: isLoadingDetail } = useAuditLogDetail(
+  const { data: auditDetail } = useAuditLogDetail(
     selectedHistoryId,
     { enabled: selectedHistoryId !== null && selectedHistoryId > 0 && isDiffOpen }
   )
@@ -482,8 +484,25 @@ export function AuditLog() {
           }}
           original={(auditDetail?.previousYaml || selectedHistory.previousYaml) || ''}
           modified={(auditDetail?.resourceYaml || selectedHistory.resourceYaml) || ''}
+          current={(auditDetail?.resourceYaml || selectedHistory.resourceYaml) || ''}
           title={`${t('auditLog.diffTitle', 'YAML Diff')} — ${selectedHistory.resourceType}/${selectedHistory.resourceName}`}
           height={560}
+          onRollback={async (yamlContent: string) => {
+            try {
+              setIsRollingBack(true)
+              await applyResource(yamlContent)
+              toast.success(t('resourceHistory.rollback.success', 'Successfully rolled back resource'))
+              setIsDiffOpen(false)
+              setSelectedHistory(null)
+              setSelectedHistoryId(null)
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+              toast.error(`${t('resourceHistory.rollback.error', 'Failed to rollback resource')}: ${errorMessage}`)
+            } finally {
+              setIsRollingBack(false)
+            }
+          }}
+          isRollingBack={isRollingBack}
         />
       )}
 

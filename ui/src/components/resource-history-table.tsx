@@ -52,7 +52,7 @@ export function ResourceHistoryTable<T extends ResourceType>({
   )
 
   const history = historyResponse?.data || []
-  // const pagination = historyResponse?.pagination
+  const historyPagination = historyResponse?.pagination
 
   // Convert current resource to YAML
   const currentYaml = useMemo(() => {
@@ -258,8 +258,7 @@ export function ResourceHistoryTable<T extends ResourceType>({
         <CardHeader>
           <CardTitle>{t('resourceHistory.title')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <SimpleTable
+        <CardContent<SimpleTable
             data={history || []}
             columns={historyColumns}
             emptyMessage={t('resourceHistory.noHistoryFound')}
@@ -269,6 +268,7 @@ export function ResourceHistoryTable<T extends ResourceType>({
               showPageInfo: true,
               currentPage,
               onPageChange: setCurrentPage,
+              totalItems: historyPagination?.total ?? history.length,
             }}
           />
         </CardContent>

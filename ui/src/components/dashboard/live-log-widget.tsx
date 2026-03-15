@@ -4,7 +4,6 @@ import { IconActivity, IconAlertCircle, IconLoader, IconRefresh, IconCircleFille
 import { useTranslation } from 'react-i18next'
 import { API_BASE_URL } from '@/lib/api-client'
 import { withSubPath } from '@/lib/subpath'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 
 type ConnState = 'connecting' | 'connected' | 'error' | 'closed'
@@ -21,7 +20,7 @@ function getLogColor(line: string): string {
 export function LiveLogWidget() {
     const { t } = useTranslation()
     const [logs, setLogs] = useState<string[]>([])
-    const [logType, setLogType] = useState<'application.log' | 'access.log'>('application.log')
+    const logType = 'application.log'
     const [connState, setConnState] = useState<ConnState>('connecting')
     const [errorMsg, setErrorMsg] = useState('')
     const [retryCount, setRetryCount] = useState(0)
@@ -76,8 +75,7 @@ export function LiveLogWidget() {
             }
         }
     }, [logType])
-
-    // Connect / reconnect when logType changes or manual retry triggered
+// Connect / reconnect when manual retry triggered
     useEffect(() => {
         setLogs([])
         connect()
@@ -85,8 +83,7 @@ export function LiveLogWidget() {
             esRef.current?.close()
             esRef.current = null
         }
-    }, [connect, logType, retryCount])
-
+    }, [connect, retryCount])
     // Auto-scroll to bottom when new logs arrive (if user hasn't scrolled up)
     useEffect(() => {
         if (autoScrollRef.current && scrollRef.current) {
@@ -104,11 +101,6 @@ export function LiveLogWidget() {
     const handleRetry = () => {
         setLogs([])
         setRetryCount(c => c + 1)
-    }
-
-    const handleTabChange = (v: string) => {
-        setLogs([])
-        setLogType(v as typeof logType)
     }
 
     return (
@@ -135,12 +127,7 @@ export function LiveLogWidget() {
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Tabs value={logType} onValueChange={handleTabChange}>
-                        <TabsList className="h-8">
-                            <TabsTrigger value="application.log" className="text-[10px] h-7 px-2">App</TabsTrigger>
-                            <TabsTrigger value="access.log" className="text-[10px] h-7 px-2">Access</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">App Logs</span>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleRetry} title="Reconnect">
                         <IconRefresh className="h-3.5 w-3.5" />
                     </Button>

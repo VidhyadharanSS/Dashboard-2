@@ -27,6 +27,8 @@ interface SimpleTableProps<T> {
     showPageInfo?: boolean
     currentPage?: number
     onPageChange?: (page: number) => void
+    /** Total number of items across all pages (for server-side pagination) */
+    totalItems?: number
   }
 }
 
@@ -55,17 +57,39 @@ export function SimpleTable<T>({
     [pagination]
   )
 
-  const { paginatedData, totalPages, startIndex, endIndex } = useMemo(() => {
+  // Server-side pagination: when totalItems is provided, skip client-side slicing
+  const isServerPaginated =
+    paginationConfig.enabled && typeof pagination?.totalItems === 'number'
+
+  const { paginatedData, totalPages, startIndex, endIndex, totalItemCount } = useMemo(() => {
     if (!paginationConfig.enabled) {
       return {
         paginatedData: data,
         totalPages: 1,
         startIndex: 1,
         endIndex: data.length,
+        totalItemCount: data.length,
       }
     }
 
     const { pageSize } = paginationConfig
+
+    if (isServerPaginated) {
+      // Server-side: data is already one page; use totalItems for page count
+      const total = pagination!.totalItems!
+      const totalPages = Math.max(Math.ceil(total / pageSize), 1)
+      const startIndex = (currentPage - 1) * pageSize
+      const endIndex = Math.min(startIndex + data.length, total)
+      return {
+        paginatedData: data,
+        totalPages,
+        startIndex: startIndex + 1,
+        endIndex,
+        totalItemCount: total,
+      }
+    }
+
+    // Client-side pagination
     const totalPages = Math.ceil(data.length / pageSize)
     const startIndex = (currentPage - 1) * pageSize
     const endIndex = Math.min(startIndex + pageSize, data.length)
@@ -76,8 +100,9 @@ export function SimpleTable<T>({
       totalPages,
       startIndex: startIndex + 1,
       endIndex,
+      totalItemCount: data.length,
     }
-  }, [data, currentPage, paginationConfig])
+  }, [data, currentPage, paginationConfig, isServerPaginated, pagination])
 
   const handlePreviousPage = () => {
     if (isControlled) {
@@ -152,11 +177,11 @@ export function SimpleTable<T>({
         </TableBody>
       </Table>
 
-      {paginationConfig.enabled && data.length > 0 && (
+      {paginationConfig.enabled && (totalItemCount > 0) && (
         <div className="flex items-center justify-between">
           {paginationConfig.showPageInfo && (
             <div className="text-sm text-muted-foreground">
-              Showing {startIndex} - {endIndex} of {data.length} entries
+              Showing {startIndex} - {endIndex} of {totalItemCount} entries
             </div>
           )}
 

@@ -11,7 +11,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { CreateResourceDialog } from './create-resource-dialog'
 import { DynamicBreadcrumb } from './dynamic-breadcrumb'
 import { FavoritesQuickAccess } from './favorites-quick-access'
-import { GlobalAuditDrawer } from './global-audit-drawer'
+
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 import { LanguageToggle } from './language-toggle'
 import { LiveEventDrawer } from './live-event-drawer'
@@ -61,9 +61,6 @@ export function SiteHeader() {
 
             {/* Live cluster event drawer */}
             <LiveEventDrawer />
-
-            {/* Global audit / activity feed */}
-            <GlobalAuditDrawer />
 
             <div className="relative group">
               <Plus

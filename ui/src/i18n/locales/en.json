@@ -598,6 +598,15 @@
       "currentScheduled": "Current Scheduled"
     }
   },
+  "dashboard": {
+    "liveSystemLogs": "Live System Logs",
+    "connecting": "Connecting...",
+    "waitingLogs": "Waiting for logs...",
+    "recentDeployments": "Recent Deployments",
+    "deploymentRollback": "Deployment Rollback",
+    "failingPods": "Failing Pods",
+    "namespaceHealth": "Namespace Health"
+  },
   "deleteConfirmation": {
     "title": "Delete {{type}}",
     "description": "This action cannot be undone.",

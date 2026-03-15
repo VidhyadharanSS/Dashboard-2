@@ -16,6 +16,7 @@ import { QuickActionsWidget } from '@/components/dashboard/quick-actions-widget'
 import { RecentDeploymentsWidget } from '@/components/dashboard/recent-deployments-widget'
 import { FailingPodsWidget } from '@/components/dashboard/failing-pods-widget'
 import { NamespaceHealthWidget } from '@/components/dashboard/namespace-health-widget'
+import { DeploymentRollbackWidget } from '@/components/dashboard/deployment-rollback-widget'
 
 export function Overview() {
   const { t } = useTranslation()
@@ -84,10 +85,15 @@ export function Overview() {
         <RecentEvents />
       </div>
 
-      {/* Workload Status */}
+      {/* Workload Status & Rollback */}
       <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-3">
         {canAccess('pods', 'list') && <FailingPodsWidget />}
         {canAccess('deployments', 'list') && <RecentDeploymentsWidget />}
+        {canAccess('deployments', 'list') && <DeploymentRollbackWidget />}
+      </div>
+
+      {/* Namespace Health */}
+      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-1">
         {canAccess('pods', 'list') && <NamespaceHealthWidget />}
       </div>
 

@@ -51,6 +51,7 @@ import {
     exportAuditLogs,
     getBookmarkedAuditIds,
     toggleAuditBookmark,
+    applyResource,
 } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -247,6 +248,21 @@ function AuditDetailDialog({
     onOpenChange: (open: boolean) => void
 }) {
     const { data: detail, isLoading } = useAuditLogDetail(entryId, { enabled: open && entryId !== null })
+    const [isRollingBack, setIsRollingBack] = useState(false)
+
+    const handleRollbackToVersion = async (yamlContent: string) => {
+        try {
+            setIsRollingBack(true)
+            await applyResource(yamlContent)
+            toast.success('Successfully rolled back resource to this version')
+            onOpenChange(false)
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+            toast.error(`Failed to rollback: ${errorMessage}`)
+        } finally {
+            setIsRollingBack(false)
+        }
+    }
 
     if (!open) return null
 
@@ -320,10 +336,40 @@ function AuditDetailDialog({
                             </div>
                         )}
 
-                        {/* YAML Diff */}
+                        {/* YAML Diff with Rollback */}
                         {(detail.resourceYaml || detail.previousYaml) && (
                             <div className="space-y-2">
-                                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">YAML Changes</div>
+                                <div className="flex items-center justify-between">
+                                    <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">YAML Changes</div>
+                                    {detail.success && (
+                                        <div className="flex items-center gap-1">
+                                            {detail.previousYaml && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-6 text-[10px] gap-1"
+                                                    disabled={isRollingBack}
+                                                    onClick={() => handleRollbackToVersion(detail.previousYaml)}
+                                                >
+                                                    <IconHistory className="h-3 w-3" />
+                                                    Rollback to Before
+                                                </Button>
+                                            )}
+                                            {detail.resourceYaml && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-6 text-[10px] gap-1"
+                                                    disabled={isRollingBack}
+                                                    onClick={() => handleRollbackToVersion(detail.resourceYaml)}
+                                                >
+                                                    <IconHistory className="h-3 w-3" />
+                                                    Apply this Version
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     {detail.previousYaml && (
                                         <div className="space-y-1">

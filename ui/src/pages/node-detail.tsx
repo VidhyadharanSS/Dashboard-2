@@ -15,8 +15,7 @@ import {
   useResource,
   useResources,
 } from '@/lib/api'
-import { useAuth } from '@/contexts/auth-context'
-import { usePermissions } from '@/hooks/use-permissions'
+
 import {
   enrichNodeConditionsWithHealth,
   formatCPU,
@@ -36,7 +35,7 @@ import { EventTable } from '@/components/event-table'
 import { LabelsAnno } from '@/components/lables-anno'
 import { NodeMonitoring } from '@/components/node-monitoring'
 import { PodTable } from '@/components/pod-table'
-import { Terminal } from '@/components/terminal'
+
 import { YamlEditor } from '@/components/yaml-editor'
 import { ResourceTopology } from '@/components/resource-topology'
 
@@ -46,10 +45,6 @@ export function NodeDetail(props: { name: string }) {
   const [isSavingYaml, setIsSavingYaml] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const { t } = useTranslation()
-  const { user } = useAuth()
-  const { canAccess } = usePermissions()
-  const isAdmin = user?.isAdmin() ?? false
-  const canExecNode = canAccess('nodes', 'exec')
 
   const {
     data,
@@ -561,27 +556,7 @@ export function NodeDetail(props: { name: string }) {
             label: 'Monitor',
             content: <NodeMonitoring name={name} />,
           },
-          // Node terminal: only shown to admin users or those with explicit 'exec' permission on 'nodes'.
-          // The backend also independently enforces rbac.CanAccess(user, "nodes", "exec", cluster, "")
-          // so even if someone tampers with the frontend, the backend will reject the connection.
-          ...(isAdmin || canExecNode ? [{
-            value: 'Terminal',
-            label: (
-              <span className="flex items-center gap-1.5">
-                Terminal
-                <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/40 text-amber-600">Admin</Badge>
-              </span>
-            ),
-            content: (
-              <div className="space-y-6">
-                <Terminal
-                  type="node"
-                  nodeName={name}
-                  requireConfirmation={true}
-                />
-              </div>
-            ),
-          }] : []),
+          
           {
             value: 'events',
             label: 'Events',
