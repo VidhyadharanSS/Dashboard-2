@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { IconAlertTriangle, IconInfoCircle, IconX, IconFilter } from '@tabler/icons-react'
+import { IconAlertTriangle, IconInfoCircle, IconX } from '@tabler/icons-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 

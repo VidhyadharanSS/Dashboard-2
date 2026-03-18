@@ -69,15 +69,7 @@ export function ClusterStatsCards({
     )
   }
 
-  // Compute resource utilization percentages for the two extra cards
-  const cpuPct = stats.resource?.cpu?.allocatable
-    ? Math.round((stats.resource.cpu.requested / stats.resource.cpu.allocatable) * 100)
-    : 0
-  const memPct = stats.resource?.memory?.allocatable
-    ? Math.round((stats.resource.memory.requested / stats.resource.memory.allocatable) * 100)
-    : 0
-
-const failingPods = stats.failingPods ?? 0
+  const failingPods = stats.failingPods ?? 0
   const pendingPods = stats.pendingPods ?? 0
 
   const statsConfig = [

@@ -4,7 +4,7 @@ import { Deployment } from 'kubernetes-types/apps/v1'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { IconReload, IconScale } from '@tabler/icons-react'
+import { IconReload } from '@tabler/icons-react'
 
 import * as api from '@/lib/api'
 
@@ -121,22 +121,48 @@ export function DeploymentListPage() {
       columnHelper.display({
         id: 'actions',
         header: t('common.actions'),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-1">
-            <QuickYamlDialog
-              resourceType="deployments"
-              namespace={row.original.metadata?.namespace}
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
-            <DescribeDialog
-              resourceType="deployments"
-              namespace={row.original.metadata?.namespace}
-              name={row.original.metadata?.name || ''}
-            />
-          </div>
-        )
+        cell: ({ row }) => {
+          const ns = row.original.metadata?.namespace
+          const name = row.original.metadata?.name || ''
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      try {
+                        await api.restartResource('deployments', name, ns!)
+                        toast.success(`Restarted ${name}`)
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err)
+                        toast.error(`Failed to restart: ${msg}`)
+                      }
+                    }}
+                  >
+                    <IconReload className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Restart deployment</TooltipContent>
+              </Tooltip>
+              <QuickYamlDialog
+                resourceType="deployments"
+                namespace={ns}
+                name={name}
+                triggerVariant="ghost"
+                triggerSize="icon"
+              />
+              <DescribeDialog
+                resourceType="deployments"
+                namespace={ns}
+                name={name}
+              />
+            </div>
+          )
+        }
       }),
     ],
     [columnHelper, t]

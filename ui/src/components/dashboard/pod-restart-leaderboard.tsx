@@ -227,7 +227,6 @@ export function PodRestartLeaderboard() {
                 ) : (
                     <div className="space-y-1">
                         {leaderboard.map((pod) => {
-                            const severity = getRestartSeverity(pod.restarts)
                             return (
                                 <button
                                     key={pod.uid}

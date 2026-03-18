@@ -418,10 +418,4 @@ export function LiveLogWidget() {
       )}
     </Card>
   )
-}                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    )
 }
