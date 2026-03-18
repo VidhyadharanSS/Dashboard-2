@@ -465,11 +465,12 @@ export function ResourceTopology({
                     </div>
                 </div>
             </CardContent>
->
+
             {/* Hint text */}
             <div className="absolute bottom-3 right-3 z-50 text-[10px] text-muted-foreground/50 hidden md:block">
                 Scroll + Ctrl to zoom · Drag to pan · Click node for YAML · Hover for connections
-            </div>        </Card>
+            </div>
+        </Card>
     )
 }
 

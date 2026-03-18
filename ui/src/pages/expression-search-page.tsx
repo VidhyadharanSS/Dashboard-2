@@ -1,6 +1,6 @@
->
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
     IconBolt,
     IconBox,
     IconBoxMultiple,
@@ -199,7 +199,7 @@ function parseKubectlCommand(input: string): KubectlParsedCommand {
 // ---------------------------------------------------------------------------
 // Expression Search Page
 // ---------------------------------------------------------------------------
->
+
 export function ExpressionSearchPage() {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
@@ -335,8 +335,8 @@ export function ExpressionSearchPage() {
                             const [key, val] = sel.split('=')
                             return labels[key] === val
                         }
-                        // Label existence check
-                        return key in labels
+                        // Label existence check (bare key)
+                        return sel in labels
                     })
                 })
             }
@@ -558,8 +558,9 @@ export function ExpressionSearchPage() {
                                 }
                                 if (e.key === 'Escape') { setShowSuggestions(false) }
                             }
->
-                        placeholder='e.g. kubectl get pods -n default -l app=web  or  status.phase in ("Pending", "Failed")'                        className={`pl-9 pr-10 h-12 text-base font-mono transition-all ${expressionError
+                        }}
+                        placeholder='e.g. kubectl get pods -n default -l app=web  or  status.phase in ("Pending", "Failed")'
+                        className={`pl-9 pr-10 h-12 text-base font-mono transition-all ${expressionError
                             ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive'
                             : hasExpression
                                 ? 'border-primary/50 ring-1 ring-primary/20'
@@ -590,7 +591,7 @@ export function ExpressionSearchPage() {
                         </div>
                     )}
                 </div>
->
+
                 {/* kubectl mode indicator */}
                 {kubectlParsed.isKubectl && (
                     <div className={`flex items-center gap-2 text-xs rounded-md px-3 py-2 ${
@@ -747,7 +748,7 @@ function ResultsTable({
 // ---------------------------------------------------------------------------
 // Examples Panel
 // ---------------------------------------------------------------------------
->
+
 const KUBECTL_EXAMPLES: ExpressionExample[] = [
     {
         label: 'kubectl',
@@ -814,7 +815,9 @@ function ExamplesPanel({ onApply }: { onApply: (ex: ExpressionExample) => void }
             </div>
         </div>
     )
-}function ExampleCard({
+}
+
+function ExampleCard({
     example,
     onApply,
 }: {

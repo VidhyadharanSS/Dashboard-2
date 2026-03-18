@@ -307,6 +307,30 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
   }, [query, sidebarItems])
 
+  // Use favorites hook
+  const {
+    favorites,
+    isFavorite,
+    toggleFavorite: toggleResourceFavorite,
+  } = useFavorites()
+
+  // Handle item selection — declared early so actionItems can reference it
+  const handleSelect = useCallback(
+    (path: string) => {
+      navigate(path)
+      onOpenChange(false)
+      setQuery('')
+      setNamespaceFilter('')
+    },
+    [navigate, onOpenChange]
+  )
+
+  // Detect kubectl-style commands — declared early so actionResults can reference it
+  const isKubectlQuery = useMemo(() => {
+    const trimmed = query.trim().toLowerCase()
+    return trimmed.startsWith('kubectl ') || trimmed.startsWith('k get ') || trimmed.startsWith('k describe ')
+  }, [query])
+
   const actionItems: ActionSearchItem[] = useMemo(() => {
     return [
       {
@@ -343,14 +367,15 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         icon: IconMap,
         searchText: 'docs help manual tutorial developer'.toLowerCase(),
         onSelect: () => handleSelect('/tutorials'),
->
+      },
       {
         id: 'nav-advanced-search',
         label: 'Advanced Search (Expression & kubectl)',
         icon: IconSearch,
         searchText: 'advanced search expression query filter kubernetes resources kubectl get nodes pods'.toLowerCase(),
         onSelect: () => handleSelect('/expression-search'),
-      },      {
+      },
+      {
         id: 'nav-settings-quick',
         label: 'Open Settings',
         icon: IconSettings,
@@ -366,11 +391,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             icon: IconServer,
             searchText: `switch cluster ${cluster.name}`.toLocaleLowerCase(),
             onSelect: () => {
-              if (
-                isSwitching ||
-                isClusterLoading ||
-                cluster.name === currentCluster
-              ) {
+              if (isSwitching || isClusterLoading || cluster.name === currentCluster) {
                 return
               }
               setCurrentCluster(cluster.name)
@@ -389,32 +410,33 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     actualTheme,
     clusters,
     currentCluster,
+    handleSelect,
     isClusterLoading,
     isSwitching,
     setCurrentCluster,
     t,
     toggleTheme,
     user,
-    canAccess
+    canAccess,
   ])
->
-  // Filter theme option based on query
+
+  // Filter actions based on query
   const actionResults = useMemo(() => {
     const trimmedQuery = query.trim().toLowerCase()
-    if (!trimmedQuery) {
-      return []
-    }
+    if (!trimmedQuery) return []
 
     // If user typed a kubectl command, show a special action at the top
-    const kubectlAction: ActionSearchItem[] = isKubectlQuery ? [{
-      id: 'kubectl-advanced-search',
-      label: `Run in Advanced Search: ${query.trim()}`,
-      icon: IconSearch,
-      searchText: '',
-      onSelect: () => {
-        handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
-      },
-    }] : []
+    const kubectlAction: ActionSearchItem[] = isKubectlQuery
+      ? [{
+          id: 'kubectl-advanced-search',
+          label: `Run in Advanced Search: ${query.trim()}`,
+          icon: IconSearch,
+          searchText: '',
+          onSelect: () => {
+            handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
+          },
+        }]
+      : []
 
     const filtered = actionItems
       .map(item => {
@@ -424,7 +446,6 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         else if (labelLower.startsWith(trimmedQuery)) score += 500
         else if (labelLower.includes(trimmedQuery)) score += 200
         else if (item.searchText.includes(trimmedQuery)) score += 100
-
         return { ...item, score }
       })
       .filter(item => item.score > 0)
@@ -432,21 +453,12 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
 
     return [...kubectlAction, ...filtered]
   }, [actionItems, query, isKubectlQuery, handleSelect])
-  // Use favorites hook
-  const {
-    favorites,
-    isFavorite,
-    toggleFavorite: toggleResourceFavorite,
-  } = useFavorites()
 
   // Handle favorite toggle
   const toggleFavorite = useCallback(
     (result: SearchResult, event: React.MouseEvent) => {
-      event.stopPropagation() // Prevent item selection
-
+      event.stopPropagation()
       toggleResourceFavorite(result)
-
-      // Refresh results to update favorite status if showing favorites
       const currentQuery = query
       setTimeout(() => {
         if (!currentQuery || currentQuery.length < 2) {
@@ -463,7 +475,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       setIsLoading(true)
       const response = await globalSearch(searchQuery, {
         limit: 10,
-        namespace: namespace || undefined
+        namespace: namespace || undefined,
       })
       setResults(response.results)
     } catch (error) {
@@ -473,12 +485,6 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       setIsLoading(false)
     }
   }, [])
->
-  // Detect kubectl-style commands and offer to redirect to advanced search
-  const isKubectlQuery = useMemo(() => {
-    const trimmed = query.trim().toLowerCase()
-    return trimmed.startsWith('kubectl ') || trimmed.startsWith('k get ') || trimmed.startsWith('k describe ')
-  }, [query])
 
   // Debounce search calls
   useEffect(() => {
@@ -500,20 +506,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     setIsLoading(true)
     const timeoutId = setTimeout(() => {
       performSearch(query, namespaceFilter)
-    }, 300) // 300ms debounce
-
+    }, 300)
     return () => clearTimeout(timeoutId)
   }, [query, namespaceFilter, performSearch, favorites, isKubectlQuery])
-  // Handle item selection
-  const handleSelect = useCallback(
-    (path: string) => {
-      navigate(path)
-      onOpenChange(false)
-      setQuery('')
-      setNamespaceFilter('')
-    },
-    [navigate, onOpenChange]
-  )
 
   // Handle pod actions
   const handlePodAction = useCallback(
