@@ -432,7 +432,7 @@ export function ExpressionSearchPage() {
     const hasExpression = expression.trim().length > 0
 
     return (
-        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+        <div className="flex flex-col gap-6 max-w-full animate-in fade-in duration-300">
             {/* Page Header */}
             <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -441,12 +441,13 @@ export function ExpressionSearchPage() {
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">
                     Filter Kubernetes resources using expression-based queries or{' '}
-                    <code className="text-xs bg-muted px-1 rounded">kubectl</code> commands — supports{' '}
-                    <code className="text-xs bg-muted px-1 rounded">kubectl get pods -n default -l app=web</code>,{' '}
-                    <code className="text-xs bg-muted px-1 rounded">in</code>,{' '}
-                    <code className="text-xs bg-muted px-1 rounded">regex</code>,{' '}
-                    <code className="text-xs bg-muted px-1 rounded">exists()</code>,{' '}
-                    <code className="text-xs bg-muted px-1 rounded">.age</code>, and more
+                    <code className="text-xs bg-muted px-1 rounded font-mono">kubectl</code> commands — supports{' '}
+                    <code className="text-xs bg-muted px-1 rounded font-mono">kubectl get pods -n default -l app=web</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded font-mono">jsonpath</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded font-mono">in</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded font-mono">regex</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded font-mono">exists()</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded font-mono">.age</code>{' '}and more. All queries are RBAC-scoped.
                 </p>
             </div>
 
@@ -659,6 +660,22 @@ export function ExpressionSearchPage() {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function getAge(timestamp: string): string {
+    const diff = Date.now() - new Date(timestamp).getTime()
+    const seconds = Math.floor(diff / 1000)
+    if (seconds < 60) return `${seconds}s`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h`
+    const days = Math.floor(hours / 24)
+    if (days < 30) return `${days}d`
+    return `${Math.floor(days / 30)}mo`
+}
+
+// ---------------------------------------------------------------------------
 // Results Table
 // ---------------------------------------------------------------------------
 function ResultsTable({
@@ -689,8 +706,8 @@ function ResultsTable({
     }
 
     return (
-        <div className="rounded-lg border overflow-hidden">
-            <table className="w-full text-sm">
+        <div className="rounded-lg border overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
                 <thead>
                     <tr className="border-b bg-muted/40">
                         <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
@@ -702,6 +719,9 @@ function ResultsTable({
                         <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
                             Namespace
                         </th>
+                        <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden lg:table-cell">
+                            Age
+                        </th>
                         <th className="w-8 px-4 py-2.5" />
                     </tr>
                 </thead>
@@ -709,6 +729,8 @@ function ResultsTable({
                     {items.map((item, i) => {
                         const def = ALL_RESOURCE_DEFS.find((d) => d.type === item.resourceType)
                         const Icon = def?.Icon ?? IconBox
+                        const meta = (item.raw as { metadata?: { creationTimestamp?: string } })?.metadata
+                        const age = meta?.creationTimestamp ? getAge(meta.creationTimestamp) : ''
                         return (
                             <tr
                                 key={`${item.resourceType}-${item.namespace}-${item.name}-${i}`}
@@ -723,7 +745,7 @@ function ResultsTable({
                                         </Badge>
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 font-mono text-xs font-medium">{item.name}</td>
+                                <td className="px-4 py-3 font-mono text-xs font-medium max-w-[300px] truncate">{item.name}</td>
                                 <td className="px-4 py-3">
                                     {item.namespace ? (
                                         <Badge variant="secondary" className="text-xs font-normal">
@@ -732,6 +754,9 @@ function ResultsTable({
                                     ) : (
                                         <span className="text-muted-foreground text-xs">—</span>
                                     )}
+                                </td>
+                                <td className="px-4 py-3 text-xs text-muted-foreground font-mono hidden lg:table-cell">
+                                    {age || '—'}
                                 </td>
                                 <td className="px-4 py-3">
                                     <IconChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

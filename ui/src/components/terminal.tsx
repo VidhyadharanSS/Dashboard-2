@@ -11,6 +11,7 @@ import {
   IconChevronUp,
   IconClearAll,
   IconCopy,
+  IconDownload,
   IconMaximize,
   IconMinimize,
   IconRefresh,
@@ -552,7 +553,7 @@ export function Terminal({
       toast.info('Terminal buffer cleared')
     }
   }, [])
-
+>
   const copyToClipboard = useCallback(() => {
     if (xtermRef.current) {
       xtermRef.current.selectAll()
@@ -567,6 +568,29 @@ export function Terminal({
     }
   }, [])
 
+  // Download the entire terminal buffer as a text file
+  const downloadBuffer = useCallback(() => {
+    if (xtermRef.current) {
+      xtermRef.current.selectAll()
+      const selection = xtermRef.current.getSelection()
+      xtermRef.current.clearSelection()
+      if (!selection) {
+        toast.error('Terminal buffer is empty')
+        return
+      }
+      const blob = new Blob([selection], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const podOrNode = type === 'node' ? (nodeName || 'node') : (selectedPod || 'pod')
+      a.download = `terminal-${podOrNode}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Terminal buffer downloaded')
+    }
+  }, [type, nodeName, selectedPod])
   // Permission denied gate
   if (permissionDeniedMessage) {
     return (
@@ -696,7 +720,7 @@ export function Terminal({
               </TooltipTrigger>
               <TooltipContent>Clear Buffer</TooltipContent>
             </Tooltip>
-
+>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={copyToClipboard}>
@@ -706,8 +730,16 @@ export function Terminal({
               <TooltipContent>Copy All</TooltipContent>
             </Tooltip>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={downloadBuffer}>
+                  <IconDownload size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Download Buffer</TooltipContent>
+            </Tooltip>
+
+            <DropdownMenu>              <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
                   <IconSettings size={16} />
                 </Button>

@@ -547,7 +547,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0 max-w-7xl h-[70vh] flex flex-col">
+      <DialogContent className="overflow-hidden p-0 max-w-[90vw] w-full xl:max-w-7xl h-[75vh] flex flex-col">
         <DialogHeader className="sr-only">
           <DialogTitle>{t('globalSearch.title')}</DialogTitle>
           <DialogDescription>{t('globalSearch.description')}</DialogDescription>
@@ -581,6 +581,26 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               </kbd>
             </div>
           </div>
+          {/* Advanced search hint banner */}
+          {query.length >= 1 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/30 text-[10px] text-muted-foreground">
+              <span>💡</span>
+              <span>
+                Need more power? Try{' '}
+                <button
+                  className="font-semibold text-primary hover:underline"
+                  onClick={() => {
+                    handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
+                  }}
+                >
+                  Advanced Search
+                </button>
+                {' '}— supports <code className="bg-muted px-1 rounded text-[9px] font-mono">kubectl get pods -n default</code>,
+                {' '}<code className="bg-muted px-1 rounded text-[9px] font-mono">jsonpath</code>,
+                {' '}expressions & RBAC-scoped queries
+              </span>
+            </div>
+          )}
           <CommandList>
             <CommandEmpty>
               {isLoading ? (

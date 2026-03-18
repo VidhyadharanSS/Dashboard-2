@@ -15,8 +15,6 @@ import { LiveLogWidget } from '@/components/dashboard/live-log-widget'
 import { QuickActionsWidget } from '@/components/dashboard/quick-actions-widget'
 import { FailingPodsWidget } from '@/components/dashboard/failing-pods-widget'
 import { NamespaceHealthWidget } from '@/components/dashboard/namespace-health-widget'
-import { WorkloadDistributionWidget } from '@/components/dashboard/workload-distribution-widget'
-import { ResourceTopConsumers } from '@/components/dashboard/resource-top-consumers'
 
 export function Overview() {
   const { t } = useTranslation()
@@ -79,13 +77,7 @@ export function Overview() {
         <RecentEvents />
       </div>
 
-      {/* Row 2: Workload Distribution + Top Consumers */}
-      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
-        <WorkloadDistributionWidget />
-        {canAccess('pods', 'list') && <ResourceTopConsumers />}
-      </div>
-
-      {/* Row 3: Failing Pods + Namespace Health */}
+      {/* Row 2: Failing Pods + Namespace Health */}
       <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
         {canAccess('pods', 'list') && <FailingPodsWidget />}
         {canAccess('pods', 'list') && <NamespaceHealthWidget />}

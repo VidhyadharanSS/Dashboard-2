@@ -19,10 +19,9 @@ import {
     IconMinimize,
     IconSearch,
     IconX,
-    IconDownload,
     IconPhoto,
 } from '@tabler/icons-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { ResourceType, Role, TopologyLink } from '@/types/api'
 import { useRelatedResources } from '@/lib/api'
@@ -32,8 +31,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { QuickYamlDialog } from './quick-yaml-dialog'
 import { useAuth } from '@/contexts/auth-context'
+import { useAppearance } from '@/components/appearance-provider'
 
 interface NodeType {
     id: string
@@ -264,45 +263,93 @@ export function ResourceTopology({
 
     const totalNodes = (related?.nodes?.length || 0) + 1
 
-    // Export topology as PNG image
-    const handleExportImage = useCallback(async () => {
+    const { actualTheme } = useAppearance()
+
+    // Export topology as image (SVG or PNG based on format param)
+    const handleExportImage = useCallback(async (format: 'svg' | 'png' = 'png') => {
         if (!contentRef.current) return
         try {
-            // Dynamically import html2canvas-like approach using native canvas
             const el = contentRef.current
-            const canvas = document.createElement('canvas')
-            const scale = 2 // High-DPI
             const rect = el.getBoundingClientRect()
-            canvas.width = rect.width * scale
-            canvas.height = rect.height * scale
-            const ctx = canvas.getContext('2d')
-            if (!ctx) return
+            const bgColor = actualTheme === 'dark' ? '#0f172a' : '#f8fafc'
+            const fgColor = actualTheme === 'dark' ? '#e2e8f0' : '#1e293b'
+            const dateStr = new Date().toISOString().slice(0, 10)
 
-            // Use the browser's built-in SVG foreignObject rendering
+            // Build SVG foreignObject wrapper
+            const styles = Array.from(document.styleSheets)
+                .map(sheet => {
+                    try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n') }
+                    catch { return '' }
+                })
+                .join('\n')
+
             const svgData = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}">
+                    <style>${styles}</style>
+                    <rect width="100%" height="100%" fill="${bgColor}" />
                     <foreignObject width="100%" height="100%">
-                        <div xmlns="http://www.w3.org/1999/xhtml">
+                        <div xmlns="http://www.w3.org/1999/xhtml"
+                             style="color: ${fgColor}; font-family: system-ui, sans-serif;"
+                             class="${actualTheme === 'dark' ? 'dark' : ''}">
                             ${el.outerHTML}
                         </div>
                     </foreignObject>
                 </svg>
             `
+
+            if (format === 'svg') {
+                const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+                const svgUrl = URL.createObjectURL(svgBlob)
+                const a = document.createElement('a')
+                a.href = svgUrl
+                a.download = `topology-${name}-${dateStr}.svg`
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                URL.revokeObjectURL(svgUrl)
+                return
+            }
+
+            // PNG export via canvas rendering of SVG
+            const scale = 2
+            const canvas = document.createElement('canvas')
+            canvas.width = rect.width * scale
+            canvas.height = rect.height * scale
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+
+            ctx.scale(scale, scale)
+            ctx.fillStyle = bgColor
+            ctx.fillRect(0, 0, rect.width, rect.height)
+
             const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
             const svgUrl = URL.createObjectURL(svgBlob)
-
-            // Fallback: export as SVG directly (much more reliable for complex DOM)
-            const a = document.createElement('a')
-            a.href = svgUrl
-            a.download = `topology-${name}-${new Date().toISOString().slice(0, 10)}.svg`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(svgUrl)
+            const img = new Image()
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, rect.width, rect.height)
+                URL.revokeObjectURL(svgUrl)
+                canvas.toBlob((blob) => {
+                    if (!blob) return
+                    const pngUrl = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = pngUrl
+                    a.download = `topology-${name}-${actualTheme}-${dateStr}.png`
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(pngUrl)
+                }, 'image/png')
+            }
+            img.onerror = () => {
+                // Fallback to SVG if PNG rendering fails (CORS, tainted canvas)
+                URL.revokeObjectURL(svgUrl)
+                handleExportImage('svg')
+            }
+            img.src = svgUrl
         } catch (err) {
             console.error('Failed to export topology:', err)
         }
-    }, [name])
+    }, [name, actualTheme])
 
     if (isLoading) {
         return (
@@ -355,7 +402,7 @@ export function ResourceTopology({
                     {isFullscreen ? <IconMinimize size={15} /> : <IconMaximize size={15} />}
                 </Button>
                 <div className="h-px w-6 bg-border/50 self-center" />
-                <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={handleExportImage} title="Export as SVG image">
+                <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={() => handleExportImage('png')} title="Export as PNG">
                     <IconPhoto size={15} />
                 </Button>
             </div>
@@ -384,11 +431,19 @@ export function ResourceTopology({
                 </div>
             )}
 
-            {/* Stats badge + Legend toggle */}
+            {/* Stats badge + Legend toggle + Export options */}
             <div className="absolute top-3 right-3 z-50 flex flex-col items-end gap-1.5">
                 <Badge variant="secondary" className="text-xs shadow-md">
                     {totalNodes} resource{totalNodes !== 1 ? 's' : ''} · {related?.links?.length || 0} link{(related?.links?.length || 0) !== 1 ? 's' : ''}
                 </Badge>
+                <div className="flex items-center gap-1">
+                    <Button variant="secondary" size="sm" className="h-7 text-xs shadow-md px-2" onClick={() => handleExportImage('png')} title="Export PNG">
+                        PNG
+                    </Button>
+                    <Button variant="secondary" size="sm" className="h-7 text-xs shadow-md px-2" onClick={() => handleExportImage('svg')} title="Export SVG">
+                        SVG
+                    </Button>
+                </div>
                 <Button variant="secondary" size="sm" className="h-7 text-xs shadow-md px-2" onClick={() => setShowLegend(l => !l)}>
                     {showLegend ? 'Hide' : 'Show'} Legend
                 </Button>
@@ -468,7 +523,7 @@ export function ResourceTopology({
 
             {/* Hint text */}
             <div className="absolute bottom-3 right-3 z-50 text-[10px] text-muted-foreground/50 hidden md:block">
-                Scroll + Ctrl to zoom · Drag to pan · Click node for YAML · Hover for connections
+                Scroll + Ctrl to zoom · Drag to pan · Click to open overview · Hover for connections
             </div>
         </Card>
     )
@@ -484,6 +539,7 @@ function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, isSearchMatch
     onHover?: (id: string | null) => void
 }) {
     const { user } = useAuth()
+    const navigate = useNavigate()
     const path = useMemo(() => {
         if (isStandardK8sResource(node.type as ResourceType)) {
             return `/${node.type}/${node.namespace ? `${node.namespace}/` : ''}${node.name}`
@@ -506,81 +562,79 @@ function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, isSearchMatch
         }) || false
     }, [user, node])
 
+    // Navigate to the resource's overview page on click
+    const handleNodeClick = useCallback(() => {
+        if (hasPermission) {
+            navigate(path)
+        }
+    }, [hasPermission, navigate, path])
+
     const colors = RESOURCE_COLORS[node.type.toLowerCase()] || DEFAULT_COLOR
-
-    const nodeContent = (
-        <div
-            id={id}
-            onMouseEnter={() => onHover?.(id)}
-            onMouseLeave={() => onHover?.(null)}
-            className={`
-                relative flex flex-col items-center p-3 pt-4 rounded-xl border-2 transition-all duration-200 group z-20 min-w-[110px] max-w-[130px] cursor-pointer select-none
-                ${isRoot
-                    ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25 scale-110 ring-4 ring-primary/20'
-                    : `${colors.bg} ${colors.border} hover:shadow-lg hover:border-primary/50 hover:scale-105 bg-background dark:bg-card`
-                }
-                ${isDimmed ? 'opacity-25 scale-95' : ''}
-                ${isHighlighted && !isRoot && !isDimmed ? 'ring-2 ring-primary/30' : ''}
-                ${isSearchMatch ? 'ring-2 ring-amber-400/80 border-amber-400/60 shadow-amber-400/20 shadow-md' : ''}
-            `}
-        >
-            {/* Icon */}
-            <div className={`mb-2 ${isRoot ? 'text-primary-foreground' : colors.text}`}>
-                {RESOURCE_ICONS[node.type.toLowerCase()] || <IconBox size={18} />}
-            </div>
-
-            {/* Name */}
-            <div className={`text-xs font-semibold truncate max-w-[100px] text-center leading-tight ${isRoot ? 'text-primary-foreground' : 'text-foreground'}`}>
-                {node.name}
-            </div>
-
-            {/* Type badge */}
-            <div className={`mt-1.5 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full ${isRoot ? 'bg-white/20 text-primary-foreground' : colors.badge}`}>
-                {node.type.replace(/s$/, '')}
-            </div>
-
-            {/* Namespace chip */}
-            {node.namespace && !isRoot && (
-                <div className="mt-1 text-[8px] text-muted-foreground/60 font-mono truncate max-w-[100px]">
-                    {node.namespace}
-                </div>
-            )}
-
-            {/* External link / View Details */}
-            {!isRoot && (
-                <Link
-                    to={withSubPath(path)}
-                    className="absolute -top-3 -right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-1.5 shadow-md hover:scale-110 z-50 flex items-center justify-center"
-                    onClick={(e) => e.stopPropagation()}
-                    title={`View ${node.type} details`}
-                >
-                    <IconExternalLink size={12} strokeWidth={2.5} />
-                </Link>
-            )}
-        </div>
-    )
-
-    if (hasPermission) {
-        return (
-            <QuickYamlDialog
-                resourceType={node.type as ResourceType}
-                name={node.name}
-                namespace={node.namespace}
-                customTrigger={nodeContent}
-            />
-        )
-    }
 
     return (
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    {nodeContent}
+                    <div
+                        id={id}
+                        onClick={handleNodeClick}
+                        onMouseEnter={() => onHover?.(id)}
+                        onMouseLeave={() => onHover?.(null)}
+                        className={`
+                            relative flex flex-col items-center p-3 pt-4 rounded-xl border-2 transition-all duration-200 group z-20 min-w-[110px] max-w-[130px] select-none
+                            ${hasPermission ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
+                            ${isRoot
+                                ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25 scale-110 ring-4 ring-primary/20'
+                                : `${colors.bg} ${colors.border} hover:shadow-lg hover:border-primary/50 hover:scale-105 bg-background dark:bg-card`
+                            }
+                            ${isDimmed ? 'opacity-25 scale-95' : ''}
+                            ${isHighlighted && !isRoot && !isDimmed ? 'ring-2 ring-primary/30' : ''}
+                            ${isSearchMatch ? 'ring-2 ring-amber-400/80 border-amber-400/60 shadow-amber-400/20 shadow-md' : ''}
+                        `}
+                    >
+                        {/* Icon */}
+                        <div className={`mb-2 ${isRoot ? 'text-primary-foreground' : colors.text}`}>
+                            {RESOURCE_ICONS[node.type.toLowerCase()] || <IconBox size={18} />}
+                        </div>
+
+                        {/* Name */}
+                        <div className={`text-xs font-semibold truncate max-w-[100px] text-center leading-tight ${isRoot ? 'text-primary-foreground' : 'text-foreground'}`}>
+                            {node.name}
+                        </div>
+
+                        {/* Type badge */}
+                        <div className={`mt-1.5 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full ${isRoot ? 'bg-white/20 text-primary-foreground' : colors.badge}`}>
+                            {node.type.replace(/s$/, '')}
+                        </div>
+
+                        {/* Namespace chip */}
+                        {node.namespace && !isRoot && (
+                            <div className="mt-1 text-[8px] text-muted-foreground/60 font-mono truncate max-w-[100px]">
+                                {node.namespace}
+                            </div>
+                        )}
+
+                        {/* External link / Open in new tab */}
+                        {!isRoot && hasPermission && (
+                            <Link
+                                to={withSubPath(path)}
+                                className="absolute -top-3 -right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-1.5 shadow-md hover:scale-110 z-50 flex items-center justify-center"
+                                onClick={(e) => e.stopPropagation()}
+                                title={`Open ${node.type} overview`}
+                            >
+                                <IconExternalLink size={12} strokeWidth={2.5} />
+                            </Link>
+                        )}
+                    </div>
                 </TooltipTrigger>
-                <TooltipContent>
-                    <p className="text-xs font-medium">{node.name}</p>
-                    <p className="text-[10px] opacity-70 italic">{node.namespace || 'Cluster Scoped'}</p>
-                    <p className="text-[10px] text-destructive mt-1">No permission to view YAML</p>
+                <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p className="text-xs font-semibold">{node.name}</p>
+                    <p className="text-[10px] opacity-70">{node.type.replace(/s$/, '')} · {node.namespace || 'Cluster Scoped'}</p>
+                    {hasPermission ? (
+                        <p className="text-[10px] text-primary mt-1">Click to open overview · Hover for connections</p>
+                    ) : (
+                        <p className="text-[10px] text-destructive mt-1">No permission to view</p>
+                    )}
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>

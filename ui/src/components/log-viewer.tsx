@@ -137,6 +137,8 @@ export function LogViewer({
   })
 
   const [errorOnly, setErrorOnly] = useState(false)
+  const [regexFilter, setRegexFilter] = useState(false)
+  const [regexError, setRegexError] = useState<string | null>(null)
   const [isReconnecting, setIsReconnecting] = useState(false)
   const [streamStatuses, setStreamStatuses] = useState<Record<string, { isConnected: boolean, isLoading: boolean, speed: number }>>({})
 
@@ -262,12 +264,29 @@ export function LogViewer({
       result = result.filter((l) => l.className.includes('ansi-log-error'))
     }
     if (filterTerm) {
-      result = result.filter((l) =>
-        l.text.toLowerCase().includes(filterTerm.toLowerCase())
-      )
+      if (regexFilter) {
+        try {
+          const regex = new RegExp(filterTerm, 'i')
+          setRegexError(null)
+          result = result.filter((l) => regex.test(l.text))
+        } catch (e) {
+          setRegexError(String(e))
+          // Fall back to plain text
+          result = result.filter((l) =>
+            l.text.toLowerCase().includes(filterTerm.toLowerCase())
+          )
+        }
+      } else {
+        setRegexError(null)
+        result = result.filter((l) =>
+          l.text.toLowerCase().includes(filterTerm.toLowerCase())
+        )
+      }
+    } else {
+      setRegexError(null)
     }
     return result
-  }, [rawLogs, errorOnly, filterTerm])
+  }, [rawLogs, errorOnly, filterTerm, regexFilter])
 
   // Log level statistics for the status bar
   const logStats = useMemo(() => {
@@ -610,18 +629,33 @@ export function LogViewer({
           </Button>
 
           {/* Inline Search */}
-          <div className="relative group flex items-center">
-            <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Filter logs..."
-              value={filterTerm}
-              onChange={(e) => setFilterTerm(e.target.value)}
-              className="h-8 w-[140px] lg:w-[220px] pl-8 pr-3 text-xs bg-background/50 focus-visible:ring-1 focus-visible:ring-primary shadow-sm"
-            />
-          </div>
-
-          {/* Log Level Stats */}
+{/* Search / filter */}
+          <div className="relative group flex items-center gap-1">
+            <div className="relative flex items-center">
+              <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                placeholder={regexFilter ? "Regex filter..." : "Filter logs..."}
+                value={filterTerm}
+                onChange={(e) => setFilterTerm(e.target.value)}
+                className={`h-8 w-[140px] lg:w-[220px] pl-8 pr-3 text-xs bg-background/50 focus-visible:ring-1 focus-visible:ring-primary shadow-sm ${regexError ? 'border-destructive ring-1 ring-destructive/30' : ''}`}
+              />
+            </div>
+            <Button
+              variant={regexFilter ? "default" : "outline"}
+              size="sm"
+              className="h-8 px-2 text-[10px] font-mono font-bold"
+              onClick={() => setRegexFilter(r => !r)}
+              title={regexFilter ? 'Regex mode ON — click to switch to plain text' : 'Plain text mode — click to enable regex'}
+            >
+              .*
+            </Button>
+            {regexError && (
+              <span className="text-[9px] text-destructive max-w-[120px] truncate" title={regexError}>
+                Bad regex
+              </span>
+            )}
+          </div>          {/* Log Level Stats */}
           <div className="flex items-center gap-1.5 h-8">
             {logStats.errors > 0 && (
               <button
