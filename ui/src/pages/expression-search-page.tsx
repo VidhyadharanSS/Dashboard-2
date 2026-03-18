@@ -306,13 +306,12 @@ export function ExpressionSearchPage() {
     }, [loadResources])
 
     // Evaluate expression against items — supports both expressions and kubectl commands
-    const filteredItems = useMemo(() => {
+    const filterResult = useMemo(() => {
         const expr = expression.trim()
-        if (!expr) return allItems
+        if (!expr) return { items: allItems, error: null }
 
         // If it's a kubectl command, filter by parsed resource type & name
         if (kubectlParsed.isKubectl && !kubectlParsed.error && kubectlParsed.resourceType) {
-            setExpressionError(null)
             let results = allItems.filter(item => item.resourceType === kubectlParsed.resourceType)
 
             // Filter by name if specified
@@ -341,18 +340,23 @@ export function ExpressionSearchPage() {
                 })
             }
 
-            return results
+            return { items: results, error: null }
         }
 
         // Standard expression mode
         try {
-            setExpressionError(null)
-            return allItems.filter((item) => evaluate(expr, item.raw))
+            return { items: allItems.filter((item) => evaluate(expr, item.raw)), error: null }
         } catch (e) {
-            setExpressionError(String(e))
-            return []
+            return { items: [] as SearchResultItem[], error: String(e) }
         }
     }, [expression, allItems, kubectlParsed])
+
+    // Sync expression error state from the memoized result (avoids setState inside useMemo)
+    useEffect(() => {
+        setExpressionError(filterResult.error)
+    }, [filterResult.error])
+
+    const filteredItems = filterResult.items
 
     // Navigate to resource detail
     const handleRowClick = useCallback(
@@ -561,11 +565,11 @@ export function ExpressionSearchPage() {
                             }
                         }}
                         placeholder='e.g. kubectl get pods -n default -l app=web  or  status.phase in ("Pending", "Failed")'
-                        className={`pl-9 pr-10 h-12 text-base font-mono transition-all ${expressionError
+                        className={`pl-9 pr-10 h-12 text-base font-mono transition-all shadow-sm bg-muted/20 ${expressionError
                             ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive'
                             : hasExpression
-                                ? 'border-primary/50 ring-1 ring-primary/20'
-                                : ''
+                                ? 'border-primary/50 ring-1 ring-primary/20 bg-background'
+                                : 'focus:bg-background hover:bg-muted/30'
                             }`}
                     />
                     {hasExpression && (
@@ -706,10 +710,10 @@ function ResultsTable({
     }
 
     return (
-        <div className="rounded-lg border overflow-hidden overflow-x-auto">
+        <div className="rounded-xl border border-border/50 overflow-hidden overflow-x-auto shadow-sm">
             <table className="w-full text-sm min-w-[600px]">
                 <thead>
-                    <tr className="border-b bg-muted/40">
+                    <tr className="border-b bg-muted/50 backdrop-blur-sm">
                         <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
                             Kind
                         </th>
@@ -867,7 +871,7 @@ function ExampleCard({
     return (
         <button
             onClick={() => onApply(example)}
-            className="text-left rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/40 transition-all p-3.5 group cursor-pointer"
+            className="text-left rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm hover:bg-accent/40 hover:border-primary/30 hover:shadow-md transition-all duration-200 p-4 group cursor-pointer"
         >
             <div className="flex items-center gap-2 mb-1.5">
                 <div className="flex items-center gap-1.5">

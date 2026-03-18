@@ -161,7 +161,7 @@ export function ResourceTableView<T>({
 
   return (
     <div className={containerClassName}>
-      <div className="rounded-lg border overflow-hidden">
+      <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm">
         <div
           className={`transition-opacity duration-200 ${isLoading && dataLength > 0 ? 'opacity-75' : 'opacity-100'
             }`}
@@ -171,7 +171,7 @@ export function ResourceTableView<T>({
               className={`relative ${maxBodyHeightClassName} overflow-auto scrollbar-hide`}
             >
               <Table>
-                <TableHeader className="bg-muted">
+                <TableHeader className="bg-muted/60 backdrop-blur-sm sticky top-0 z-10">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header, index) => (

@@ -668,11 +668,11 @@ export function ResourceTable<T>({
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         {/* Title column */}
         <div className="shrink-0">
-          <h1 className="text-2xl font-bold capitalize">{resourceName}</h1>
+          <h1 className="text-2xl font-bold capitalize tracking-tight">{resourceName}</h1>
           {!clusterScope && selectedNamespace && (
-            <div className="text-muted-foreground flex items-center mt-1">
+            <div className="text-muted-foreground flex items-center mt-1 text-sm">
               <span>Namespace:</span>
-              <Badge variant="outline" className="ml-2">
+              <Badge variant="outline" className="ml-2 font-medium bg-primary/5 border-primary/20 text-primary">
                 {selectedNamespace === '_all'
                   ? 'All Namespaces'
                   : selectedNamespace}
@@ -836,14 +836,14 @@ export function ResourceTable<T>({
           {/* Row 2: Search + Batch Actions + Create + Column Toggle */}
           <div className="flex items-center gap-2">
             {/* Search bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative group/search">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60 group-focus-within/search:text-primary transition-colors" />
               <Input
                 ref={searchInputRef}
                 placeholder={`Search ${resourceName.toLowerCase()}...`}
                 value={displaySearchQuery}
                 onChange={(e) => setDisplaySearchQuery(e.target.value)}
-                className="pl-9 pr-4 w-[200px]"
+                className="pl-9 pr-4 w-[220px] bg-muted/30 border-border/40 focus:bg-background focus:border-primary/40 shadow-sm transition-all duration-200"
               />
             </div>
             {displaySearchQuery && (

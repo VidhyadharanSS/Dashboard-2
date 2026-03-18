@@ -225,3 +225,37 @@ samp {
 .badge-live {
   animation: badge-pulse 2s ease-in-out infinite;
 }
+
+/* Elevated card style for key dashboard cards */
+.card-elevated {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card-elevated:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.dark .card-elevated {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dark .card-elevated:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Glass effect for overlays */
+.glass {
+  background: oklch(1 0 0 / 0.8);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+.dark .glass {
+  background: oklch(0.15 0 0 / 0.8);
+}
+
+/* Subtle table row hover */
+table tbody tr {
+  transition: background-color 0.15s ease;
+}

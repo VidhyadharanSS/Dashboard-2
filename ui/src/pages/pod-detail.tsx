@@ -602,6 +602,24 @@ export function PodDetail(props: { namespace: string; name: string }) {
             ),
           },
           {
+            value: 'Related',
+            label: 'Related',
+            content: (
+              <div className="space-y-6">
+                <ResourceTopology
+                  resource="pods"
+                  name={name}
+                  namespace={namespace}
+                />
+                <RelatedResourcesTable
+                  resource={'pods'}
+                  name={name}
+                  namespace={namespace}
+                />
+              </div>
+            ),
+          },
+          {
             value: 'volumes',
             label: (
               <>
@@ -618,24 +636,6 @@ export function PodDetail(props: { namespace: string; name: string }) {
                   volumes={pod.spec?.volumes}
                   containers={pod.spec?.containers}
                   isLoading={isLoading}
-                />
-              </div>
-            ),
-          },
-          {
-            value: 'Related',
-            label: 'Related',
-            content: (
-              <div className="space-y-6">
-                <ResourceTopology
-                  resource="pods"
-                  name={name}
-                  namespace={namespace}
-                />
-                <RelatedResourcesTable
-                  resource={'pods'}
-                  name={name}
-                  namespace={namespace}
                 />
               </div>
             ),

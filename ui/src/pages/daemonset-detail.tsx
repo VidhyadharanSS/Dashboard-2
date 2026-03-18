@@ -570,6 +570,24 @@ export function DaemonSetDetail(props: { namespace: string; name: string }) {
               },
             ]
             : []),
+          {
+            value: 'Related',
+            label: 'Related',
+            content: (
+              <div className="space-y-6">
+                <ResourceTopology
+                  resource="daemonsets"
+                  name={name}
+                  namespace={namespace}
+                />
+                <RelatedResourcesTable
+                  resource={'daemonsets'}
+                  name={name}
+                  namespace={namespace}
+                />
+              </div>
+            ),
+          },
           ...(spec?.template?.spec?.volumes
             ? [
               {
@@ -597,24 +615,6 @@ export function DaemonSetDetail(props: { namespace: string; name: string }) {
               },
             ]
             : []),
-          {
-            value: 'Related',
-            label: 'Related',
-            content: (
-              <div className="space-y-6">
-                <ResourceTopology
-                  resource="daemonsets"
-                  name={name}
-                  namespace={namespace}
-                />
-                <RelatedResourcesTable
-                  resource={'daemonsets'}
-                  name={name}
-                  namespace={namespace}
-                />
-              </div>
-            ),
-          },
           {
             value: 'events',
             label: 'Events',

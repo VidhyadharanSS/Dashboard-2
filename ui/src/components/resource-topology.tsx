@@ -275,7 +275,149 @@ export function ResourceTopology({
             const fgColor = actualTheme === 'dark' ? '#e2e8f0' : '#1e293b'
             const dateStr = new Date().toISOString().slice(0, 10)
 
-            // Build SVG foreignObject wrapper
+            if (format === 'png') {
+                // Direct canvas rendering — avoids foreignObject CORS issues entirely
+                const scale = 2
+                const canvas = document.createElement('canvas')
+                canvas.width = rect.width * scale
+                canvas.height = rect.height * scale
+                const ctx = canvas.getContext('2d')
+                if (!ctx) return
+
+                ctx.scale(scale, scale)
+
+                // Background
+                ctx.fillStyle = bgColor
+                ctx.fillRect(0, 0, rect.width, rect.height)
+
+                // Render SVG lines first
+                const svgEl = el.querySelector('svg')
+                if (svgEl) {
+                    const svgClone = svgEl.cloneNode(true) as SVGSVGElement
+                    svgClone.setAttribute('width', String(rect.width))
+                    svgClone.setAttribute('height', String(rect.height))
+                    // Inline styles for standalone rendering
+                    svgClone.querySelectorAll('[class*="fill-"]').forEach(node => {
+                        const computed = getComputedStyle(node as Element)
+                        ;(node as SVGElement).style.fill = computed.fill
+                    })
+                    svgClone.querySelectorAll('[class*="text-"]').forEach(node => {
+                        const computed = getComputedStyle(node as Element)
+                        ;(node as SVGElement).style.stroke = computed.color
+                    })
+                    const svgData = new XMLSerializer().serializeToString(svgClone)
+                    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+                    const svgUrl = URL.createObjectURL(svgBlob)
+
+                    await new Promise<void>((resolve) => {
+                        const img = new Image()
+                        img.onload = () => {
+                            ctx.drawImage(img, 0, 0, rect.width, rect.height)
+                            URL.revokeObjectURL(svgUrl)
+                            resolve()
+                        }
+                        img.onerror = () => {
+                            URL.revokeObjectURL(svgUrl)
+                            resolve()
+                        }
+                        img.src = svgUrl
+                    })
+                }
+
+                // Render each node card onto the canvas
+                const nodes = el.querySelectorAll('[id]')
+                const contentRect = el.getBoundingClientRect()
+                nodes.forEach(node => {
+                    const nodeEl = node as HTMLElement
+                    if (!nodeEl.className || typeof nodeEl.className !== 'string') return
+                    if (!nodeEl.className.includes('rounded-xl')) return
+
+                    const nodeRect = nodeEl.getBoundingClientRect()
+                    const x = nodeRect.left - contentRect.left
+                    const y = nodeRect.top - contentRect.top
+                    const w = nodeRect.width
+                    const h = nodeRect.height
+
+                    const computed = getComputedStyle(nodeEl)
+                    const isRoot = nodeEl.className.includes('bg-primary')
+
+                    // Node background
+                    ctx.fillStyle = isRoot ? (actualTheme === 'dark' ? '#3b82f6' : '#2563eb') : (actualTheme === 'dark' ? '#1e293b' : '#ffffff')
+                    ctx.strokeStyle = isRoot ? 'transparent' : (actualTheme === 'dark' ? '#475569' : '#cbd5e1')
+                    ctx.lineWidth = 2
+
+                    // Rounded rectangle
+                    const radius = 12
+                    ctx.beginPath()
+                    ctx.moveTo(x + radius, y)
+                    ctx.lineTo(x + w - radius, y)
+                    ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+                    ctx.lineTo(x + w, y + h - radius)
+                    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+                    ctx.lineTo(x + radius, y + h)
+                    ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+                    ctx.lineTo(x, y + radius)
+                    ctx.quadraticCurveTo(x, y, x + radius, y)
+                    ctx.closePath()
+                    ctx.fill()
+                    if (!isRoot) ctx.stroke()
+
+                    // Shadow for root
+                    if (isRoot) {
+                        ctx.shadowColor = 'rgba(59, 130, 246, 0.25)'
+                        ctx.shadowBlur = 12
+                        ctx.fill()
+                        ctx.shadowColor = 'transparent'
+                        ctx.shadowBlur = 0
+                    }
+
+                    // Node name text
+                    const nameEl = nodeEl.querySelector('.truncate')
+                    if (nameEl) {
+                        ctx.fillStyle = isRoot ? '#ffffff' : (actualTheme === 'dark' ? '#e2e8f0' : '#1e293b')
+                        ctx.font = 'bold 11px system-ui, -apple-system, sans-serif'
+                        ctx.textAlign = 'center'
+                        const text = nameEl.textContent || ''
+                        const maxWidth = w - 16
+                        let displayText = text
+                        while (ctx.measureText(displayText).width > maxWidth && displayText.length > 3) {
+                            displayText = displayText.slice(0, -4) + '...'
+                        }
+                        ctx.fillText(displayText, x + w / 2, y + h / 2 + 2)
+                    }
+
+                    // Type badge text
+                    const badgeEl = nodeEl.querySelector('.uppercase')
+                    if (badgeEl) {
+                        ctx.fillStyle = isRoot ? 'rgba(255,255,255,0.7)' : (actualTheme === 'dark' ? '#94a3b8' : '#64748b')
+                        ctx.font = 'bold 8px system-ui, -apple-system, sans-serif'
+                        ctx.textAlign = 'center'
+                        ctx.fillText((badgeEl.textContent || '').toUpperCase(), x + w / 2, y + h / 2 + 16)
+                    }
+                })
+
+                // Watermark
+                ctx.fillStyle = actualTheme === 'dark' ? 'rgba(148,163,184,0.3)' : 'rgba(100,116,139,0.2)'
+                ctx.font = '10px system-ui, -apple-system, sans-serif'
+                ctx.textAlign = 'right'
+                ctx.fillText(`Kites Topology — ${name} — ${dateStr}`, rect.width - 12, rect.height - 8)
+
+                // Export as PNG blob
+                canvas.toBlob((blob) => {
+                    if (!blob) return
+                    const pngUrl = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = pngUrl
+                    a.download = `topology-${name}-${actualTheme}-${dateStr}.png`
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(pngUrl)
+                }, 'image/png')
+                return
+            }
+
+            // SVG export via foreignObject (used as fallback and explicit SVG export)
             const styles = Array.from(document.styleSheets)
                 .map(sheet => {
                     try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n') }
@@ -297,55 +439,15 @@ export function ResourceTopology({
                 </svg>
             `
 
-            if (format === 'svg') {
-                const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-                const svgUrl = URL.createObjectURL(svgBlob)
-                const a = document.createElement('a')
-                a.href = svgUrl
-                a.download = `topology-${name}-${dateStr}.svg`
-                document.body.appendChild(a)
-                a.click()
-                document.body.removeChild(a)
-                URL.revokeObjectURL(svgUrl)
-                return
-            }
-
-            // PNG export via canvas rendering of SVG
-            const scale = 2
-            const canvas = document.createElement('canvas')
-            canvas.width = rect.width * scale
-            canvas.height = rect.height * scale
-            const ctx = canvas.getContext('2d')
-            if (!ctx) return
-
-            ctx.scale(scale, scale)
-            ctx.fillStyle = bgColor
-            ctx.fillRect(0, 0, rect.width, rect.height)
-
             const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
             const svgUrl = URL.createObjectURL(svgBlob)
-            const img = new Image()
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0, rect.width, rect.height)
-                URL.revokeObjectURL(svgUrl)
-                canvas.toBlob((blob) => {
-                    if (!blob) return
-                    const pngUrl = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = pngUrl
-                    a.download = `topology-${name}-${actualTheme}-${dateStr}.png`
-                    document.body.appendChild(a)
-                    a.click()
-                    document.body.removeChild(a)
-                    URL.revokeObjectURL(pngUrl)
-                }, 'image/png')
-            }
-            img.onerror = () => {
-                // Fallback to SVG if PNG rendering fails (CORS, tainted canvas)
-                URL.revokeObjectURL(svgUrl)
-                handleExportImage('svg')
-            }
-            img.src = svgUrl
+            const a = document.createElement('a')
+            a.href = svgUrl
+            a.download = `topology-${name}-${dateStr}.svg`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(svgUrl)
         } catch (err) {
             console.error('Failed to export topology:', err)
         }

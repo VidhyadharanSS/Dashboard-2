@@ -553,7 +553,7 @@ export function Terminal({
       toast.info('Terminal buffer cleared')
     }
   }, [])
->
+
   const copyToClipboard = useCallback(() => {
     if (xtermRef.current) {
       xtermRef.current.selectAll()
@@ -720,7 +720,7 @@ export function Terminal({
               </TooltipTrigger>
               <TooltipContent>Clear Buffer</TooltipContent>
             </Tooltip>
->
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={copyToClipboard}>
