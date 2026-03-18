@@ -156,10 +156,14 @@ func (g *GenericProvider) GetAuthURL(state string) string {
 	params := url.Values{}
 	params.Add("client_id", g.Config.ClientID)
 	params.Add("redirect_uri", g.Config.RedirectURL)
-	// TODO: fix me
 	params.Add("scope", g.Config.Scopes)
 	params.Add("state", state)
 	params.Add("response_type", "code")
+	// Zoho OAuth requires access_type=offline to return a refresh token,
+	// and prompt=consent ensures the consent screen is shown so scopes are granted.
+	// These params are safely ignored by providers that don't support them (GitHub, GitLab, etc.)
+	params.Add("access_type", "offline")
+	params.Add("prompt", "consent")
 
 	return g.AuthURL + "?" + params.Encode()
 }
@@ -188,6 +192,14 @@ func (g *GenericProvider) ExchangeCodeForToken(code string) (*TokenResponse, err
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody map[string]interface{}
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		klog.Errorf("Token exchange failed for %s: HTTP %d, response: %v", g.Name, resp.StatusCode, errBody)
+		return nil, fmt.Errorf("token exchange failed: HTTP %d from %s", resp.StatusCode, g.Name)
+	}
+
 	var tokenResp TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
 		return nil, err
@@ -219,6 +231,14 @@ func (g *GenericProvider) RefreshToken(refreshToken string) (*TokenResponse, err
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody map[string]interface{}
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		klog.Errorf("Token refresh failed for %s: HTTP %d, response: %v", g.Name, resp.StatusCode, errBody)
+		return nil, fmt.Errorf("token refresh failed: HTTP %d from %s", resp.StatusCode, g.Name)
+	}
+
 	var tokenResp TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
 		return nil, err
@@ -244,6 +264,14 @@ func (g *GenericProvider) GetUserInfo(accessToken string) (*model.User, error) {
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody map[string]interface{}
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		klog.Errorf("GetUserInfo failed for %s: HTTP %d, response: %v", g.Name, resp.StatusCode, errBody)
+		return nil, fmt.Errorf("failed to get user info: HTTP %d from %s", resp.StatusCode, g.Name)
+	}
+
 	var userInfo map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		return nil, err

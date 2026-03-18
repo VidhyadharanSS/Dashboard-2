@@ -17,6 +17,9 @@ import { RecentDeploymentsWidget } from '@/components/dashboard/recent-deploymen
 import { FailingPodsWidget } from '@/components/dashboard/failing-pods-widget'
 import { NamespaceHealthWidget } from '@/components/dashboard/namespace-health-widget'
 import { DeploymentRollbackWidget } from '@/components/dashboard/deployment-rollback-widget'
+import { PodRestartLeaderboard } from '@/components/dashboard/pod-restart-leaderboard'
+import { WorkloadDistributionWidget } from '@/components/dashboard/workload-distribution-widget'
+import { ResourceTopConsumers } from '@/components/dashboard/resource-top-consumers'
 
 export function Overview() {
   const { t } = useTranslation()
@@ -85,15 +88,22 @@ export function Overview() {
         <RecentEvents />
       </div>
 
-      {/* Workload Status & Rollback */}
+      {/* Workload Distribution & Top Consumers — NEW */}
+      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
+        <WorkloadDistributionWidget />
+        {canAccess('pods', 'list') && <ResourceTopConsumers />}
+      </div>
+
+      {/* Workload Status, Rollback & Restart Leaderboard */}
       <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-3">
         {canAccess('pods', 'list') && <FailingPodsWidget />}
         {canAccess('deployments', 'list') && <RecentDeploymentsWidget />}
-        {canAccess('deployments', 'list') && <DeploymentRollbackWidget />}
+        {canAccess('pods', 'list') && <PodRestartLeaderboard />}
       </div>
 
-      {/* Namespace Health */}
-      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-1">
+      {/* Deployment Rollback & Namespace Health */}
+      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
+        {canAccess('deployments', 'list') && <DeploymentRollbackWidget />}
         {canAccess('pods', 'list') && <NamespaceHealthWidget />}
       </div>
 

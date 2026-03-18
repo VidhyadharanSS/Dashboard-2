@@ -4,12 +4,14 @@ import { Deployment } from 'kubernetes-types/apps/v1'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { IconReload, IconScale } from '@tabler/icons-react'
 
 import * as api from '@/lib/api'
 
 import { getDeploymentStatus } from '@/lib/k8s'
 import { formatDate, getAge } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,

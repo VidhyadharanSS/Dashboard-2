@@ -6,9 +6,6 @@ import {
     IconHistory,
     IconLoader2,
     IconRotate2,
-    IconChevronRight,
-    IconAlertCircle,
-    IconCheck,
     IconClock,
     IconEye,
 } from '@tabler/icons-react'
@@ -265,7 +262,7 @@ function RollbackDialog({
 }
 
 export function DeploymentRollbackWidget() {
-    const { t } = useTranslation()
+    useTranslation()
     const navigate = useNavigate()
     const { canAccess } = usePermissions()
     const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null)

@@ -17,6 +17,9 @@ import {
     IconRefresh,
     IconMaximize,
     IconMinimize,
+    IconSearch,
+    IconX,
+    IconLayoutGrid,
 } from '@tabler/icons-react'
 import { Link } from 'react-router-dom'
 
@@ -118,6 +121,10 @@ export function ResourceTopology({
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [hoveredNode, setHoveredNode] = useState<string | null>(null)
     const [showLegend, setShowLegend] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [showSearch, setShowSearch] = useState(false)
+    const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set())
+    const searchInputRef = useRef<HTMLInputElement>(null)
     const dragStartRef = useRef<Position>({ x: 0, y: 0 })
     const containerRef = useRef<HTMLDivElement>(null)
     const contentRef = useRef<HTMLDivElement>(null)
@@ -180,6 +187,29 @@ export function ResourceTopology({
             window.removeEventListener('resize', updatePositions)
         }
     }, [updatePositions])
+
+    // Update search highlights
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setHighlightedNodes(new Set())
+            return
+        }
+        const q = searchQuery.toLowerCase()
+        const matched = new Set<string>()
+        layers.flat().forEach(node => {
+            if (node.name.toLowerCase().includes(q) || node.type.toLowerCase().includes(q)) {
+                matched.add(node.id)
+            }
+        })
+        setHighlightedNodes(matched)
+    }, [searchQuery, layers])
+
+    // Focus search input when opened
+    useEffect(() => {
+        if (showSearch) {
+            setTimeout(() => searchInputRef.current?.focus(), 50)
+        }
+    }, [showSearch])
 
     const handleWheel = useCallback((e: React.WheelEvent) => {
         if (e.ctrlKey || e.metaKey) {
@@ -271,10 +301,43 @@ export function ResourceTopology({
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={handleReset} title="Reset View">
                     <IconRefresh size={15} />
                 </Button>
+                <Button
+                    variant={showSearch ? "default" : "secondary"}
+                    size="icon"
+                    className="h-8 w-8 shadow-md"
+                    onClick={() => { setShowSearch(s => !s); if (showSearch) setSearchQuery('') }}
+                    title="Search nodes"
+                >
+                    <IconSearch size={15} />
+                </Button>
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={() => setIsFullscreen(f => !f)} title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
                     {isFullscreen ? <IconMinimize size={15} /> : <IconMaximize size={15} />}
                 </Button>
             </div>
+
+            {/* Search bar */}
+            {showSearch && (
+                <div className="absolute top-3 left-14 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg px-2 py-1">
+                    <IconSearch size={13} className="text-muted-foreground shrink-0" />
+                    <input
+                        ref={searchInputRef}
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Search by name or type…"
+                        className="bg-transparent text-xs outline-none w-44 placeholder:text-muted-foreground/50"
+                    />
+                    {searchQuery && (
+                        <>
+                            <span className="text-[10px] text-muted-foreground font-medium">
+                                {highlightedNodes.size} match{highlightedNodes.size !== 1 ? 'es' : ''}
+                            </span>
+                            <button onClick={() => setSearchQuery('')} className="text-muted-foreground hover:text-foreground">
+                                <IconX size={12} />
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Stats badge + Legend toggle */}
             <div className="absolute top-3 right-3 z-50 flex flex-col items-end gap-1.5">
@@ -335,17 +398,22 @@ export function ResourceTopology({
                         <div className="flex flex-col items-center justify-start gap-12 relative z-10">
                             {layers.map((layer, lIdx) => (
                                 <div key={`layer-${lIdx}`} className="flex justify-center gap-6 flex-wrap w-full">
-                                    {layer.map((node) => (
+                                    {layer.map((node) => {
+                                        const isSearchMatch = highlightedNodes.size > 0 && highlightedNodes.has(node.id)
+                                        const isSearchDimmed = highlightedNodes.size > 0 && !highlightedNodes.has(node.id)
+                                        return (
                                         <TopologyNode
                                             key={node.id}
                                             id={node.id}
                                             node={node}
                                             isRoot={node.id === rootId}
-                                            isHighlighted={hoveredNode ? connectedNodes.has(node.id) : true}
-                                            isDimmed={hoveredNode !== null && !connectedNodes.has(node.id)}
+                                            isHighlighted={hoveredNode ? connectedNodes.has(node.id) : (highlightedNodes.size === 0 || isSearchMatch)}
+                                            isDimmed={(hoveredNode !== null && !connectedNodes.has(node.id)) || isSearchDimmed}
+                                            isSearchMatch={isSearchMatch}
                                             onHover={setHoveredNode}
                                         />
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             ))}
                         </div>
@@ -361,12 +429,13 @@ export function ResourceTopology({
     )
 }
 
-function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, onHover }: {
+function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, isSearchMatch, onHover }: {
     id: string
     node: NodeType
     isRoot: boolean
     isHighlighted?: boolean
     isDimmed?: boolean
+    isSearchMatch?: boolean
     onHover?: (id: string | null) => void
 }) {
     const { user } = useAuth()
@@ -405,8 +474,9 @@ function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, onHover }: {
                     ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25 scale-110 ring-4 ring-primary/20'
                     : `${colors.bg} ${colors.border} hover:shadow-lg hover:border-primary/50 hover:scale-105 bg-background dark:bg-card`
                 }
-                ${isDimmed ? 'opacity-30 scale-95' : ''}
+                ${isDimmed ? 'opacity-25 scale-95' : ''}
                 ${isHighlighted && !isRoot && !isDimmed ? 'ring-2 ring-primary/30' : ''}
+                ${isSearchMatch ? 'ring-2 ring-amber-400/80 border-amber-400/60 shadow-amber-400/20 shadow-md' : ''}
             `}
         >
             {/* Icon */}

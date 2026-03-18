@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	"github.com/zxh326/kite/pkg/cluster"
 	"github.com/zxh326/kite/pkg/common"
 	"github.com/zxh326/kite/pkg/model"
@@ -12,15 +15,54 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// WorkloadCounts summarises each workload type's total and ready counts.
+type WorkloadCounts struct {
+	TotalDeployments      int `json:"totalDeployments"`
+	ReadyDeployments      int `json:"readyDeployments"`
+	TotalStatefulSets     int `json:"totalStatefulSets"`
+	ReadyStatefulSets     int `json:"readyStatefulSets"`
+	TotalDaemonSets       int `json:"totalDaemonSets"`
+	ReadyDaemonSets       int `json:"readyDaemonSets"`
+	TotalJobs             int `json:"totalJobs"`
+	CompletedJobs         int `json:"completedJobs"`
+	TotalCronJobs         int `json:"totalCronJobs"`
+}
+
 type OverviewData struct {
 	TotalNodes      int                   `json:"totalNodes"`
 	ReadyNodes      int                   `json:"readyNodes"`
 	TotalPods       int                   `json:"totalPods"`
 	RunningPods     int                   `json:"runningPods"`
+	FailingPods     int                   `json:"failingPods"`
+	PendingPods     int                   `json:"pendingPods"`
+	SucceededPods   int                   `json:"succeededPods"`
 	TotalNamespaces int                   `json:"totalNamespaces"`
 	TotalServices   int                   `json:"totalServices"`
 	PromEnabled     bool                  `json:"prometheusEnabled"`
 	Resource        common.ResourceMetric `json:"resource"`
+	Workloads       WorkloadCounts        `json:"workloads"`
+}
+
+// isPodFailing returns true when a pod is in a known failure / crash state.
+func isPodFailing(pod v1.Pod) bool {
+	if pod.Status.Phase == v1.PodFailed {
+		return true
+	}
+	// Check container statuses for crash/error conditions
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.State.Waiting != nil {
+			reason := cs.State.Waiting.Reason
+			if reason == "CrashLoopBackOff" ||
+				reason == "OOMKilled" ||
+				reason == "Error" ||
+				reason == "ImagePullBackOff" ||
+				reason == "ErrImagePull" ||
+				strings.HasPrefix(reason, "Err") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func GetOverview(c *gin.Context) {
@@ -61,12 +103,13 @@ func GetOverview(c *gin.Context) {
 		return
 	}
 
-	runningPods := 0
+	runningPods, failingPods, pendingPods, succeededPods := 0, 0, 0, 0
 	for _, pod := range pods.Items {
 		for _, container := range pod.Spec.Containers {
-			cpuRequested.Add(*container.Resources.Requests.Cpu())
-			memRequested.Add(*container.Resources.Requests.Memory())
-
+			if container.Resources.Requests != nil {
+				cpuRequested.Add(*container.Resources.Requests.Cpu())
+				memRequested.Add(*container.Resources.Requests.Memory())
+			}
 			if container.Resources.Limits != nil {
 				if cpuLimit := container.Resources.Limits.Cpu(); cpuLimit != nil {
 					cpuLimited.Add(*cpuLimit)
@@ -76,8 +119,19 @@ func GetOverview(c *gin.Context) {
 				}
 			}
 		}
-		if pod.Status.Phase == v1.PodRunning || pod.Status.Phase == v1.PodSucceeded {
-			runningPods++
+		switch pod.Status.Phase {
+		case v1.PodRunning:
+			if isPodFailing(pod) {
+				failingPods++
+			} else {
+				runningPods++
+			}
+		case v1.PodPending:
+			pendingPods++
+		case v1.PodSucceeded:
+			succeededPods++
+		case v1.PodFailed:
+			failingPods++
 		}
 	}
 
@@ -94,11 +148,63 @@ func GetOverview(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// ── Workload counts ──────────────────────────────────────────────────────
+	var wc WorkloadCounts
+
+	deployments := &appsv1.DeploymentList{}
+	if err := cs.K8sClient.List(ctx, deployments, &client.ListOptions{}); err == nil {
+		wc.TotalDeployments = len(deployments.Items)
+		for _, d := range deployments.Items {
+			if d.Status.ReadyReplicas == d.Status.Replicas && d.Status.Replicas > 0 {
+				wc.ReadyDeployments++
+			}
+		}
+	}
+
+	statefulSets := &appsv1.StatefulSetList{}
+	if err := cs.K8sClient.List(ctx, statefulSets, &client.ListOptions{}); err == nil {
+		wc.TotalStatefulSets = len(statefulSets.Items)
+		for _, ss := range statefulSets.Items {
+			if ss.Status.ReadyReplicas == ss.Status.Replicas && ss.Status.Replicas > 0 {
+				wc.ReadyStatefulSets++
+			}
+		}
+	}
+
+	daemonSets := &appsv1.DaemonSetList{}
+	if err := cs.K8sClient.List(ctx, daemonSets, &client.ListOptions{}); err == nil {
+		wc.TotalDaemonSets = len(daemonSets.Items)
+		for _, ds := range daemonSets.Items {
+			if ds.Status.NumberReady == ds.Status.DesiredNumberScheduled {
+				wc.ReadyDaemonSets++
+			}
+		}
+	}
+
+	jobs := &batchv1.JobList{}
+	if err := cs.K8sClient.List(ctx, jobs, &client.ListOptions{}); err == nil {
+		wc.TotalJobs = len(jobs.Items)
+		for _, j := range jobs.Items {
+			if j.Status.CompletionTime != nil {
+				wc.CompletedJobs++
+			}
+		}
+	}
+
+	cronJobs := &batchv1.CronJobList{}
+	if err := cs.K8sClient.List(ctx, cronJobs, &client.ListOptions{}); err == nil {
+		wc.TotalCronJobs = len(cronJobs.Items)
+	}
+
 	overview := OverviewData{
 		TotalNodes:      len(nodes.Items),
 		ReadyNodes:      readyNodes,
 		TotalPods:       len(pods.Items),
 		RunningPods:     runningPods,
+		FailingPods:     failingPods,
+		PendingPods:     pendingPods,
+		SucceededPods:   succeededPods,
 		TotalNamespaces: len(namespaces.Items),
 		TotalServices:   len(services.Items),
 		PromEnabled:     cs.PromClient != nil,
@@ -114,6 +220,7 @@ func GetOverview(c *gin.Context) {
 				Limited:     memLimited.MilliValue(),
 			},
 		},
+		Workloads: wc,
 	}
 
 	c.JSON(http.StatusOK, overview)

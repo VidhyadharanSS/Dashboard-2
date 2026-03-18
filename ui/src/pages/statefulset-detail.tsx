@@ -412,7 +412,7 @@ export function StatefulSetDetail(props: { namespace: string; name: string }) {
                   <CardHeader>
                     <CardTitle>Status Overview</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
@@ -425,42 +425,71 @@ export function StatefulSetDetail(props: { namespace: string; name: string }) {
                           )}
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">
-                            Status
-                          </p>
+                          <p className="text-xs text-muted-foreground">Status</p>
                           <p className="text-sm font-medium">
-                            {isPending
-                              ? 'Pending'
-                              : isAvailable
-                                ? 'Available'
-                                : 'In Progress'}
+                            {isPending ? 'Pending' : isAvailable ? 'Available' : 'In Progress'}
                           </p>
                         </div>
                       </div>
-
                       <div>
-                        <p className="text-xs text-muted-foreground">
-                          Ready Replicas
-                        </p>
-                        <p className="text-sm font-medium">
-                          {readyReplicas} / {replicas}
-                        </p>
+                        <p className="text-xs text-muted-foreground">Ready Replicas</p>
+                        <p className="text-sm font-medium">{readyReplicas} / {replicas}</p>
                       </div>
-
                       <div>
-                        <p className="text-xs text-muted-foreground">
-                          Current Replicas
-                        </p>
+                        <p className="text-xs text-muted-foreground">Current Replicas</p>
                         <p className="text-sm font-medium">{currentReplicas}</p>
                       </div>
-
                       <div>
-                        <p className="text-xs text-muted-foreground">
-                          Updated Replicas
-                        </p>
+                        <p className="text-xs text-muted-foreground">Updated Replicas</p>
                         <p className="text-sm font-medium">{updatedReplicas}</p>
                       </div>
                     </div>
+
+                    {/* Rolling update progress bar */}
+                    {replicas > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Rolling update progress</span>
+                          <span className="font-medium tabular-nums">
+                            {readyReplicas}/{replicas} ready
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              readyReplicas === replicas
+                                ? 'bg-green-500'
+                                : readyReplicas === 0
+                                  ? 'bg-red-500'
+                                  : 'bg-amber-500'
+                            }`}
+                            style={{ width: `${Math.round((readyReplicas / replicas) * 100)}%` }}
+                          />
+                        </div>
+                        {/* Pod indicators */}
+                        <div className="flex gap-1 flex-wrap">
+                          {Array.from({ length: replicas }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`h-2 w-2 rounded-full transition-colors duration-300 ${
+                                i < readyReplicas
+                                  ? 'bg-green-500'
+                                  : i < currentReplicas
+                                    ? 'bg-amber-500'
+                                    : 'bg-muted-foreground/30'
+                              }`}
+                              title={
+                                i < readyReplicas
+                                  ? `Pod ${i + 1}: Ready`
+                                  : i < currentReplicas
+                                    ? `Pod ${i + 1}: Starting`
+                                    : `Pod ${i + 1}: Pending`
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

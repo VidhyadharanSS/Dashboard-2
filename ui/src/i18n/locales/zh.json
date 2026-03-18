@@ -597,6 +597,26 @@
       "nameImmutable": "创建后名称不可更改"
     }
   },
+  "dashboard": {
+    "liveSystemLogs": "实时系统日志",
+    "connecting": "连接中...",
+    "waitingLogs": "等待日志...",
+    "recentDeployments": "最近部署",
+    "deploymentRollback": "部署回滚",
+    "failingPods": "故障 Pod",
+    "namespaceHealth": "命名空间健康",
+    "podRestartLeaderboard": "Pod 重启排行榜",
+    "workloadDistribution": "工作负载分布",
+    "topConsumers": "资源消耗排行",
+    "noRestartsDetected": "未检测到 Pod 重启",
+    "allPodsStable": "所有 Pod 运行稳定",
+    "noMetricsAvailable": "无指标数据",
+    "metricsRequire": "Pod 指标需要 metrics-server",
+    "healthy": "健康",
+    "progressing": "进行中",
+    "failing": "故障",
+    "clusterAllocatable": "集群可分配资源"
+  },
   "pvcs": {
     "volume": "卷",
     "storageClass": "存储类",

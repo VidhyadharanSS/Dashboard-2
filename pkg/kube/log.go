@@ -211,3 +211,8 @@ func sendMessage(ws *websocket.Conn, msgType, data string) error {
 func sendErrorMessage(ws *websocket.Conn, errMsg string) error {
 	return sendMessage(ws, "error", errMsg)
 }
+
+// SendErrorMessage is an exported wrapper for use from other packages (e.g. handlers).
+func SendErrorMessage(ws *websocket.Conn, errMsg string) error {
+	return sendErrorMessage(ws, errMsg)
+}

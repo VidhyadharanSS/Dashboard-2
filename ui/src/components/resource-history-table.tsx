@@ -258,7 +258,8 @@ export function ResourceHistoryTable<T extends ResourceType>({
         <CardHeader>
           <CardTitle>{t('resourceHistory.title')}</CardTitle>
         </CardHeader>
-        <CardContent<SimpleTable
+        <CardContent>
+          <SimpleTable
             data={history || []}
             columns={historyColumns}
             emptyMessage={t('resourceHistory.noHistoryFound')}

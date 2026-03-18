@@ -348,7 +348,7 @@ export function DaemonSetDetail(props: { namespace: string; name: string }) {
                   <CardHeader>
                     <CardTitle>Status Overview</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
@@ -361,42 +361,56 @@ export function DaemonSetDetail(props: { namespace: string; name: string }) {
                           )}
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">
-                            Status
-                          </p>
+                          <p className="text-xs text-muted-foreground">Status</p>
                           <p className="text-sm font-medium">
-                            {isPending
-                              ? 'Pending'
-                              : isAvailable
-                                ? 'Available'
-                                : 'In Progress'}
+                            {isPending ? 'Pending' : isAvailable ? 'Available' : 'In Progress'}
                           </p>
                         </div>
                       </div>
-
                       <div>
-                        <p className="text-xs text-muted-foreground">
-                          Ready Replicas
-                        </p>
-                        <p className="text-sm font-medium">
-                          {readyReplicas} / {desiredReplicas}
-                        </p>
+                        <p className="text-xs text-muted-foreground">Ready / Desired</p>
+                        <p className="text-sm font-medium">{readyReplicas} / {desiredReplicas}</p>
                       </div>
-
                       <div>
-                        <p className="text-xs text-muted-foreground">
-                          Current Scheduled
-                        </p>
+                        <p className="text-xs text-muted-foreground">Current Scheduled</p>
                         <p className="text-sm font-medium">{currentReplicas}</p>
                       </div>
-
                       <div>
-                        <p className="text-xs text-muted-foreground">
-                          Desired Scheduled
+                        <p className="text-xs text-muted-foreground">Unavailable</p>
+                        <p className={`text-sm font-medium ${(status?.numberUnavailable ?? 0) > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                          {status?.numberUnavailable ?? 0}
                         </p>
-                        <p className="text-sm font-medium">{desiredReplicas}</p>
                       </div>
                     </div>
+
+                    {/* Node coverage bar */}
+                    {desiredReplicas > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Node coverage</span>
+                          <span className="font-medium tabular-nums">
+                            {readyReplicas}/{desiredReplicas} nodes covered
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              readyReplicas === desiredReplicas
+                                ? 'bg-green-500'
+                                : readyReplicas === 0
+                                  ? 'bg-red-500'
+                                  : 'bg-amber-500'
+                            }`}
+                            style={{
+                              width: `${Math.round((readyReplicas / desiredReplicas) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {Math.round((readyReplicas / desiredReplicas) * 100)}% of cluster nodes are running this DaemonSet
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 {/* DaemonSet Information */}

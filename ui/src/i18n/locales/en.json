@@ -605,7 +605,18 @@
     "recentDeployments": "Recent Deployments",
     "deploymentRollback": "Deployment Rollback",
     "failingPods": "Failing Pods",
-    "namespaceHealth": "Namespace Health"
+    "namespaceHealth": "Namespace Health",
+    "podRestartLeaderboard": "Pod Restart Leaderboard",
+    "workloadDistribution": "Workload Distribution",
+    "topConsumers": "Top Consumers",
+    "noRestartsDetected": "No pod restarts detected",
+    "allPodsStable": "All pods are running stable",
+    "noMetricsAvailable": "No metrics data available",
+    "metricsRequire": "Pod metrics require metrics-server",
+    "healthy": "Healthy",
+    "progressing": "Progressing",
+    "failing": "Failing",
+    "clusterAllocatable": "Cluster Allocatable"
   },
   "deleteConfirmation": {
     "title": "Delete {{type}}",

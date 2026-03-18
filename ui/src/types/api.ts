@@ -275,11 +275,26 @@ export interface PodMetrics {
   fallback?: boolean
 }
 
+export interface WorkloadCounts {
+  totalDeployments: number
+  readyDeployments: number
+  totalStatefulSets: number
+  readyStatefulSets: number
+  totalDaemonSets: number
+  readyDaemonSets: number
+  totalJobs: number
+  completedJobs: number
+  totalCronJobs: number
+}
+
 export interface OverviewData {
   totalNodes: number
   readyNodes: number
   totalPods: number
   runningPods: number
+  failingPods: number
+  pendingPods: number
+  succeededPods: number
   totalNamespaces: number
   totalServices: number
   prometheusEnabled: boolean
@@ -295,6 +310,7 @@ export interface OverviewData {
       limited: number
     }
   }
+  workloads: WorkloadCounts
 }
 
 // Pagination types

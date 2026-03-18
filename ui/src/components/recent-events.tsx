@@ -1,11 +1,13 @@
-import { useMemo } from 'react'
-import { IconAlertTriangle, IconInfoCircle, IconX } from '@tabler/icons-react'
+import { useMemo, useState } from 'react'
+import { IconAlertTriangle, IconInfoCircle, IconX, IconFilter } from '@tabler/icons-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 
 import { useResources } from '@/lib/api'
 import { usePermissions } from '@/hooks/use-permissions'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Card,
   CardContent,
@@ -14,15 +16,53 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
+type EventFilter = 'all' | 'Warning' | 'Normal'
+
+/* ─── Compact severity summary bar ─── */
+function SeveritySummaryBar({ normal, warning }: { normal: number; warning: number }) {
+  const total = normal + warning
+  if (total === 0) return null
+
+  const normalPct = (normal / total) * 100
+  const warningPct = (warning / total) * 100
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="h-1.5 rounded-full overflow-hidden bg-muted flex cursor-default">
+            {normalPct > 0 && (
+              <div
+                className="h-full bg-blue-500 transition-all duration-500"
+                style={{ width: `${normalPct}%` }}
+              />
+            )}
+            {warningPct > 0 && (
+              <div
+                className="h-full bg-amber-500 transition-all duration-500"
+                style={{ width: `${warningPct}%` }}
+              />
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs">
+          {normal} Normal · {warning} Warning
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 export function RecentEvents() {
   const { t } = useTranslation()
   const { canAccess } = usePermissions()
+  const [filter, setFilter] = useState<EventFilter>('all')
   const { data, isLoading } = useResources('events', undefined, {
     limit: 20,
     disable: !canAccess('events', 'list'),
   })
 
-  const events = useMemo(() => {
+  const allEvents = useMemo(() => {
     return data
       ?.filter((event) => {
         // Filter events based on access to the involved object
@@ -42,6 +82,24 @@ export function RecentEvents() {
         return dateB.getTime() - dateA.getTime() // Sort by most recent first
       })
   }, [data, canAccess])
+
+  // Severity counts
+  const { normalCount, warningCount } = useMemo(() => {
+    let normalCount = 0
+    let warningCount = 0
+    allEvents?.forEach((e) => {
+      if (e.type === 'Warning') warningCount++
+      else normalCount++
+    })
+    return { normalCount, warningCount }
+  }, [allEvents])
+
+  // Filtered events
+  const events = useMemo(() => {
+    if (filter === 'all') return allEvents
+    return allEvents?.filter((e) => e.type === filter)
+  }, [allEvents, filter])
+
   const getEventIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'warning':
@@ -88,7 +146,7 @@ export function RecentEvents() {
     )
   }
 
-  if (!events || events.length === 0) {
+  if (!allEvents || allEvents.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -106,14 +164,51 @@ export function RecentEvents() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t('overview.recentEvents')}</CardTitle>
-        <CardDescription>Latest cluster events</CardDescription>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>{t('overview.recentEvents')}</CardTitle>
+            <CardDescription>Latest cluster events</CardDescription>
+          </div>
+          {/* Filter buttons */}
+          <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+            <Button
+              variant={filter === 'all' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 text-[10px] px-2"
+              onClick={() => setFilter('all')}
+            >
+              All ({(allEvents?.length ?? 0)})
+            </Button>
+            <Button
+              variant={filter === 'Warning' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 text-[10px] px-2 gap-0.5"
+              onClick={() => setFilter('Warning')}
+            >
+              <IconAlertTriangle className="h-3 w-3 text-amber-500" />
+              {warningCount}
+            </Button>
+            <Button
+              variant={filter === 'Normal' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 text-[10px] px-2 gap-0.5"
+              onClick={() => setFilter('Normal')}
+            >
+              <IconInfoCircle className="h-3 w-3 text-blue-500" />
+              {normalCount}
+            </Button>
+          </div>
+        </div>
+        {/* Severity bar */}
+        <div className="mt-2">
+          <SeveritySummaryBar normal={normalCount} warning={warningCount} />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="max-h-72 overflow-y-auto scrollbar-hide">
           <div className="space-y-4">
-            {events.map((event, index) => (
+            {events && events.length > 0 ? events.map((event, index) => (
               <div
                 key={index}
                 className="flex items-start gap-3 pb-3 border-b border-border last:border-0"
@@ -166,7 +261,11 @@ export function RecentEvents() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                No {filter !== 'all' ? filter.toLowerCase() : ''} events found
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
