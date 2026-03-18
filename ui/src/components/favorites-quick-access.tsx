@@ -12,7 +12,7 @@
  *  - See an empty state with guidance on how to add favorites
  */
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import {
     IconStar,
     IconStarFilled,
@@ -86,6 +86,26 @@ export function FavoritesQuickAccess() {
     const navigate = useNavigate()
     const { favorites, removeFromFavorites } = useFavorites()
     const [open, setOpen] = useState(false)
+
+    // Ctrl+F / Cmd+F shortcut to toggle favorites popover
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+                // Only intercept if not inside an input / textarea / editor
+                const el = document.activeElement
+                const tag = el?.tagName?.toLowerCase()
+                if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+                if ((el as HTMLElement)?.contentEditable === 'true') return
+                if (el?.closest('.cm-editor, .monaco-editor')) return
+
+                e.preventDefault()
+                e.stopPropagation()
+                setOpen(prev => !prev)
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown, true)
+        return () => window.removeEventListener('keydown', handleKeyDown, true)
+    }, [])
 
     const grouped = useMemo(() => {
         const groups: Record<string, SearchResult[]> = {}
@@ -215,13 +235,14 @@ export function FavoritesQuickAccess() {
                 </div>
 
                 {/* Footer */}
-                {favorites.length > 0 && (
-                    <div className="px-4 py-2 border-t bg-muted/20 shrink-0">
-                        <p className="text-[10px] text-muted-foreground text-center">
-                            Add favorites via <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">⌘K</kbd> search
-                        </p>
-                    </div>
-                )}
+                <div className="px-4 py-2 border-t bg-muted/20 shrink-0">
+                    <p className="text-[10px] text-muted-foreground text-center">
+                        {favorites.length > 0 ? 'Add more via' : 'Star resources from'}{' '}
+                        <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">⌘K</kbd> search
+                        {' · '}
+                        <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">⌘F</kbd> to toggle
+                    </p>
+                </div>
             </PopoverContent>
         </Popover>
     )

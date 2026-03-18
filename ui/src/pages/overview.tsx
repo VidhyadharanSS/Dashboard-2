@@ -13,11 +13,8 @@ import { ResourceCharts } from '@/components/resources-charts'
 import { SettingsHint } from '@/components/settings-hint'
 import { LiveLogWidget } from '@/components/dashboard/live-log-widget'
 import { QuickActionsWidget } from '@/components/dashboard/quick-actions-widget'
-import { RecentDeploymentsWidget } from '@/components/dashboard/recent-deployments-widget'
 import { FailingPodsWidget } from '@/components/dashboard/failing-pods-widget'
 import { NamespaceHealthWidget } from '@/components/dashboard/namespace-health-widget'
-import { DeploymentRollbackWidget } from '@/components/dashboard/deployment-rollback-widget'
-import { PodRestartLeaderboard } from '@/components/dashboard/pod-restart-leaderboard'
 import { WorkloadDistributionWidget } from '@/components/dashboard/workload-distribution-widget'
 import { ResourceTopConsumers } from '@/components/dashboard/resource-top-consumers'
 
@@ -70,13 +67,7 @@ export function Overview() {
         user?.provider !== 'Anonymous' &&
         user?.roles?.some((role) => role.name === 'admin') && <SettingsHint />}
 
-      {/* Live Logs & Quick Actions - Admin tools first */}
-      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
-        {canAccess('nodes', 'get') && <LiveLogWidget />}
-        <QuickActionsWidget />
-      </div>
-
-      {/* Resource Usage, Health Score & Recent Events */}
+      {/* Row 1: Resource usage donut + Health Score + Recent Events */}
       <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-3">
         <ResourceCharts
           data={overview?.resource}
@@ -88,23 +79,22 @@ export function Overview() {
         <RecentEvents />
       </div>
 
-      {/* Workload Distribution & Top Consumers — NEW */}
+      {/* Row 2: Workload Distribution + Top Consumers */}
       <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
         <WorkloadDistributionWidget />
         {canAccess('pods', 'list') && <ResourceTopConsumers />}
       </div>
 
-      {/* Workload Status, Rollback & Restart Leaderboard */}
-      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-3">
+      {/* Row 3: Failing Pods + Namespace Health */}
+      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
         {canAccess('pods', 'list') && <FailingPodsWidget />}
-        {canAccess('deployments', 'list') && <RecentDeploymentsWidget />}
-        {canAccess('pods', 'list') && <PodRestartLeaderboard />}
+        {canAccess('pods', 'list') && <NamespaceHealthWidget />}
       </div>
 
-      {/* Deployment Rollback & Namespace Health */}
+      {/* Row 4: Live System Logs + Quick Actions (admin) */}
       <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
-        {canAccess('deployments', 'list') && <DeploymentRollbackWidget />}
-        {canAccess('pods', 'list') && <NamespaceHealthWidget />}
+        {canAccess('nodes', 'get') && <LiveLogWidget />}
+        <QuickActionsWidget />
       </div>
 
       {/* CPU/Memory Charts if Prometheus enabled */}

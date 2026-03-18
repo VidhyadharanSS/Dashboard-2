@@ -1,6 +1,6 @@
+>
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import {
+import { useNavigate, useSearchParams } from 'react-router-dom'
     IconBolt,
     IconBox,
     IconBoxMultiple,
@@ -82,17 +82,135 @@ interface SearchResultItem {
 }
 
 // ---------------------------------------------------------------------------
+// kubectl command parser — maps `kubectl get <resource> -n <ns> [-l label]`
+// to a resource type + namespace + optional label filter expression
+// ---------------------------------------------------------------------------
+interface KubectlParsedCommand {
+    isKubectl: boolean
+    verb?: string
+    resourceType?: ResourceType
+    namespace?: string
+    name?: string
+    labelSelector?: string
+    fieldSelector?: string
+    error?: string
+}
+
+const KUBECTL_RESOURCE_MAP: Record<string, ResourceType> = {
+    po: 'pods', pod: 'pods', pods: 'pods',
+    deploy: 'deployments', deployment: 'deployments', deployments: 'deployments',
+    svc: 'services', service: 'services', services: 'services',
+    ds: 'daemonsets', daemonset: 'daemonsets', daemonsets: 'daemonsets',
+    sts: 'statefulsets', statefulset: 'statefulsets', statefulsets: 'statefulsets',
+    job: 'jobs', jobs: 'jobs',
+    cj: 'cronjobs', cronjob: 'cronjobs', cronjobs: 'cronjobs',
+    cm: 'configmaps', configmap: 'configmaps', configmaps: 'configmaps',
+    secret: 'secrets', secrets: 'secrets',
+    ing: 'ingresses', ingress: 'ingresses', ingresses: 'ingresses',
+    no: 'nodes', node: 'nodes', nodes: 'nodes',
+    ns: 'namespaces', namespace: 'namespaces', namespaces: 'namespaces',
+    pvc: 'persistentvolumeclaims', persistentvolumeclaim: 'persistentvolumeclaims', persistentvolumeclaims: 'persistentvolumeclaims',
+    pv: 'persistentvolumes', persistentvolume: 'persistentvolumes', persistentvolumes: 'persistentvolumes',
+    hpa: 'horizontalpodautoscalers', horizontalpodautoscaler: 'horizontalpodautoscalers', horizontalpodautoscalers: 'horizontalpodautoscalers',
+    sa: 'serviceaccounts', serviceaccount: 'serviceaccounts', serviceaccounts: 'serviceaccounts',
+    rb: 'rolebindings', rolebinding: 'rolebindings', rolebindings: 'rolebindings',
+    cr: 'clusterroles', clusterrole: 'clusterroles', clusterroles: 'clusterroles',
+}
+
+function parseKubectlCommand(input: string): KubectlParsedCommand {
+    const trimmed = input.trim()
+    if (!trimmed.startsWith('kubectl ') && !trimmed.startsWith('k ')) {
+        return { isKubectl: false }
+    }
+
+    const parts = trimmed.split(/\s+/)
+    const idx = parts[0] === 'kubectl' || parts[0] === 'k' ? 1 : 0
+
+    const verb = parts[idx]?.toLowerCase()
+    if (!verb || !['get', 'describe', 'logs'].includes(verb)) {
+        return { isKubectl: true, error: `Supported verbs: get, describe, logs (got "${verb}")` }
+    }
+
+    const resourceStr = parts[idx + 1]?.toLowerCase()
+    if (!resourceStr) {
+        return { isKubectl: true, verb, error: 'Missing resource type' }
+    }
+
+    // Handle "kubectl get nodes" / "kubectl get pods/<name>"
+    let resourceKey = resourceStr
+    let inlineName: string | undefined
+    if (resourceStr.includes('/')) {
+        const [rk, nm] = resourceStr.split('/')
+        resourceKey = rk
+        inlineName = nm
+    }
+
+    const resourceType = KUBECTL_RESOURCE_MAP[resourceKey]
+    if (!resourceType) {
+        return { isKubectl: true, verb, error: `Unknown resource type: "${resourceStr}"` }
+    }
+
+    // Parse remaining name arg and flags
+    let namespace: string | undefined
+    let name = inlineName
+    let labelSelector: string | undefined
+    let fieldSelector: string | undefined
+
+    let i = idx + 2
+    while (i < parts.length) {
+        const arg = parts[i]
+        if ((arg === '-n' || arg === '--namespace') && parts[i + 1]) {
+            namespace = parts[i + 1]
+            i += 2
+        } else if (arg === '-A' || arg === '--all-namespaces') {
+            namespace = '_all'
+            i++
+        } else if ((arg === '-l' || arg === '--selector') && parts[i + 1]) {
+            labelSelector = parts[i + 1]
+            i += 2
+        } else if (arg.startsWith('-l=')) {
+            labelSelector = arg.slice(3)
+            i++
+        } else if (arg.startsWith('--field-selector=')) {
+            fieldSelector = arg.slice(17)
+            i++
+        } else if (arg.startsWith('--field-selector') && parts[i + 1]) {
+            fieldSelector = parts[i + 1]
+            i += 2
+        } else if (!arg.startsWith('-') && !name) {
+            name = arg
+            i++
+        } else {
+            i++
+        }
+    }
+
+    return {
+        isKubectl: true,
+        verb,
+        resourceType,
+        namespace,
+        name,
+        labelSelector,
+        fieldSelector,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Expression Search Page
 // ---------------------------------------------------------------------------
+>
 export function ExpressionSearchPage() {
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const inputRef = useRef<HTMLInputElement>(null)
     const { canAccess } = usePermissions()
 
-    const [expression, setExpression] = useState('')
+    // Accept ?q= parameter from global search redirect
+    const initialQuery = searchParams.get('q') || ''
+    const [expression, setExpression] = useState(initialQuery)
     const [selectedNamespace, setSelectedNamespace] = useState('default')
-
-    // Filter resource definitions based on user permissions
+    const [kubectlParsed, setKubectlParsed] = useState<KubectlParsedCommand>({ isKubectl: false })    // Filter resource definitions based on user permissions
     const authorizedResourceDefs = useMemo(() => {
         return ALL_RESOURCE_DEFS.filter(def =>
             canAccess(def.type, 'list', def.clusterScope ? undefined : selectedNamespace)
@@ -119,6 +237,23 @@ export function ExpressionSearchPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [loadedAt, setLoadedAt] = useState<Date | null>(null)
     const [expressionError, setExpressionError] = useState<string | null>(null)
+
+    // Parse kubectl commands on expression change
+    useEffect(() => {
+        const parsed = parseKubectlCommand(expression)
+        setKubectlParsed(parsed)
+
+        if (parsed.isKubectl && parsed.resourceType && !parsed.error) {
+            // Auto-select the resource type parsed from kubectl command
+            if (!selectedTypes.includes(parsed.resourceType)) {
+                setSelectedTypes([parsed.resourceType])
+            }
+            // Auto-set namespace from -n flag
+            if (parsed.namespace && parsed.namespace !== selectedNamespace) {
+                setSelectedNamespace(parsed.namespace === '_all' ? '_all' : parsed.namespace)
+            }
+        }
+    }, [expression]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Focus input on mount
     useEffect(() => {
@@ -170,11 +305,46 @@ export function ExpressionSearchPage() {
         loadResources()
     }, [loadResources])
 
-    // Evaluate expression against items
+    // Evaluate expression against items — supports both expressions and kubectl commands
     const filteredItems = useMemo(() => {
         const expr = expression.trim()
         if (!expr) return allItems
 
+        // If it's a kubectl command, filter by parsed resource type & name
+        if (kubectlParsed.isKubectl && !kubectlParsed.error && kubectlParsed.resourceType) {
+            setExpressionError(null)
+            let results = allItems.filter(item => item.resourceType === kubectlParsed.resourceType)
+
+            // Filter by name if specified
+            if (kubectlParsed.name) {
+                const nameLower = kubectlParsed.name.toLowerCase()
+                results = results.filter(item => item.name.toLowerCase().includes(nameLower))
+            }
+
+            // Filter by label selector if specified
+            if (kubectlParsed.labelSelector) {
+                const selectors = kubectlParsed.labelSelector.split(',').map(s => s.trim())
+                results = results.filter(item => {
+                    const labels = (item.raw as { metadata?: { labels?: Record<string, string> } })?.metadata?.labels || {}
+                    return selectors.every(sel => {
+                        if (sel.includes('!=')) {
+                            const [key, val] = sel.split('!=')
+                            return labels[key] !== val
+                        }
+                        if (sel.includes('=')) {
+                            const [key, val] = sel.split('=')
+                            return labels[key] === val
+                        }
+                        // Label existence check
+                        return key in labels
+                    })
+                })
+            }
+
+            return results
+        }
+
+        // Standard expression mode
         try {
             setExpressionError(null)
             return allItems.filter((item) => evaluate(expr, item.raw))
@@ -182,7 +352,7 @@ export function ExpressionSearchPage() {
             setExpressionError(String(e))
             return []
         }
-    }, [expression, allItems])
+    }, [expression, allItems, kubectlParsed])
 
     // Navigate to resource detail
     const handleRowClick = useCallback(
@@ -270,7 +440,13 @@ export function ExpressionSearchPage() {
                     Advanced Search
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                    Filter Kubernetes resources using expression-based queries — supports <code className="text-xs bg-muted px-1 rounded">in</code>, <code className="text-xs bg-muted px-1 rounded">regex</code>, <code className="text-xs bg-muted px-1 rounded">exists()</code>, <code className="text-xs bg-muted px-1 rounded">.age</code>, and more
+                    Filter Kubernetes resources using expression-based queries or{' '}
+                    <code className="text-xs bg-muted px-1 rounded">kubectl</code> commands — supports{' '}
+                    <code className="text-xs bg-muted px-1 rounded">kubectl get pods -n default -l app=web</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded">in</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded">regex</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded">exists()</code>,{' '}
+                    <code className="text-xs bg-muted px-1 rounded">.age</code>, and more
                 </p>
             </div>
 
@@ -382,9 +558,8 @@ export function ExpressionSearchPage() {
                                 }
                                 if (e.key === 'Escape') { setShowSuggestions(false) }
                             }
-                        }}
-                        placeholder='e.g. status.phase in ("Pending", "Failed") && metadata.name.matches("web-.*")'
-                        className={`pl-9 pr-10 h-12 text-base font-mono transition-all ${expressionError
+>
+                        placeholder='e.g. kubectl get pods -n default -l app=web  or  status.phase in ("Pending", "Failed")'                        className={`pl-9 pr-10 h-12 text-base font-mono transition-all ${expressionError
                             ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive'
                             : hasExpression
                                 ? 'border-primary/50 ring-1 ring-primary/20'
@@ -415,15 +590,36 @@ export function ExpressionSearchPage() {
                         </div>
                     )}
                 </div>
+>
+                {/* kubectl mode indicator */}
+                {kubectlParsed.isKubectl && (
+                    <div className={`flex items-center gap-2 text-xs rounded-md px-3 py-2 ${
+                        kubectlParsed.error
+                            ? 'text-destructive bg-destructive/5 border border-destructive/20'
+                            : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 border border-emerald-500/20'
+                    }`}>
+                        <IconBolt className="h-3.5 w-3.5 shrink-0" />
+                        {kubectlParsed.error ? (
+                            <span className="font-mono">{kubectlParsed.error}</span>
+                        ) : (
+                            <span className="font-mono">
+                                kubectl mode — {kubectlParsed.verb} {kubectlParsed.resourceType}
+                                {kubectlParsed.namespace ? ` -n ${kubectlParsed.namespace}` : ''}
+                                {kubectlParsed.name ? ` ${kubectlParsed.name}` : ''}
+                                {kubectlParsed.labelSelector ? ` -l ${kubectlParsed.labelSelector}` : ''}
+                                <span className="ml-2 opacity-60">(scoped to your RBAC permissions)</span>
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 {/* Expression Error */}
-                {expressionError && (
+                {!kubectlParsed.isKubectl && expressionError && (
                     <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2">
                         <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                         <span className="font-mono">{expressionError}</span>
                     </div>
                 )}
-
                 {/* Active filter chip */}
                 {hasExpression && !expressionError && (
                     <div className="flex items-center gap-2 text-xs">
@@ -551,20 +747,74 @@ function ResultsTable({
 // ---------------------------------------------------------------------------
 // Examples Panel
 // ---------------------------------------------------------------------------
+>
+const KUBECTL_EXAMPLES: ExpressionExample[] = [
+    {
+        label: 'kubectl',
+        expression: 'kubectl get pods -n default',
+        description: 'List all pods in the default namespace',
+        resourceHint: 'pods',
+    },
+    {
+        label: 'kubectl',
+        expression: 'kubectl get deploy -A',
+        description: 'List all deployments across all namespaces',
+        resourceHint: 'deployments',
+    },
+    {
+        label: 'kubectl',
+        expression: 'kubectl get pods -l app=nginx -n default',
+        description: 'Get pods filtered by label selector',
+        resourceHint: 'pods',
+    },
+    {
+        label: 'kubectl',
+        expression: 'kubectl get nodes',
+        description: 'List all cluster nodes (cluster-scoped)',
+        resourceHint: 'nodes',
+    },
+    {
+        label: 'kubectl',
+        expression: 'kubectl get svc -n kube-system',
+        description: 'List services in kube-system',
+        resourceHint: 'services',
+    },
+    {
+        label: 'kubectl',
+        expression: 'kubectl get cm -A',
+        description: 'List all ConfigMaps across namespaces',
+        resourceHint: 'configmaps',
+    },
+]
+
 function ExamplesPanel({ onApply }: { onApply: (ex: ExpressionExample) => void }) {
     return (
-        <div className="flex flex-col gap-4 mt-2">
-            <div className="text-center text-sm text-muted-foreground font-medium">Examples</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {EXPRESSION_EXAMPLES.map((ex, i) => (
-                    <ExampleCard key={i} example={ex} onApply={onApply} />
-                ))}
+        <div className="flex flex-col gap-6 mt-2">
+            {/* kubectl examples */}
+            <div>
+                <div className="text-center text-sm text-muted-foreground font-medium mb-3 flex items-center justify-center gap-2">
+                    <Badge variant="secondary" className="text-xs font-mono">kubectl</Badge>
+                    Commands (RBAC-scoped)
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {KUBECTL_EXAMPLES.map((ex, i) => (
+                        <ExampleCard key={`kubectl-${i}`} example={ex} onApply={onApply} />
+                    ))}
+                </div>
+            </div>
+
+            {/* Expression examples */}
+            <div>
+                <div className="text-center text-sm text-muted-foreground font-medium mb-3">Expression Examples</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {EXPRESSION_EXAMPLES.map((ex, i) => (
+                        <ExampleCard key={i} example={ex} onApply={onApply} />
+                    ))}
+                </div>
             </div>
         </div>
     )
-}
-
-function ExampleCard({
+}function ExampleCard({
     example,
     onApply,
 }: {

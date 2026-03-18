@@ -16,16 +16,8 @@ import { API_BASE_URL } from '@/lib/api-client'
 import { withSubPath } from '@/lib/subpath'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 type ConnState = 'connecting' | 'connected' | 'error' | 'closed'
-type LogFile = 'application.log' | 'access.log'
 
 function getLogColor(line: string): string {
   const l = line.toLowerCase()
@@ -55,7 +47,7 @@ function getLogLevelBadge(line: string): { label: string; className: string } | 
 export function LiveLogWidget() {
   const { t } = useTranslation()
   const [logs, setLogs] = useState<string[]>([])
-  const [logFile, setLogFile] = useState<LogFile>('application.log')
+  const logFile = 'access.log'
   const [connState, setConnState] = useState<ConnState>('connecting')
   const [errorMsg, setErrorMsg] = useState('')
   const [retryCount, setRetryCount] = useState(0)
@@ -279,25 +271,9 @@ export function LiveLogWidget() {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <Select
-            value={logFile}
-            onValueChange={(v) => {
-              setLogFile(v as LogFile)
-              setRetryCount(c => c + 1)
-            }}
-          >
-            <SelectTrigger className="h-7 w-[130px] text-[11px] border-border/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="application.log" className="text-xs">
-                application.log
-              </SelectItem>
-              <SelectItem value="access.log" className="text-xs">
-                access.log
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <Badge variant="outline" className="h-7 px-2 text-[10px] font-mono border-border/50 text-muted-foreground">
+            access.log
+          </Badge>
 
           <Button
             variant="ghost"

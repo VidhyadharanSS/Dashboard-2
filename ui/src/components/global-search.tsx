@@ -343,15 +343,14 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         icon: IconMap,
         searchText: 'docs help manual tutorial developer'.toLowerCase(),
         onSelect: () => handleSelect('/tutorials'),
-      },
+>
       {
         id: 'nav-advanced-search',
-        label: 'Advanced Search (Expression Query)',
+        label: 'Advanced Search (Expression & kubectl)',
         icon: IconSearch,
-        searchText: 'advanced search expression query filter kubernetes resources'.toLowerCase(),
+        searchText: 'advanced search expression query filter kubernetes resources kubectl get nodes pods'.toLowerCase(),
         onSelect: () => handleSelect('/expression-search'),
-      },
-      {
+      },      {
         id: 'nav-settings-quick',
         label: 'Open Settings',
         icon: IconSettings,
@@ -398,7 +397,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     user,
     canAccess
   ])
-
+>
   // Filter theme option based on query
   const actionResults = useMemo(() => {
     const trimmedQuery = query.trim().toLowerCase()
@@ -406,7 +405,18 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       return []
     }
 
-    return actionItems
+    // If user typed a kubectl command, show a special action at the top
+    const kubectlAction: ActionSearchItem[] = isKubectlQuery ? [{
+      id: 'kubectl-advanced-search',
+      label: `Run in Advanced Search: ${query.trim()}`,
+      icon: IconSearch,
+      searchText: '',
+      onSelect: () => {
+        handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
+      },
+    }] : []
+
+    const filtered = actionItems
       .map(item => {
         let score = 0
         const labelLower = item.label.toLowerCase()
@@ -419,8 +429,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       })
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
-  }, [actionItems, query])
 
+    return [...kubectlAction, ...filtered]
+  }, [actionItems, query, isKubectlQuery, handleSelect])
   // Use favorites hook
   const {
     favorites,
@@ -462,6 +473,12 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       setIsLoading(false)
     }
   }, [])
+>
+  // Detect kubectl-style commands and offer to redirect to advanced search
+  const isKubectlQuery = useMemo(() => {
+    const trimmed = query.trim().toLowerCase()
+    return trimmed.startsWith('kubectl ') || trimmed.startsWith('k get ') || trimmed.startsWith('k describe ')
+  }, [query])
 
   // Debounce search calls
   useEffect(() => {
@@ -474,14 +491,19 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       }
       return
     }
+    // Don't run API search for kubectl commands — the action item will handle it
+    if (isKubectlQuery) {
+      setIsLoading(false)
+      setResults([])
+      return
+    }
     setIsLoading(true)
     const timeoutId = setTimeout(() => {
       performSearch(query, namespaceFilter)
     }, 300) // 300ms debounce
 
     return () => clearTimeout(timeoutId)
-  }, [query, namespaceFilter, performSearch, favorites])
-
+  }, [query, namespaceFilter, performSearch, favorites, isKubectlQuery])
   // Handle item selection
   const handleSelect = useCallback(
     (path: string) => {

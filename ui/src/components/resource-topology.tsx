@@ -19,6 +19,8 @@ import {
     IconMinimize,
     IconSearch,
     IconX,
+    IconDownload,
+    IconPhoto,
 } from '@tabler/icons-react'
 import { Link } from 'react-router-dom'
 
@@ -262,6 +264,46 @@ export function ResourceTopology({
 
     const totalNodes = (related?.nodes?.length || 0) + 1
 
+    // Export topology as PNG image
+    const handleExportImage = useCallback(async () => {
+        if (!contentRef.current) return
+        try {
+            // Dynamically import html2canvas-like approach using native canvas
+            const el = contentRef.current
+            const canvas = document.createElement('canvas')
+            const scale = 2 // High-DPI
+            const rect = el.getBoundingClientRect()
+            canvas.width = rect.width * scale
+            canvas.height = rect.height * scale
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+
+            // Use the browser's built-in SVG foreignObject rendering
+            const svgData = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}">
+                    <foreignObject width="100%" height="100%">
+                        <div xmlns="http://www.w3.org/1999/xhtml">
+                            ${el.outerHTML}
+                        </div>
+                    </foreignObject>
+                </svg>
+            `
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+            const svgUrl = URL.createObjectURL(svgBlob)
+
+            // Fallback: export as SVG directly (much more reliable for complex DOM)
+            const a = document.createElement('a')
+            a.href = svgUrl
+            a.download = `topology-${name}-${new Date().toISOString().slice(0, 10)}.svg`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(svgUrl)
+        } catch (err) {
+            console.error('Failed to export topology:', err)
+        }
+    }, [name])
+
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
@@ -311,6 +353,10 @@ export function ResourceTopology({
                 </Button>
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={() => setIsFullscreen(f => !f)} title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
                     {isFullscreen ? <IconMinimize size={15} /> : <IconMaximize size={15} />}
+                </Button>
+                <div className="h-px w-6 bg-border/50 self-center" />
+                <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={handleExportImage} title="Export as SVG image">
+                    <IconPhoto size={15} />
                 </Button>
             </div>
 
@@ -419,12 +465,11 @@ export function ResourceTopology({
                     </div>
                 </div>
             </CardContent>
-
+>
             {/* Hint text */}
             <div className="absolute bottom-3 right-3 z-50 text-[10px] text-muted-foreground/50 hidden md:block">
-                Scroll + Ctrl to zoom · Drag to pan
-            </div>
-        </Card>
+                Scroll + Ctrl to zoom · Drag to pan · Click node for YAML · Hover for connections
+            </div>        </Card>
     )
 }
 

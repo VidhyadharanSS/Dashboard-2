@@ -32,6 +32,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 
 interface ShortcutGroup {
     title: string
@@ -47,6 +48,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
         shortcuts: [
             { keys: ['?'], description: 'Show keyboard shortcuts' },
             { keys: ['Ctrl', 'K'], description: 'Open global search' },
+            { keys: ['Ctrl', 'F'], description: 'Open favorites' },
             { keys: ['Ctrl', 'J'], description: 'Create new resource' },
             { keys: ['Esc'], description: 'Close dialogs & drawers' },
         ],

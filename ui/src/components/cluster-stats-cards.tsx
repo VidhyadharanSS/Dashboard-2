@@ -20,15 +20,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-
+>
 interface ClusterStatsCardsProps {
   stats?: OverviewData
   isLoading?: boolean
 }
 
-/* ─── Tiny health ring for stat cards ─── */
-function HealthRing({ pct, size = 32 }: { pct: number; size?: number }) {
-  const strokeWidth = 3
+function HealthRing({ pct, size = 32 }: { pct: number; size?: number }) {  const strokeWidth = 3
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
   const progress = (pct / 100) * circumference
