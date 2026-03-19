@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { Role } from '@/types/api'
 import {
   assignRole,
+  cloneRole,
   createRole,
   deleteRole,
   unassignRole,
@@ -193,15 +194,17 @@ export function RBACManagement() {
             {t('common.clone', 'Clone')}
           </>
         ),
-        onClick: (role) => {
-          const clonedRole: Role = {
-            ...role,
-            id: 0,
-            name: `${role.name}-copy`,
-            isSystem: false,
+        onClick: async (role) => {
+          try {
+            await cloneRole(role.id, { cloneAssignments: false })
+            queryClient.invalidateQueries({ queryKey: ['role-list'] })
+            toast.success(t('rbac.messages.cloned', 'Role cloned successfully'))
+          } catch (err: unknown) {
+            toast.error(
+              (err as Error).message ||
+              t('rbac.messages.cloneError', 'Failed to clone role')
+            )
           }
-          setEditingRole(clonedRole)
-          setShowDialog(true)
         },
       },
       {
@@ -348,13 +351,13 @@ export function RBACManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-6 animate-page-enter">
+      <Card className="card-elevated">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <IconShield className="h-5 w-5" />
-              {t('rbac.title', 'RBAC Management')}
+              <IconShield className="h-5 w-5 text-primary" />
+              <span className="text-gradient">{t('rbac.title', 'RBAC Management')}</span>
             </CardTitle>
             <div className="flex items-center gap-3">
               <div className="relative">

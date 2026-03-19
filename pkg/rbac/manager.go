@@ -25,7 +25,9 @@ func InitRBAC() {
 	})
 }
 
-// loadRolesFromDB populates RBACConfig from DB rows
+// loadRolesFromDB populates RBACConfig from DB rows.
+// All assignments for the same role are merged into a single RoleMapping so that
+// GetUserRoles correctly handles roles with many subjects.
 func loadRolesFromDB() error {
 	cfg := &common.RolesConfig{
 		Roles:       []common.Role{},
@@ -48,17 +50,26 @@ func loadRolesFromDB() error {
 		}
 		cfg.Roles = append(cfg.Roles, cr)
 
+		// Merge all assignments for this role into one RoleMapping entry.
+		// Previously one entry was created per assignment which caused each
+		// entry to only carry a single user/group — only the last one would
+		// match during iteration.
+		if len(r.Assignments) == 0 {
+			continue
+		}
+		rm := common.RoleMapping{
+			Name:       cr.Name,
+			Users:      make([]string, 0),
+			OIDCGroups: make([]string, 0),
+		}
 		for _, a := range r.Assignments {
-			rm := common.RoleMapping{
-				Name: cr.Name,
-			}
 			if a.SubjectType == model.SubjectTypeUser {
 				rm.Users = append(rm.Users, a.Subject)
 			} else {
 				rm.OIDCGroups = append(rm.OIDCGroups, a.Subject)
 			}
-			cfg.RoleMapping = append(cfg.RoleMapping, rm)
 		}
+		cfg.RoleMapping = append(cfg.RoleMapping, rm)
 	}
 	rwlock.Lock()
 	RBACConfig = cfg

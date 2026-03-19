@@ -78,9 +78,10 @@ func GetUserRoles(user model.User) []common.Role {
 	return roles
 }
 
+// findRole looks up a role by name.
+// IMPORTANT: The caller MUST already hold at least an RLock on rwlock.
+// This is an internal helper — do NOT call without the lock held.
 func findRole(name string) *common.Role {
-	rwlock.RLock()
-	defer rwlock.RUnlock()
 	for _, r := range RBACConfig.Roles {
 		if r.Name == name {
 			return &r

@@ -273,6 +273,7 @@ export function ResourceTopology({
             const rect = el.getBoundingClientRect()
             const bgColor = actualTheme === 'dark' ? '#0f172a' : '#f8fafc'
             const fgColor = actualTheme === 'dark' ? '#e2e8f0' : '#1e293b'
+            const lineColor = actualTheme === 'dark' ? 'rgba(96,165,250,0.3)' : 'rgba(59,130,246,0.25)'
             const dateStr = new Date().toISOString().slice(0, 10)
 
             if (format === 'png') {
@@ -290,61 +291,77 @@ export function ResourceTopology({
                 ctx.fillStyle = bgColor
                 ctx.fillRect(0, 0, rect.width, rect.height)
 
-                // Render SVG lines first
-                const svgEl = el.querySelector('svg')
-                if (svgEl) {
-                    const svgClone = svgEl.cloneNode(true) as SVGSVGElement
-                    svgClone.setAttribute('width', String(rect.width))
-                    svgClone.setAttribute('height', String(rect.height))
-                    // Inline styles for standalone rendering
-                    svgClone.querySelectorAll('[class*="fill-"]').forEach(node => {
-                        const computed = getComputedStyle(node as Element)
-                        ;(node as SVGElement).style.fill = computed.fill
-                    })
-                    svgClone.querySelectorAll('[class*="text-"]').forEach(node => {
-                        const computed = getComputedStyle(node as Element)
-                        ;(node as SVGElement).style.stroke = computed.color
-                    })
-                    const svgData = new XMLSerializer().serializeToString(svgClone)
-                    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-                    const svgUrl = URL.createObjectURL(svgBlob)
+                // Draw connection lines directly on canvas using nodePositions
+                const contentRect2 = el.getBoundingClientRect()
+                if (related?.links && Object.keys(nodePositions).length > 0) {
+                    ctx.strokeStyle = lineColor
+                    ctx.lineWidth = 1.5
+                    ctx.setLineDash([])
 
-                    await new Promise<void>((resolve) => {
-                        const img = new Image()
-                        img.onload = () => {
-                            ctx.drawImage(img, 0, 0, rect.width, rect.height)
-                            URL.revokeObjectURL(svgUrl)
-                            resolve()
+                    related.links.forEach(link => {
+                        const p1 = nodePositions[link.source]
+                        const p2 = nodePositions[link.target]
+                        if (p1 && p2) {
+                            ctx.beginPath()
+                            if (Math.abs(p1.x - p2.x) > 50) {
+                                // Curved line
+                                const mx = (p1.x + p2.x) / 2
+                                ctx.moveTo(p1.x, p1.y)
+                                ctx.quadraticCurveTo(mx, p1.y, p2.x, p2.y)
+                            } else {
+                                ctx.moveTo(p1.x, p1.y)
+                                ctx.lineTo(p2.x, p2.y)
+                            }
+                            ctx.stroke()
+
+                            // Arrowhead
+                            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x)
+                            const arrowLen = 8
+                            ctx.fillStyle = lineColor
+                            ctx.beginPath()
+                            ctx.moveTo(p2.x, p2.y)
+                            ctx.lineTo(p2.x - arrowLen * Math.cos(angle - Math.PI / 6), p2.y - arrowLen * Math.sin(angle - Math.PI / 6))
+                            ctx.lineTo(p2.x - arrowLen * Math.cos(angle + Math.PI / 6), p2.y - arrowLen * Math.sin(angle + Math.PI / 6))
+                            ctx.closePath()
+                            ctx.fill()
+
+                            // Link label
+                            if (link.label) {
+                                const mx2 = (p1.x + p2.x) / 2
+                                const my2 = (p1.y + p2.y) / 2
+                                ctx.fillStyle = actualTheme === 'dark' ? 'rgba(148,163,184,0.5)' : 'rgba(100,116,139,0.4)'
+                                ctx.font = '9px system-ui, -apple-system, sans-serif'
+                                ctx.textAlign = 'center'
+                                ctx.fillText(link.label, mx2, my2 - 6)
+                            }
                         }
-                        img.onerror = () => {
-                            URL.revokeObjectURL(svgUrl)
-                            resolve()
-                        }
-                        img.src = svgUrl
                     })
                 }
 
                 // Render each node card onto the canvas
                 const nodes = el.querySelectorAll('[id]')
-                const contentRect = el.getBoundingClientRect()
                 nodes.forEach(node => {
                     const nodeEl = node as HTMLElement
                     if (!nodeEl.className || typeof nodeEl.className !== 'string') return
                     if (!nodeEl.className.includes('rounded-xl')) return
 
                     const nodeRect = nodeEl.getBoundingClientRect()
-                    const x = nodeRect.left - contentRect.left
-                    const y = nodeRect.top - contentRect.top
+                    const x = nodeRect.left - contentRect2.left
+                    const y = nodeRect.top - contentRect2.top
                     const w = nodeRect.width
                     const h = nodeRect.height
 
-                    const computed = getComputedStyle(nodeEl)
                     const isRoot = nodeEl.className.includes('bg-primary')
+
+                    // Shadow
+                    ctx.shadowColor = isRoot ? 'rgba(59, 130, 246, 0.3)' : 'rgba(0,0,0,0.08)'
+                    ctx.shadowBlur = isRoot ? 16 : 6
+                    ctx.shadowOffsetY = isRoot ? 0 : 2
 
                     // Node background
                     ctx.fillStyle = isRoot ? (actualTheme === 'dark' ? '#3b82f6' : '#2563eb') : (actualTheme === 'dark' ? '#1e293b' : '#ffffff')
                     ctx.strokeStyle = isRoot ? 'transparent' : (actualTheme === 'dark' ? '#475569' : '#cbd5e1')
-                    ctx.lineWidth = 2
+                    ctx.lineWidth = isRoot ? 0 : 1.5
 
                     // Rounded rectangle
                     const radius = 12
@@ -362,14 +379,17 @@ export function ResourceTopology({
                     ctx.fill()
                     if (!isRoot) ctx.stroke()
 
-                    // Shadow for root
-                    if (isRoot) {
-                        ctx.shadowColor = 'rgba(59, 130, 246, 0.25)'
-                        ctx.shadowBlur = 12
-                        ctx.fill()
-                        ctx.shadowColor = 'transparent'
-                        ctx.shadowBlur = 0
-                    }
+                    // Reset shadow
+                    ctx.shadowColor = 'transparent'
+                    ctx.shadowBlur = 0
+                    ctx.shadowOffsetY = 0
+
+                    // Icon placeholder circle
+                    const iconY = y + 16
+                    ctx.fillStyle = isRoot ? 'rgba(255,255,255,0.2)' : (actualTheme === 'dark' ? 'rgba(96,165,250,0.15)' : 'rgba(59,130,246,0.1)')
+                    ctx.beginPath()
+                    ctx.arc(x + w / 2, iconY, 10, 0, Math.PI * 2)
+                    ctx.fill()
 
                     // Node name text
                     const nameEl = nodeEl.querySelector('.truncate')
@@ -383,21 +403,45 @@ export function ResourceTopology({
                         while (ctx.measureText(displayText).width > maxWidth && displayText.length > 3) {
                             displayText = displayText.slice(0, -4) + '...'
                         }
-                        ctx.fillText(displayText, x + w / 2, y + h / 2 + 2)
+                        ctx.fillText(displayText, x + w / 2, y + h / 2 + 6)
                     }
 
                     // Type badge text
                     const badgeEl = nodeEl.querySelector('.uppercase')
                     if (badgeEl) {
-                        ctx.fillStyle = isRoot ? 'rgba(255,255,255,0.7)' : (actualTheme === 'dark' ? '#94a3b8' : '#64748b')
+                        const badgeText = (badgeEl.textContent || '').toUpperCase()
                         ctx.font = 'bold 8px system-ui, -apple-system, sans-serif'
                         ctx.textAlign = 'center'
-                        ctx.fillText((badgeEl.textContent || '').toUpperCase(), x + w / 2, y + h / 2 + 16)
+                        const tw = ctx.measureText(badgeText).width
+
+                        // Badge background pill
+                        const bx = x + w / 2 - tw / 2 - 6
+                        const by = y + h / 2 + 12
+                        const bw = tw + 12
+                        const bh = 14
+                        const br = 7
+                        ctx.fillStyle = isRoot ? 'rgba(255,255,255,0.2)' : (actualTheme === 'dark' ? 'rgba(96,165,250,0.15)' : 'rgba(59,130,246,0.08)')
+                        ctx.beginPath()
+                        ctx.moveTo(bx + br, by); ctx.lineTo(bx + bw - br, by)
+                        ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + br)
+                        ctx.lineTo(bx + bw, by + bh - br)
+                        ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - br, by + bh)
+                        ctx.lineTo(bx + br, by + bh)
+                        ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - br)
+                        ctx.lineTo(bx, by + br)
+                        ctx.quadraticCurveTo(bx, by, bx + br, by)
+                        ctx.closePath()
+                        ctx.fill()
+
+                        ctx.fillStyle = isRoot ? 'rgba(255,255,255,0.8)' : (actualTheme === 'dark' ? '#94a3b8' : '#64748b')
+                        ctx.fillText(badgeText, x + w / 2, by + 10)
                     }
                 })
 
                 // Watermark
-                ctx.fillStyle = actualTheme === 'dark' ? 'rgba(148,163,184,0.3)' : 'rgba(100,116,139,0.2)'
+                ctx.shadowColor = 'transparent'
+                ctx.shadowBlur = 0
+                ctx.fillStyle = actualTheme === 'dark' ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.15)'
                 ctx.font = '10px system-ui, -apple-system, sans-serif'
                 ctx.textAlign = 'right'
                 ctx.fillText(`Kites Topology — ${name} — ${dateStr}`, rect.width - 12, rect.height - 8)
@@ -451,7 +495,7 @@ export function ResourceTopology({
         } catch (err) {
             console.error('Failed to export topology:', err)
         }
-    }, [name, actualTheme])
+    }, [name, actualTheme, related, nodePositions])
 
     if (isLoading) {
         return (

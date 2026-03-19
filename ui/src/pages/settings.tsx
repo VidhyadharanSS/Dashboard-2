@@ -18,10 +18,10 @@ export function SettingsPage() {
   usePageTitle('Settings')
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 animate-page-enter">
       <div className="mb-4">
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl">{t('settings.title', 'Settings')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gradient">{t('settings.title', 'Settings')}</h1>
         </div>
         <p className="text-muted-foreground">
           {t('settings.description', 'Manage clusters, roles and permissions')}

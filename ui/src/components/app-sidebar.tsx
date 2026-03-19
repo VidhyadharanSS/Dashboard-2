@@ -279,7 +279,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="flex items-center gap-2 rounded-md px-2 py-1.5 bg-gradient-to-r from-muted/40 to-muted/20 border border-border/60 backdrop-blur-sm">
+        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 bg-gradient-to-r from-muted/40 to-muted/20 border border-border/40 backdrop-blur-sm transition-all duration-200 hover:border-border/60 hover:shadow-sm">
           <ClusterSelector />
         </div>
       </SidebarFooter>

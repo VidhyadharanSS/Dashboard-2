@@ -9,7 +9,16 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { ResourceHistory } from '@/types/api'
-import { useAuditLogs, useAuditLogDetail, useClusterList, useUserList, exportAuditLogs, applyResource } from '@/lib/api'
+import {
+  useAuditLogs,
+  useAuditLogDetail,
+  useClusterList,
+  useUserList,
+  exportAuditLogs,
+  applyResource,
+  useAuditRetentionInfo,
+  purgeOldAuditLogs,
+} from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -51,6 +60,10 @@ export function AuditLog() {
   const [isDiffOpen, setIsDiffOpen] = useState(false)
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false)
   const [isRollingBack, setIsRollingBack] = useState(false)
+  const [isPurging, setIsPurging] = useState(false)
+  const [purgeRetentionDays, setPurgeRetentionDays] = useState(90)
+
+  const { data: retentionInfo } = useAuditRetentionInfo()
 
   // Fetch full audit detail (with YAML diffs) only when a specific entry is selected
   const { data: auditDetail } = useAuditLogDetail(
@@ -304,12 +317,26 @@ export function AuditLog() {
   const totalRowCount = auditData?.total ?? 0
   const filteredRowCount = auditData?.data.length ?? 0
 
+  const handlePurge = async () => {
+    if (isPurging) return
+    setIsPurging(true)
+    try {
+      const result = await purgeOldAuditLogs(purgeRetentionDays)
+      toast.success(result.message)
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to purge audit logs')
+    } finally {
+      setIsPurging(false)
+    }
+  }
+
   return (
-    <Card>
+    <div className="space-y-4 animate-page-enter">
+    <Card className="card-elevated">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{t('auditLog.title', 'Audit Logs')}</CardTitle>
+            <CardTitle className="text-gradient">{t('auditLog.title', 'Audit Logs')}</CardTitle>
             <p className="text-muted-foreground text-sm">
               {t(
                 'auditLog.description',
@@ -431,7 +458,8 @@ export function AuditLog() {
                     onClick={() =>
                       exportAuditLogs({
                         operation: operationFilter || undefined,
-                        cluster: clusterFilter || undefined,
+                        cluster: showCluster ? (clusterFilter || undefined) : undefined,
+                        operatorId: operatorId || undefined,
                         search: searchQuery || undefined,
                         startDate: startDate || undefined,
                         endDate: endDate || undefined,
@@ -528,5 +556,68 @@ export function AuditLog() {
         </DialogContent>
       </Dialog>
     </Card>
+
+    {/* Audit Log Retention & Cleanup */}
+    {retentionInfo && (
+      <Card className="card-elevated">
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">
+            {t('auditLog.retention.title', 'Storage & Retention')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="text-center p-3 rounded-lg bg-muted/30 border border-border/40">
+              <div className="text-2xl font-bold tabular-nums animate-count-up">
+                {retentionInfo.totalEntries.toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">Total Entries</div>
+            </div>
+            {retentionInfo.ageBrackets?.map((bracket, i) => (
+              <div key={i} className="text-center p-3 rounded-lg bg-muted/30 border border-border/40">
+                <div className="text-2xl font-bold tabular-nums animate-count-up">
+                  {bracket.count.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">{bracket.label}</div>
+              </div>
+            ))}
+          </div>
+          {retentionInfo.oldestEntry && (
+            <p className="text-xs text-muted-foreground mb-4">
+              Oldest entry: <span className="font-medium">{retentionInfo.oldestEntry}</span>
+            </p>
+          )}
+          <div className="flex items-center gap-3 pt-3 border-t border-border/40">
+            <span className="text-sm text-muted-foreground">Purge entries older than</span>
+            <Select
+              value={String(purgeRetentionDays)}
+              onValueChange={(v) => setPurgeRetentionDays(Number(v))}
+            >
+              <SelectTrigger className="w-28 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 days</SelectItem>
+                <SelectItem value="30">30 days</SelectItem>
+                <SelectItem value="60">60 days</SelectItem>
+                <SelectItem value="90">90 days</SelectItem>
+                <SelectItem value="180">180 days</SelectItem>
+                <SelectItem value="365">1 year</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handlePurge}
+              disabled={isPurging}
+              className="h-8"
+            >
+              {isPurging ? 'Purging...' : 'Purge Old Logs'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )}
+    </div>
   )
 }

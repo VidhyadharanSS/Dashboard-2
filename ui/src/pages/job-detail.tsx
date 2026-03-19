@@ -166,7 +166,7 @@ export function JobDetail(props: { namespace: string; name: string }) {
   const volumes = templateSpec?.volumes
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 animate-page-enter">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold">{name}</h1>

@@ -58,8 +58,12 @@ const Highlight = ({ text, query }: { text: string; query: string }) => {
   )
 }
 
-const ResourceTableRow = React.memo(({ row, searchQuery, isSelected }: { row: any; searchQuery: string; isSelected: boolean }) => (
-  <TableRow data-state={isSelected && 'selected'}>
+const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex }: { row: any; searchQuery: string; isSelected: boolean; rowIndex: number }) => (
+  <TableRow
+    data-state={isSelected && 'selected'}
+    className="transition-all duration-150 hover:bg-accent/40 group/row"
+    style={{ '--stagger-index': rowIndex } as React.CSSProperties}
+  >
     {row.getVisibleCells().map((cell: any, index: number) => {
       const content = cell.column.columnDef.cell
         ? flexRender(cell.column.columnDef.cell, cell.getContext())
@@ -80,7 +84,7 @@ const ResourceTableRow = React.memo(({ row, searchQuery, isSelected }: { row: an
     })}
   </TableRow>
 ), (prev, next) => {
-  return prev.isSelected === next.isSelected && prev.searchQuery === next.searchQuery && prev.row.id === next.row.id
+  return prev.isSelected === next.isSelected && prev.searchQuery === next.searchQuery && prev.row.id === next.row.id && prev.rowIndex === next.rowIndex
 })
 
 export function ResourceTableView<T>({
@@ -112,12 +116,13 @@ export function ResourceTableView<T>({
       )
     }
 
-    return rows.map((row) => (
+    return rows.map((row, index) => (
       <ResourceTableRow
         key={row.id}
         row={row}
         searchQuery={searchQuery}
         isSelected={row.getIsSelected()}
+        rowIndex={index}
       />
     ))
   }
@@ -161,9 +166,10 @@ export function ResourceTableView<T>({
 
   return (
     <div className={containerClassName}>
-      <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-border/50 overflow-hidden shadow-sm card-elevated card-shine">
+        {isLoading && dataLength > 0 && <div className="loading-bar" />}
         <div
-          className={`transition-opacity duration-200 ${isLoading && dataLength > 0 ? 'opacity-75' : 'opacity-100'
+          className={`transition-opacity duration-300 ${isLoading && dataLength > 0 ? 'opacity-70' : 'opacity-100'
             }`}
         >
           {emptyState || (
@@ -171,7 +177,7 @@ export function ResourceTableView<T>({
               className={`relative ${maxBodyHeightClassName} overflow-auto scrollbar-hide`}
             >
               <Table>
-                <TableHeader className="bg-muted/60 backdrop-blur-sm sticky top-0 z-10">
+                <TableHeader className="bg-muted/40 backdrop-blur-sm sticky top-0 z-10 border-b shadow-[0_1px_0_oklch(0_0_0/0.03)]">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header, index) => (
@@ -226,7 +232,7 @@ export function ResourceTableView<T>({
       </div>
 
       {dataLength > 0 && (
-        <div className="flex items-center justify-between px-2 py-1">
+        <div className="flex items-center justify-between px-2 py-1 animate-fade-slide-in">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
             {hasActiveFilters ? (
               <>

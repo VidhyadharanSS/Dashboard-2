@@ -122,6 +122,13 @@ samp {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Universal smooth transitions for interactive elements */
+  button, a, input, select, textarea, [role="button"], [role="tab"] {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 0.15s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }
 
 /* Breathing animation for log viewer connection indicator */
@@ -258,4 +265,597 @@ samp {
 /* Subtle table row hover */
 table tbody tr {
   transition: background-color 0.15s ease;
+}
+
+/* Smooth staggered fade-in for list items */
+@keyframes listItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-list-item {
+  animation: listItemFadeIn 0.2s ease-out both;
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent 25%, oklch(0.7 0 0 / 0.06) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Micro-bounce for interactive elements */
+@keyframes microBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+}
+
+.active\:micro-bounce:active {
+  animation: microBounce 0.15s ease-out;
+}
+
+/* Smooth slide-up entrance */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Scale-in for modals / cards */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Smooth count-up transition for numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle border glow on focus */
+.focus-glow:focus-within {
+  box-shadow: 0 0 0 3px oklch(0.6 0.15 250 / 0.1);
+}
+
+.dark .focus-glow:focus-within {
+  box-shadow: 0 0 0 3px oklch(0.6 0.15 250 / 0.15);
+}
+
+/* Smooth width transition for search inputs */
+.search-expand {
+  transition: width 0.25s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Row highlight on hover with smooth left accent */
+table tbody tr {
+  position: relative;
+}
+
+table tbody tr::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.15s ease;
+}
+
+table tbody tr:hover::before {
+  width: 3px;
+}
+
+/* Pulse dot for live indicators */
+@keyframes pulseDot {
+  0%, 100% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 4px transparent;
+    opacity: 0.8;
+  }
+}
+
+.pulse-dot {
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+/* ─── Enhanced Page Entrance ─────────────────────────────────────────────── */
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.animate-page-enter {
+  animation: pageEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Card Shine Effect on Hover ─────────────────────────────────────────── */
+
+.card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    oklch(1 0 0 / 0.03) 45%,
+    oklch(1 0 0 / 0.06) 50%,
+    oklch(1 0 0 / 0.03) 55%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.card-shine:hover::after {
+  transform: translateX(100%);
+}
+
+.dark .card-shine::after {
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    oklch(1 0 0 / 0.02) 45%,
+    oklch(1 0 0 / 0.04) 50%,
+    oklch(1 0 0 / 0.02) 55%,
+    transparent 60%
+  );
+}
+
+/* ─── Staggered List Animation with CSS variables ────────────────────────── */
+
+@keyframes staggerFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-stagger-item {
+  animation: staggerFadeUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--stagger-index, 0) * 30ms);
+}
+
+/* ─── Smooth Expand/Collapse ─────────────────────────────────────────────── */
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: scaleY(0.95);
+    transform-origin: top;
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+}
+
+.animate-expand-in {
+  animation: expandIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Badge Glow ─────────────────────────────────────────────────────────── */
+
+.badge-glow {
+  transition: box-shadow 0.2s ease;
+}
+
+.badge-glow:hover {
+  box-shadow: 0 0 8px oklch(0.7 0.15 250 / 0.2);
+}
+
+.dark .badge-glow:hover {
+  box-shadow: 0 0 8px oklch(0.6 0.15 250 / 0.25);
+}
+
+/* ─── Floating Action Button Ripple ──────────────────────────────────────── */
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, oklch(1 0 0 / 0.3) 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 0.8s;
+}
+
+.btn-ripple:active::after {
+  transform: scale(0);
+  opacity: 0.3;
+  transition: 0s;
+}
+
+/* ─── Gradient Text ──────────────────────────────────────────────────────── */
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary), oklch(0.65 0.2 280));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .text-gradient {
+  background: linear-gradient(135deg, var(--primary), oklch(0.75 0.2 280));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Enhanced Tooltip Animation ─────────────────────────────────────────── */
+
+@keyframes tooltipIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+[data-state="delayed-open"][data-side] {
+  animation: tooltipIn 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Dialog/Sheet Enhanced Backdrop ─────────────────────────────────────── */
+
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+[data-state="open"][role="dialog"]::backdrop,
+[vaul-overlay][data-state="open"] {
+  animation: backdropIn 0.2s ease forwards;
+}
+
+/* ─── Skeleton Pulse (more refined) ──────────────────────────────────────── */
+
+@keyframes skeletonPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.skeleton-refined {
+  animation: skeletonPulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ─── Sidebar Polish ─────────────────────────────────────────────────────── */
+
+[data-sidebar="menu-button"][data-active="true"] {
+  position: relative;
+}
+
+[data-sidebar="menu-button"][data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--primary);
+  border-radius: 0 3px 3px 0;
+  animation: slideInLeft 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    width: 0;
+  }
+  to {
+    opacity: 1;
+    width: 3px;
+  }
+}
+
+/* ─── Input Focus Glow (enhanced) ────────────────────────────────────────── */
+
+input:focus, textarea:focus, select:focus, [role="combobox"]:focus {
+  box-shadow: 0 0 0 2px oklch(0.6 0.15 250 / 0.08), 0 1px 2px oklch(0 0 0 / 0.04);
+}
+
+.dark input:focus, .dark textarea:focus, .dark select:focus, .dark [role="combobox"]:focus {
+  box-shadow: 0 0 0 2px oklch(0.6 0.15 250 / 0.12), 0 1px 2px oklch(0 0 0 / 0.1);
+}
+
+/* ─── Tab Ink Bar ────────────────────────────────────────────────────────── */
+
+[role="tab"][data-state="active"] {
+  position: relative;
+}
+
+[role="tab"][data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  width: 80%;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px 2px 0 0;
+  animation: inkBarIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes inkBarIn {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* ─── Number Counter ─────────────────────────────────────────────────────── */
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-count-up {
+  animation: countUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Status Dot Breathe ─────────────────────────────────────────────────── */
+
+@keyframes statusBreathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  50% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+
+.status-dot-breathe {
+  animation: statusBreathe 3s ease-in-out infinite;
+}
+
+/* ─── Popover Float In ───────────────────────────────────────────────────── */
+
+@keyframes popoverFloat {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+[data-state="open"][data-side] {
+  animation: popoverFloat 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Row Selection Glow ─────────────────────────────────────────────────── */
+
+table tbody tr[data-state="selected"] {
+  background: oklch(0.6 0.15 250 / 0.05) !important;
+  box-shadow: inset 0 0 0 1px oklch(0.6 0.15 250 / 0.1);
+}
+
+.dark table tbody tr[data-state="selected"] {
+  background: oklch(0.6 0.15 250 / 0.08) !important;
+  box-shadow: inset 0 0 0 1px oklch(0.6 0.15 250 / 0.15);
+}
+
+/* ─── Enhanced Dropdown Menu Items ───────────────────────────────────────── */
+
+[role="menuitem"] {
+  transition: background-color 0.1s ease, color 0.1s ease, padding-left 0.15s ease !important;
+}
+
+[role="menuitem"]:hover {
+  padding-left: 0.125rem;
+}
+
+/* ─── Smooth Accordion/Collapsible ───────────────────────────────────────── */
+
+[data-state="open"] > [data-radix-collapsible-content] {
+  animation: expandIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Loading Progress Bar ───────────────────────────────────────────────── */
+
+@keyframes loadingBar {
+  0% {
+    width: 0;
+    left: 0;
+  }
+  50% {
+    width: 60%;
+    left: 20%;
+  }
+  100% {
+    width: 0;
+    left: 100%;
+  }
+}
+
+.loading-bar {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: oklch(0.5 0 0 / 0.1);
+  border-radius: 1px;
+}
+
+.loading-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 1px;
+  animation: loadingBar 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* ─── Hover Scale for Icon Buttons ───────────────────────────────────────── */
+
+button[size="icon"]:hover,
+[data-slot="sidebar-menu-button"]:hover {
+  transform: scale(1.02);
+}
+
+button[size="icon"]:active,
+[data-slot="sidebar-menu-button"]:active {
+  transform: scale(0.97);
+}
+
+/* ─── Enhanced Card Borders on Hover ─────────────────────────────────────── */
+
+.card-elevated:hover {
+  border-color: oklch(0.6 0.1 250 / 0.2);
+}
+
+.dark .card-elevated:hover {
+  border-color: oklch(0.6 0.1 250 / 0.15);
+}
+
+/* ─── Scroll Fade at Edges ───────────────────────────────────────────────── */
+
+.scroll-fade-top {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 24px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 24px);
+}
+
+.scroll-fade-bottom {
+  mask-image: linear-gradient(to top, transparent 0%, black 24px);
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 24px);
+}
+
+/* ─── Smooth Number Transitions ──────────────────────────────────────────── */
+
+.transition-number {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+}
+
+/* ─── Notification Badge Pop ─────────────────────────────────────────────── */
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-badge-pop {
+  animation: badgePop 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Subtle Text Selection ──────────────────────────────────────────────── */
+
+::selection {
+  background: oklch(0.6 0.15 250 / 0.2);
+  color: inherit;
+}
+
+.dark ::selection {
+  background: oklch(0.65 0.15 250 / 0.3);
+  color: inherit;
 }

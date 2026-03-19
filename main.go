@@ -106,6 +106,10 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 		userGroup.POST("/sidebar_preference", authHandler.RequireAuth(), handlers.UpdateSidebarPreference)
 		userGroup.GET("/sessions", authHandler.RequireAuth(), handlers.ListUserSessions)
 		userGroup.DELETE("/sessions/:id", authHandler.RequireAuth(), handlers.DeleteUserSession)
+		// Permission introspection — any authenticated user can query their own permissions
+		userGroup.GET("/permissions", authHandler.RequireAuth(), rbac.GetMyPermissions)
+		userGroup.GET("/permissions/check", authHandler.RequireAuth(), rbac.CheckPermission)
+		userGroup.GET("/accessible-namespaces", authHandler.RequireAuth(), rbac.ListAccessibleNamespaces)
 	}
 
 	// admin apis
@@ -118,6 +122,8 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 	{
 		adminAPI.GET("/audit-logs", handlers.ListAuditLogs)
 		adminAPI.GET("/audit-logs/export", handlers.ExportAuditLogs)
+		adminAPI.GET("/audit-logs/retention", handlers.GetAuditRetentionInfo)
+		adminAPI.DELETE("/audit-logs/purge", handlers.PurgeOldAuditLogs)
 		adminAPI.GET("/audit-logs/:id", handlers.GetAuditLogDetailAdmin)
 		oauthProviderAPI := adminAPI.Group("/oauth-providers")
 		{
@@ -146,7 +152,12 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 
 			rbacAPI.POST("/:id/assign", rbac.AssignRole)
 			rbacAPI.DELETE("/:id/assign", rbac.UnassignRole)
+			rbacAPI.POST("/:id/assign/bulk", rbac.BulkAssignRole)
+			rbacAPI.POST("/:id/clone", rbac.CloneRole)
 		}
+
+		// Effective permissions introspection (admin)
+		adminAPI.GET("/effective-permissions/:username", rbac.GetEffectivePermissions)
 
 		adminAPI.GET("/system/logs/:filename", handlers.StreamLogFile)
 		adminAPI.GET("/sessions", handlers.ListAllSessions)
@@ -207,7 +218,10 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 		api.GET("/audit-logs", handlers.ListAuditLogsForUser)
 		api.GET("/audit-logs/stats", handlers.GetAuditStats)
 		api.GET("/audit-logs/timeline", handlers.GetAuditTimeline)
+		api.GET("/audit-logs/summary", handlers.GetAuditSummary)
 		api.GET("/audit-logs/:id", handlers.GetAuditLogDetail)
+		// Per-resource activity (used by resource detail pages)
+		api.GET("/audit-logs/resource/:resourceType/:namespace/:name", handlers.GetAuditResourceActivity)
 
 		api.GET("/image/tags", handlers.GetImageTags)
 		api.GET("/templates", handlers.ListTemplates)

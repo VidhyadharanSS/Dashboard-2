@@ -1828,27 +1828,40 @@ export const useAuditStats = (options?: { enabled?: boolean; refetchInterval?: n
   })
 }
 
-// Export audit logs (admin only) — downloads as a file via fetch to avoid popup blockers
+// Export audit logs (admin only) — downloads as a CSV file via fetch to avoid popup blockers.
+// NOTE: The export endpoint streams ALL matching rows with no page/size limit, so we must
+// NOT send a `size` parameter — the backend export handler ignores pagination entirely.
 export const exportAuditLogs = async (params?: {
   operation?: string
   cluster?: string
+  operatorId?: number
   search?: string
+  resourceType?: string
+  resourceName?: string
+  namespace?: string
   startDate?: string
   endDate?: string
 }) => {
   const searchParams = new URLSearchParams()
-  searchParams.set('page', '1')
-  searchParams.set('size', '10000')
+  // Do NOT include page/size — the export endpoint streams unbounded rows
   if (params?.operation) searchParams.set('operation', params.operation)
   if (params?.cluster) searchParams.set('cluster', params.cluster)
+  if (params?.operatorId) searchParams.set('operatorId', String(params.operatorId))
   if (params?.search) searchParams.set('search', params.search)
+  if (params?.resourceType) searchParams.set('resourceType', params.resourceType)
+  if (params?.resourceName) searchParams.set('resourceName', params.resourceName)
+  if (params?.namespace) searchParams.set('namespace', params.namespace)
   if (params?.startDate) searchParams.set('startDate', params.startDate)
   if (params?.endDate) searchParams.set('endDate', params.endDate)
 
-  const url = withSubPath(`${API_BASE_URL}/admin/audit-logs/export?${searchParams.toString()}`)
+  const qs = searchParams.toString()
+  const url = withSubPath(`${API_BASE_URL}/admin/audit-logs/export${qs ? `?${qs}` : ''}`)
   try {
     const response = await fetch(url, { credentials: 'include' })
-    if (!response.ok) throw new Error('Export failed')
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new Error(body || `Export failed (HTTP ${response.status})`)
+    }
     const blob = await response.blob()
     const blobUrl = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -1864,6 +1877,209 @@ export const exportAuditLogs = async (params?: {
     // Fallback to window.open
     window.open(url, '_blank')
   }
+}
+
+// Audit resource activity — per-resource change history for detail pages
+export const fetchAuditResourceActivity = async (
+  resourceType: string,
+  namespace: string,
+  name: string,
+  limit = 20
+): Promise<{ data: ResourceHistory[] }> => {
+  const params = new URLSearchParams({ limit: String(limit) })
+  return fetchAPI<{ data: ResourceHistory[] }>(
+    `/audit-logs/resource/${resourceType}/${namespace || '_all'}/${name}?${params.toString()}`
+  )
+}
+
+export const useAuditResourceActivity = (
+  resourceType: string,
+  namespace: string,
+  name: string,
+  limit = 20,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery<{ data: ResourceHistory[] }, Error>({
+    queryKey: ['audit-resource-activity', resourceType, namespace, name, limit],
+    queryFn: () => fetchAuditResourceActivity(resourceType, namespace, name, limit),
+    enabled: (options?.enabled ?? true) && !!resourceType && !!name,
+    staleTime: 30000,
+  })
+}
+
+// Audit summary — top operators for a cluster
+export interface AuditOperatorActivity {
+  operatorId: number
+  operatorName: string
+  totalChanges: number
+  successes: number
+  failures: number
+  lastActivityAt: string
+}
+
+export const fetchAuditSummary = async (
+  days = 7
+): Promise<{ data: AuditOperatorActivity[]; days: number }> => {
+  return fetchAPI<{ data: AuditOperatorActivity[]; days: number }>(
+    `/audit-logs/summary?days=${days}`
+  )
+}
+
+export const useAuditSummary = (
+  days = 7,
+  options?: { enabled?: boolean; refetchInterval?: number }
+) => {
+  return useQuery<{ data: AuditOperatorActivity[]; days: number }, Error>({
+    queryKey: ['audit-summary', days],
+    queryFn: () => fetchAuditSummary(days),
+    enabled: options?.enabled ?? true,
+    staleTime: 60000,
+    refetchInterval: options?.refetchInterval,
+  })
+}
+
+// Permission introspection
+export interface PermissionCheckResult {
+  allowed: boolean
+  resource: string
+  verb: string
+  cluster: string
+  namespace: string
+}
+
+export const checkPermission = async (
+  resource: string,
+  verb: string,
+  cluster: string,
+  namespace?: string
+): Promise<PermissionCheckResult> => {
+  const params = new URLSearchParams({ resource, verb, cluster })
+  if (namespace) params.set('namespace', namespace)
+  return fetchAPI<PermissionCheckResult>(`/users/permissions/check?${params.toString()}`)
+}
+
+export interface MyPermissionsSummary {
+  username: string
+  isAdmin: boolean
+  roles: Array<{
+    roleName: string
+    clusters: string[]
+    namespaces: string[]
+    resources: string[]
+    verbs: string[]
+  }>
+}
+
+export const getMyPermissions = async (): Promise<MyPermissionsSummary> => {
+  return fetchAPI<MyPermissionsSummary>('/users/permissions')
+}
+
+export const useMyPermissions = (options?: { enabled?: boolean }) => {
+  return useQuery<MyPermissionsSummary, Error>({
+    queryKey: ['my-permissions'],
+    queryFn: getMyPermissions,
+    enabled: options?.enabled ?? true,
+    staleTime: 60000,
+  })
+}
+
+// ─── Clone Role ──────────────────────────────────────────────────────────────
+
+export const cloneRole = async (
+  id: number,
+  data: { name?: string; description?: string; cloneAssignments?: boolean }
+): Promise<{ role: Role; clonedAssignments: number; sourceRole: string }> => {
+  return await apiClient.post(`/admin/roles/${id}/clone`, data)
+}
+
+// ─── Effective Permissions (Admin) ───────────────────────────────────────────
+
+export interface EffectivePermissions {
+  username: string
+  isAdmin: boolean
+  roleNames: string[]
+  effective: {
+    clusters: string[]
+    namespaces: string[]
+    resources: string[]
+    verbs: string[]
+  }
+}
+
+export const fetchEffectivePermissions = async (
+  username: string
+): Promise<EffectivePermissions> => {
+  return fetchAPI<EffectivePermissions>(
+    `/admin/effective-permissions/${encodeURIComponent(username)}`
+  )
+}
+
+export const useEffectivePermissions = (
+  username: string,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery<EffectivePermissions, Error>({
+    queryKey: ['effective-permissions', username],
+    queryFn: () => fetchEffectivePermissions(username),
+    enabled: (options?.enabled ?? true) && !!username,
+    staleTime: 30000,
+  })
+}
+
+// ─── Accessible Namespaces ───────────────────────────────────────────────────
+
+export interface AccessibleNamespacesResponse {
+  namespaces: string[]
+  hasWildcard: boolean
+}
+
+export const fetchAccessibleNamespaces =
+  async (): Promise<AccessibleNamespacesResponse> => {
+    return fetchAPI<AccessibleNamespacesResponse>('/users/accessible-namespaces')
+  }
+
+export const useAccessibleNamespaces = (options?: { enabled?: boolean }) => {
+  return useQuery<AccessibleNamespacesResponse, Error>({
+    queryKey: ['accessible-namespaces'],
+    queryFn: fetchAccessibleNamespaces,
+    enabled: options?.enabled ?? true,
+    staleTime: 60000,
+  })
+}
+
+// ─── Audit Log Retention ─────────────────────────────────────────────────────
+
+export interface AuditRetentionInfo {
+  totalEntries: number
+  oldestEntry: string
+  ageBrackets: Array<{ label: string; count: number }>
+}
+
+export const fetchAuditRetentionInfo =
+  async (): Promise<AuditRetentionInfo> => {
+    return fetchAPI<AuditRetentionInfo>('/admin/audit-logs/retention')
+  }
+
+export const useAuditRetentionInfo = (options?: { enabled?: boolean }) => {
+  return useQuery<AuditRetentionInfo, Error>({
+    queryKey: ['audit-retention-info'],
+    queryFn: fetchAuditRetentionInfo,
+    enabled: options?.enabled ?? true,
+    staleTime: 60000,
+  })
+}
+
+export const purgeOldAuditLogs = async (
+  retentionDays: number
+): Promise<{
+  deleted: number
+  retentionDays: number
+  cutoffDate: string
+  message: string
+}> => {
+  return await apiClient.delete(
+    `/admin/audit-logs/purge?retentionDays=${retentionDays}`
+  )
 }
 
 // Resource History API

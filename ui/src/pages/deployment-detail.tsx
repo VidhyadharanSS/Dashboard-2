@@ -268,7 +268,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
   const totalReplicas = status?.replicas || 0
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 animate-page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

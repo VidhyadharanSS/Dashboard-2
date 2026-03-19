@@ -106,7 +106,7 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 animate-page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

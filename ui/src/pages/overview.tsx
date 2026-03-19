@@ -51,9 +51,9 @@ export function Overview() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 animate-page-enter">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">{t('overview.title')}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-gradient">{t('overview.title')}</h1>
         <p className="text-muted-foreground text-sm font-medium italic opacity-80">
           Navigate Kites cluster with ease!
         </p>

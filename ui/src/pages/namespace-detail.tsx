@@ -43,7 +43,7 @@ export function NamespaceDetail(props: { name: string }) {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-page-enter">
             <div className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-2">

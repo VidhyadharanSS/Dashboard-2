@@ -155,7 +155,7 @@ export function ClusterStatsCards({
           const allReady = !hasSubValue || stat.subValue === stat.value
 
           return (
-            <Card key={stat.label} className="@container/card group hover:shadow-md transition-shadow duration-200">
+            <Card key={stat.label} className="@container/card group hover:shadow-md transition-all duration-200 card-elevated card-shine">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
