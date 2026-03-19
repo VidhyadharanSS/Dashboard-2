@@ -88,8 +88,9 @@ function AppContent() {
   const navigate = useNavigate()
 
   // Persist sidebar open/closed state in localStorage
-  const [sidebarDefaultOpen] = useState(() => {
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
     const stored = localStorage.getItem('sidebar-open')
+    // Default to open (true) if no preference stored
     return stored === null ? true : stored === 'true'
   })
 
@@ -112,8 +113,11 @@ function AppContent() {
   return (
     <>
       <SidebarProvider
-        defaultOpen={sidebarDefaultOpen}
-        onOpenChange={(open) => localStorage.setItem('sidebar-open', String(open))}
+        open={sidebarOpen}
+        onOpenChange={(open) => {
+          setSidebarOpen(open)
+          localStorage.setItem('sidebar-open', String(open))
+        }}
       >
         <AppSidebar variant="inset" />
         <SidebarInset className="h-screen overflow-y-auto scrollbar-hide">

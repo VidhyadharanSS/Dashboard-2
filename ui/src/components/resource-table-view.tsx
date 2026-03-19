@@ -214,32 +214,33 @@ export function ResourceTableView<T>({
                           className="text-left"
                         >
                           {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                            <Button
-                              variant="ghost"
+                            <button
                               onClick={header.column.getToggleSortingHandler()}
-                              className={
+                              className={`inline-flex items-center gap-1 cursor-pointer select-none font-medium text-xs hover:text-foreground transition-colors ${
                                 header.column.getIsSorted()
                                   ? 'text-primary'
-                                  : ''
-                              }
+                                  : 'text-muted-foreground'
+                              }`}
                             >
                               {flexRender(
                                 header.column.columnDef.header,
                                 header.getContext()
                               )}
                               {header.column.getIsSorted() && (
-                                <span className="ml-2">
+                                <span className="ml-1">
                                   {header.column.getIsSorted() === 'asc'
                                     ? '↑'
                                     : '↓'}
                                 </span>
                               )}
-                            </Button>
+                            </button>
                           ) : (
-                            flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            </span>
                           )}
                         </TableHead>
                       ))}
