@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useState, useEffect } from 'react'
 import Logo from '@/assets/icon.svg'
 import { useAuth } from '@/contexts/auth-context'
 import { useTranslation } from 'react-i18next'
@@ -114,12 +114,19 @@ export function LoginPage() {
     }
   }
 
+  // Animated background orbs effect
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}>
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground animate-pulse">Authenticating...</p>
+          <div className="relative">
+            <div className="h-12 w-12 rounded-full border-2 border-white/10 border-t-white/60 animate-spin" />
+            <img src={Logo} className="absolute inset-0 m-auto h-5 w-5 invert opacity-70" alt="" />
+          </div>
+          <p className="text-sm text-white/40 animate-pulse tracking-wide">Authenticating...</p>
         </div>
       </div>
     )
@@ -128,49 +135,74 @@ export function LoginPage() {
   const errorInfo = getErrorMessage(error)
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Animated gradient background */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-blue-600/10 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse [animation-delay:2s]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-violet-600/5 blur-[100px]" />
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}>
+      {/* Animated mesh gradient orbs */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className={`absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] max-w-[800px] max-h-[800px] rounded-full transition-opacity duration-1000 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)', animation: 'float1 12s ease-in-out infinite' }} />
+        <div className={`absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] rounded-full transition-opacity duration-1000 delay-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+          style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)', animation: 'float2 15s ease-in-out infinite' }} />
+        <div className={`absolute top-[30%] right-[20%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] rounded-full transition-opacity duration-1000 delay-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+          style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', animation: 'float3 18s ease-in-out infinite' }} />
+        {/* Subtle grid overlay */}
+        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '64px 64px' }} />
       </div>
 
+      {/* Floating animation keyframes */}
+      <style>{`
+        @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(3%,2%) scale(1.05)} 66%{transform:translate(-2%,3%) scale(0.97)} }
+        @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-2%,-3%) scale(1.03)} 66%{transform:translate(3%,2%) scale(0.98)} }
+        @keyframes float3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-2%,4%)} }
+        @keyframes loginCardIn { from{opacity:0;transform:translateY(20px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes logoIn { from{opacity:0;transform:scale(0.8) rotate(-5deg)} to{opacity:1;transform:scale(1) rotate(0deg)} }
+      `}</style>
+
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <img src={Logo} className="h-6 w-6 invert opacity-80" alt="Kites" />
-          <span className="text-white/60 text-sm font-medium tracking-wide">Kites</span>
+      <div className="flex items-center justify-between px-6 py-4 relative z-10">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center backdrop-blur-sm">
+            <img src={Logo} className="h-4 w-4 invert opacity-90" alt="Kites" />
+          </div>
+          <span className="text-white/50 text-sm font-medium tracking-wide">Kites</span>
         </div>
         <LanguageToggle />
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm">
+      <div className="flex-1 flex items-center justify-center px-4 py-8 relative z-10">
+        <div className="w-full max-w-[380px]" style={{ animation: 'loginCardIn 0.6s cubic-bezier(0.22,1,0.36,1) both' }}>
 
           {/* Logo + Title */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 border border-white/10 mb-5 shadow-2xl backdrop-blur-sm">
-              <img src={Logo} className="h-8 w-8 invert" alt="Kites" />
+            <div
+              className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-6 relative"
+              style={{ animation: 'logoIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both' }}
+            >
+              {/* Glow ring */}
+              <div className="absolute inset-0 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3))', filter: 'blur(8px)', transform: 'scale(1.1)' }} />
+              <div className="relative w-full h-full rounded-3xl bg-white/8 border border-white/15 backdrop-blur-xl flex items-center justify-center shadow-2xl" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))' }}>
+                <img src={Logo} className="h-10 w-10 invert" alt="Kites" />
+              </div>
             </div>
-            <h1 className="text-2xl font-semibold text-white mb-1">{t('login.signIn')}</h1>
-            <p className="text-sm text-white/50">{t('login.subtitle')}</p>
+            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">{t('login.signIn')}</h1>
+            <p className="text-sm text-white/40">{t('login.subtitle')}</p>
           </div>
 
           {/* Error Alert */}
           {errorInfo && (
-            <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 backdrop-blur-sm p-4 text-sm">
-              <p className="font-semibold text-red-400">{errorInfo.title}</p>
-              <p className="text-red-300/80 mt-1">{errorInfo.message}</p>
+            <div className="mb-5 rounded-2xl border border-red-500/20 p-4 text-sm" style={{ background: 'rgba(239,68,68,0.08)', backdropFilter: 'blur(12px)' }}>
+              <p className="font-semibold text-red-400 flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 text-[10px]">!</span>
+                {errorInfo.title}
+              </p>
+              <p className="text-red-300/80 mt-1.5 text-xs leading-relaxed">{errorInfo.message}</p>
               {errorInfo.details && (
-                <p className="text-red-400/60 text-xs mt-2">{errorInfo.details}</p>
+                <p className="text-red-400/50 text-[11px] mt-2">{errorInfo.details}</p>
               )}
               {(searchParams.get('reason') === 'insufficient_permissions' || error === 'insufficient_permissions') && (
                 <button
                   onClick={() => { window.location.href = withSubPath('/login') }}
-                  className="mt-3 w-full text-xs font-medium text-red-300 underline underline-offset-2 hover:text-red-200"
+                  className="mt-3 w-full text-xs font-medium text-red-300/80 hover:text-red-200 underline underline-offset-2 transition-colors"
                 >
                   {t('login.tryAgainDifferentAccount')}
                 </button>
@@ -179,11 +211,14 @@ export function LoginPage() {
           )}
 
           {/* Auth Card */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl p-6 space-y-5">
+          <div className="rounded-2xl p-6 space-y-4" style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px) saturate(180%)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 32px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
             {providers.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-white/50 text-sm">{t('login.noLoginMethods')}</p>
-                <p className="text-white/30 text-xs mt-2">{t('login.configureAuth')}</p>
+              <div className="text-center py-8">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-xl">🔐</span>
+                </div>
+                <p className="text-white/50 text-sm font-medium">{t('login.noLoginMethods')}</p>
+                <p className="text-white/25 text-xs mt-2">{t('login.configureAuth')}</p>
               </div>
             ) : (
               <>
@@ -191,66 +226,75 @@ export function LoginPage() {
                 {providers.includes('password') && (
                   <form onSubmit={handlePasswordLogin} className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="username" className="text-white/70 text-xs uppercase tracking-wider font-semibold">
+                      <Label htmlFor="username" className="text-white/50 text-[11px] uppercase tracking-widest font-semibold">
                         {t('login.usernameOrEmail', 'Username or Email')}
                       </Label>
                       <Input
                         id="username"
                         type="text"
-                        placeholder={t('login.enterUsernameOrEmail', 'Enter your username or email')}
+                        placeholder={t('login.enterUsernameOrEmail', 'your@email.com')}
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-white/30 focus:ring-white/10 h-11"
+                        autoComplete="username"
+                        className="h-11 rounded-xl text-white placeholder:text-white/20 transition-all duration-200"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none' }}
+                        onFocus={(e) => { e.target.style.border = '1px solid rgba(255,255,255,0.25)'; e.target.style.background = 'rgba(255,255,255,0.08)' }}
+                        onBlur={(e) => { e.target.style.border = '1px solid rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.06)' }}
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="password" className="text-white/70 text-xs uppercase tracking-wider font-semibold">
+                      <Label htmlFor="password" className="text-white/50 text-[11px] uppercase tracking-widest font-semibold">
                         {t('login.password')}
                       </Label>
                       <Input
                         id="password"
                         type="password"
-                        placeholder={t('login.enterPassword')}
+                        placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-white/30 focus:ring-white/10 h-11"
+                        autoComplete="current-password"
+                        className="h-11 rounded-xl text-white placeholder:text-white/25 transition-all duration-200"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none' }}
+                        onFocus={(e) => { e.target.style.border = '1px solid rgba(255,255,255,0.25)'; e.target.style.background = 'rgba(255,255,255,0.08)' }}
+                        onBlur={(e) => { e.target.style.border = '1px solid rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.06)' }}
                       />
                     </div>
                     {passwordError && (
-                      <Alert variant="destructive" className="bg-red-900/30 border-red-500/30 text-red-300">
-                        <AlertDescription>{passwordError}</AlertDescription>
+                      <Alert variant="destructive" className="rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                        <AlertDescription className="text-red-300 text-xs">{passwordError}</AlertDescription>
                       </Alert>
                     )}
                     <Button
                       type="submit"
                       disabled={loginLoading !== null}
-                      className="w-full h-11 bg-white text-slate-900 hover:bg-white/90 font-semibold transition-all duration-200 shadow-lg shadow-white/10"
+                      className="w-full h-11 rounded-xl font-semibold transition-all duration-200 relative overflow-hidden group"
+                      style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', boxShadow: '0 4px 15px rgba(99,102,241,0.4)' }}
                     >
-                      {loginLoading === 'password' ? (
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-900 border-t-transparent" />
-                          <span>{t('login.signingIn')}</span>
-                        </div>
-                      ) : (
-                        t('login.signInWithPassword')
-                      )}
+                      <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }} />
+                      <span className="relative flex items-center justify-center gap-2">
+                        {loginLoading === 'password' ? (
+                          <>
+                            <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                            <span>{t('login.signingIn')}</span>
+                          </>
+                        ) : (
+                          t('login.signInWithPassword')
+                        )}
+                      </span>
                     </Button>
                   </form>
                 )}
 
-                {/* Divider if both password and oauth providers exist */}
+                {/* Divider */}
                 {providers.filter((p) => p !== 'password').length > 0 && providers.includes('password') && (
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-white/10" />
-                    </div>
-                    <div className="relative flex justify-center">
-                      <span className="px-3 text-[10px] uppercase tracking-wider text-white/30 bg-transparent">
-                        {t('login.orContinueWith')}
-                      </span>
-                    </div>
+                  <div className="relative flex items-center gap-3">
+                    <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                    <span className="text-[10px] uppercase tracking-widest text-white/25 shrink-0">
+                      {t('login.orContinueWith')}
+                    </span>
+                    <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
                   </div>
                 )}
 
@@ -260,20 +304,19 @@ export function LoginPage() {
                     key={provider}
                     onClick={() => handleLogin(provider)}
                     disabled={loginLoading !== null}
-                    className="w-full h-11 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white font-medium transition-all duration-200"
+                    className="w-full h-11 rounded-xl font-medium transition-all duration-200 group"
                     variant="ghost"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLButtonElement).style.color = 'white' }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)' }}
                   >
                     {loginLoading === provider ? (
                       <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                         <span>{t('login.signingIn')}</span>
                       </div>
                     ) : (
-                      <span>
-                        {t('login.signInWith', {
-                          provider: provider.charAt(0).toUpperCase() + provider.slice(1),
-                        })}
-                      </span>
+                      <span>{t('login.signInWith', { provider: provider.charAt(0).toUpperCase() + provider.slice(1) })}</span>
                     )}
                   </Button>
                 ))}
@@ -282,8 +325,8 @@ export function LoginPage() {
           </div>
 
           {/* Footer note */}
-          <p className="text-center text-[11px] text-white/25 mt-6">
-            Access Kites dashboard
+          <p className="text-center text-[11px] text-white/20 mt-6 tracking-wide">
+            Kites · Kubernetes Dashboard
           </p>
         </div>
       </div>

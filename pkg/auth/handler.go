@@ -100,6 +100,17 @@ func (h *AuthHandler) PasswordLogin(c *gin.Context) {
 
 	setCookieSecure(c, "auth_token", jwtToken, common.CookieExpirationSeconds)
 
+	// Create a session record so it shows up in session management
+	session := &model.UserSession{
+		UserID:     user.ID,
+		Token:      jwtToken,
+		IP:         c.ClientIP(),
+		UserAgent:  c.Request.UserAgent(),
+		LastUsedAt: time.Now(),
+		ExpiresAt:  time.Now().Add(time.Duration(common.CookieExpirationSeconds) * time.Second),
+	}
+	_ = model.CreateUserSession(session)
+
 	logger.Audit(user.Key(), "Login", "User", "", "", "User logged in with password")
 
 	c.Status(http.StatusNoContent)
@@ -198,6 +209,17 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 
 	// Set JWT as HTTP-only cookie with secure/samesite settings
 	setCookieSecure(c, "auth_token", jwtToken, common.CookieExpirationSeconds)
+
+	// Create a session record for OAuth logins too
+	session := &model.UserSession{
+		UserID:     user.ID,
+		Token:      jwtToken,
+		IP:         c.ClientIP(),
+		UserAgent:  c.Request.UserAgent(),
+		LastUsedAt: time.Now(),
+		ExpiresAt:  time.Now().Add(time.Duration(common.CookieExpirationSeconds) * time.Second),
+	}
+	_ = model.CreateUserSession(session)
 
 	c.Redirect(http.StatusFound, base+"/")
 }

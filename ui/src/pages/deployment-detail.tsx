@@ -422,70 +422,81 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
             content: (
               <div className="space-y-4">
                 {/* Status Overview */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Status Overview</CardTitle>
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <DeploymentStatusIcon status={getDeploymentStatus(deployment)} />
+                      Status Overview
+                      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+                        getDeploymentStatus(deployment) === 'Available' ? 'bg-green-500/10 text-green-600' :
+                        getDeploymentStatus(deployment) === 'Progressing' ? 'bg-blue-500/10 text-blue-600 animate-pulse' :
+                        getDeploymentStatus(deployment) === 'Scaled Down' ? 'bg-muted text-muted-foreground' :
+                        'bg-red-500/10 text-red-600'
+                      }`}>{getDeploymentStatus(deployment)}</span>
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <DeploymentStatusIcon
-                            status={getDeploymentStatus(deployment)}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Status
-                          </p>
-                          <div className="flex flex-col">
-                            <p className="text-sm font-medium">
-                              {getDeploymentStatus(deployment)}
-                            </p>
-                            {(() => {
-                              const s = getDeploymentStatus(deployment);
-                              if (s === 'Progressing' && deployment.status?.conditions) {
-                                const progCond = deployment.status.conditions.find(c => c.type === 'Progressing');
-                                if (progCond && progCond.message) {
-                                  return <span className="text-xs text-muted-foreground break-words mt-1 max-w-[200px] leading-snug">{progCond.message}</span>
-                                }
-                                if (deployment.status.availableReplicas !== deployment.status.replicas) {
-                                  return <span className="text-xs text-muted-foreground mt-1 max-w-[200px] leading-snug">{deployment.status.availableReplicas || 0} / {deployment.status.replicas || 0} pods available</span>
-                                }
-                              }
-                              return null;
-                            })()}
-                          </div>
-                        </div>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {/* Ready Replicas */}
+                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Ready</p>
+                        <p className="text-sm font-semibold">
+                          <span className={readyReplicas === totalReplicas && totalReplicas > 0 ? 'text-green-600' : 'text-amber-600'}>{readyReplicas}</span>
+                          <span className="text-muted-foreground mx-1">/</span>{totalReplicas}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Replicas</p>
                       </div>
 
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Ready Replicas
-                        </p>
-                        <p className="text-sm font-medium">
-                          {readyReplicas} / {totalReplicas}
-                        </p>
+                      {/* Updated Replicas */}
+                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Updated</p>
+                        <p className="text-sm font-semibold">{status?.updatedReplicas || 0}</p>
+                        <p className="text-xs text-muted-foreground">Replicas</p>
                       </div>
 
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Updated Replicas
-                        </p>
-                        <p className="text-sm font-medium">
-                          {status?.updatedReplicas || 0}
-                        </p>
+                      {/* Available Replicas */}
+                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Available</p>
+                        <p className="text-sm font-semibold">{status?.availableReplicas || 0}</p>
+                        <p className="text-xs text-muted-foreground">Replicas</p>
                       </div>
 
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Available Replicas
-                        </p>
-                        <p className="text-sm font-medium">
-                          {status?.availableReplicas || 0}
-                        </p>
+                      {/* Desired */}
+                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Desired</p>
+                        <p className="text-sm font-semibold">{deployment.spec?.replicas || 0}</p>
+                        <p className="text-xs text-muted-foreground">Replicas</p>
                       </div>
                     </div>
+
+                    {/* Progress bar for rolling update */}
+                    {totalReplicas > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Rollout Progress</span>
+                          <span>{Math.round((readyReplicas / totalReplicas) * 100)}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-700 ease-out ${
+                              readyReplicas === totalReplicas ? 'bg-green-500' :
+                              readyReplicas > 0 ? 'bg-blue-500' : 'bg-muted-foreground/30'
+                            }`}
+                            style={{ width: `${Math.round((readyReplicas / totalReplicas) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Progressing message */}
+                    {getDeploymentStatus(deployment) === 'Progressing' && deployment.status?.conditions && (() => {
+                      const progCond = deployment.status!.conditions!.find(c => c.type === 'Progressing')
+                      return progCond?.message ? (
+                        <p className="text-xs text-muted-foreground bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-2">
+                          ℹ️ {progCond.message}
+                        </p>
+                      ) : null
+                    })()}
                   </CardContent>
                 </Card>
                 {/* Deployment Info */}

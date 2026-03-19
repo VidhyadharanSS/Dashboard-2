@@ -1,8 +1,9 @@
 import './App.css'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 import { AppSidebar } from './components/app-sidebar'
 import { GlobalSearch } from './components/global-search'
@@ -11,7 +12,7 @@ import {
   useGlobalSearch,
 } from './components/global-search-provider'
 import { SiteHeader } from './components/site-header'
-import { SidebarInset, SidebarProvider } from './components/ui/sidebar'
+import { SidebarInset, SidebarProvider, useSidebar } from './components/ui/sidebar'
 import { Toaster } from './components/ui/sonner'
 import { ClusterProvider } from './contexts/cluster-context'
 import { useCluster } from './hooks/use-cluster'
@@ -51,12 +52,48 @@ function ClusterAwareApp() {
   return <AppContent />
 }
 
+function SidebarFloatingToggle() {
+  const { open, toggleSidebar } = useSidebar()
+  return (
+    <button
+      onClick={toggleSidebar}
+      className={`
+        fixed bottom-6 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full
+        bg-background/90 backdrop-blur-md border border-border/60
+        shadow-lg shadow-black/10 text-muted-foreground hover:text-foreground
+        hover:border-border hover:shadow-xl hover:shadow-black/15
+        transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
+        group text-xs font-medium
+        ${open ? 'left-[var(--sidebar-width)] -translate-x-full ml-2' : 'left-4'}
+      `}
+      title={open ? 'Collapse sidebar (⌘B)' : 'Expand sidebar (⌘B)'}
+    >
+      {open ? (
+        <>
+          <PanelLeftClose className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
+          <span className="hidden sm:inline">Collapse</span>
+        </>
+      ) : (
+        <>
+          <PanelLeftOpen className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+          <span className="hidden sm:inline">Expand</span>
+        </>
+      )}
+    </button>
+  )
+}
+
 function AppContent() {
   const { isOpen, closeSearch } = useGlobalSearch()
   const [searchParams] = useSearchParams()
   const isIframe = searchParams.get('iframe') === 'true'
-
   const navigate = useNavigate()
+
+  // Persist sidebar open/closed state in localStorage
+  const [sidebarDefaultOpen] = useState(() => {
+    const stored = localStorage.getItem('sidebar-open')
+    return stored === null ? true : stored === 'true'
+  })
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,7 +113,10 @@ function AppContent() {
 
   return (
     <>
-      <SidebarProvider>
+      <SidebarProvider
+        defaultOpen={sidebarDefaultOpen}
+        onOpenChange={(open) => localStorage.setItem('sidebar-open', String(open))}
+      >
         <AppSidebar variant="inset" />
         <SidebarInset className="h-screen overflow-y-auto scrollbar-hide">
           <SiteHeader />
@@ -88,6 +128,7 @@ function AppContent() {
             </div>
           </div>
         </SidebarInset>
+        <SidebarFloatingToggle />
       </SidebarProvider>
       <GlobalSearch open={isOpen} onOpenChange={closeSearch} />
       <Toaster />

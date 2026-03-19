@@ -58,31 +58,29 @@ const RESOURCE_CONFIG: Record<
   {
     label: string
     icon: React.ComponentType<{ className?: string }>
+    group?: string
+    color?: string
   }
 > = {
-  pods: { label: 'nav.pods', icon: IconBox },
-  deployments: { label: 'nav.deployments', icon: IconRocket },
-  services: { label: 'nav.services', icon: IconNetwork },
-  configmaps: { label: 'nav.configMaps', icon: IconMap },
-  secrets: { label: 'nav.secrets', icon: IconLock },
-  namespaces: {
-    label: 'nav.namespaces',
-    icon: IconBoxMultiple,
-  },
-  nodes: { label: 'nav.nodes', icon: IconServer2 },
-  jobs: { label: 'nav.jobs', icon: IconPlayerPlay },
-  ingresses: { label: 'nav.ingresses', icon: IconRouter },
-  gateways: { label: 'nav.gateways', icon: IconLoadBalancer },
-  httproutes: { label: 'nav.httproutes', icon: IconRoute },
-  daemonsets: {
-    label: 'nav.daemonsets',
-    icon: IconTopologyBus,
-  },
-  horizontalpodautoscalers: {
-    label: 'nav.horizontalpodautoscalers',
-    icon: IconArrowsHorizontal,
-  },
+  pods: { label: 'nav.pods', icon: IconBox, group: 'Workloads', color: 'text-green-500' },
+  deployments: { label: 'nav.deployments', icon: IconRocket, group: 'Workloads', color: 'text-blue-500' },
+  daemonsets: { label: 'nav.daemonsets', icon: IconTopologyBus, group: 'Workloads', color: 'text-blue-400' },
+  statefulsets: { label: 'nav.statefulsets', icon: IconServer2, group: 'Workloads', color: 'text-blue-400' },
+  jobs: { label: 'nav.jobs', icon: IconPlayerPlay, group: 'Workloads', color: 'text-amber-500' },
+  cronjobs: { label: 'nav.cronJobs', icon: IconPlayerPlay, group: 'Workloads', color: 'text-amber-400' },
+  services: { label: 'nav.services', icon: IconNetwork, group: 'Networking', color: 'text-purple-500' },
+  ingresses: { label: 'nav.ingresses', icon: IconRouter, group: 'Networking', color: 'text-purple-400' },
+  gateways: { label: 'nav.gateways', icon: IconLoadBalancer, group: 'Networking', color: 'text-purple-400' },
+  httproutes: { label: 'nav.httproutes', icon: IconRoute, group: 'Networking', color: 'text-purple-300' },
+  configmaps: { label: 'nav.configMaps', icon: IconMap, group: 'Config', color: 'text-orange-500' },
+  secrets: { label: 'nav.secrets', icon: IconLock, group: 'Config', color: 'text-red-400' },
+  namespaces: { label: 'nav.namespaces', icon: IconBoxMultiple, group: 'Cluster', color: 'text-cyan-500' },
+  nodes: { label: 'nav.nodes', icon: IconServer2, group: 'Cluster', color: 'text-cyan-400' },
+  horizontalpodautoscalers: { label: 'nav.horizontalpodautoscalers', icon: IconArrowsHorizontal, group: 'Scaling', color: 'text-teal-500' },
 }
+
+// Ordered groups for display
+const WORKLOAD_GROUP_ORDER = ['Workloads', 'Networking', 'Config', 'Cluster', 'Scaling']
 
 interface SidebarSearchItem {
   id: string
@@ -686,116 +684,124 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               </CommandGroup>
             )}
 
-            {results && results.length > 0 && (
-              <CommandGroup
-                heading={
-                  query.length < 2
-                    ? t('globalSearch.favorites')
-                    : t('globalSearch.resources')
-                }
-              >
-                {results
-                  .filter(result => canAccess(result.resourceType as any, 'get', result.namespace))
-                  .map((result) => {
-                    const config = RESOURCE_CONFIG[result.resourceType] || {
-                      label: result.resourceType,
-                      icon: IconBox, // Default icon if not found
-                    }
-                    const Icon = config.icon
-                    const isFav = isFavorite(result.id)
-                    const path = result.namespace
-                      ? `/${result.resourceType}/${result.namespace}/${result.name}`
-                      : `/${result.resourceType}/${result.name}`
-                    const isPod = result.resourceType === 'pods'
-                    const canExec = result.resourceType === 'pods' && canAccess('pods', 'exec', result.namespace)
-                    const canLogs = result.resourceType === 'pods' && canAccess('pods', 'get', result.namespace)
-                    return (
-                      <CommandItem
-                        key={result.id}
-                        value={`${result.name} ${result.namespace || ''} ${result.resourceType} ${RESOURCE_CONFIG[result.resourceType]?.label ||
-                          result.resourceType
-                          }`}
-                        onSelect={() => handleSelect(path)}
-                        className="flex items-center gap-3 py-3"
-                      >
-                        <Icon className="h-4 w-4 text-sidebar-primary" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-medium truncate">
-                              <Highlight text={result.name} query={query} />
-                            </span>
-                            <Badge className="text-xs">
-                              {RESOURCE_CONFIG[result.resourceType]?.label
-                                ? t(
-                                  RESOURCE_CONFIG[result.resourceType]
-                                    .label as string
-                                )
-                                : result.resourceType}
-                            </Badge>
+            {results && results.length > 0 && (() => {
+              const filtered = results.filter(result => canAccess(result.resourceType as any, 'get', result.namespace))
+              const isFavoriteView = query.length < 2
+
+              if (isFavoriteView) {
+                // Favorites view — flat list
+                return (
+                  <CommandGroup heading={t('globalSearch.favorites')}>
+                    {filtered.map((result) => {
+                      const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, icon: IconBox, color: '' }
+                      const Icon = cfg.icon
+                      const isFav = isFavorite(result.id)
+                      const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
+                      return (
+                        <CommandItem key={result.id} value={`fav-${result.id}`} onSelect={() => handleSelect(path)} className="flex items-center gap-3 py-2.5">
+                          <Icon className={`h-4 w-4 ${cfg.color || 'text-sidebar-primary'}`} />
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm truncate">{result.name}</span>
+                            {result.namespace && <div className="text-xs text-muted-foreground">{result.namespace}</div>}
                           </div>
-                          {result.namespace && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Namespace: <Highlight text={result.namespace} query={query} />
+                          <Badge variant="outline" className="text-[10px] h-4">{result.resourceType}</Badge>
+                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }} className="p-1 hover:bg-accent rounded transition-colors">
+                            {isFav ? <IconStarFilled className="h-3 w-3 text-yellow-500" /> : <IconStar className="h-3 w-3 text-muted-foreground opacity-50" />}
+                          </button>
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                )
+              }
+
+              // Categorized workload groups
+              const grouped: Record<string, typeof filtered> = {}
+              filtered.forEach(result => {
+                const group = RESOURCE_CONFIG[result.resourceType]?.group || 'Other'
+                if (!grouped[group]) grouped[group] = []
+                grouped[group].push(result)
+              })
+
+              const orderedGroupKeys = [
+                ...WORKLOAD_GROUP_ORDER.filter(g => grouped[g]),
+                ...Object.keys(grouped).filter(g => !WORKLOAD_GROUP_ORDER.includes(g)),
+              ]
+
+              return (
+                <>
+                  {orderedGroupKeys.map(group => (
+                    <CommandGroup key={group} heading={
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider">{group}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">({grouped[group].length})</span>
+                      </span>
+                    }>
+                      {grouped[group].map((result) => {
+                        const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, icon: IconBox, color: '' }
+                        const Icon = cfg.icon
+                        const isFav = isFavorite(result.id)
+                        const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
+                        const canExec = result.resourceType === 'pods' && canAccess('pods', 'exec', result.namespace)
+                        const canLogs = result.resourceType === 'pods' && canAccess('pods', 'get', result.namespace)
+                        return (
+                          <CommandItem
+                            key={result.id}
+                            value={`${result.name} ${result.namespace || ''} ${result.resourceType}`}
+                            onSelect={() => handleSelect(path)}
+                            className="flex items-center gap-3 py-2.5 group/item"
+                          >
+                            <div className={`p-1.5 rounded-md bg-muted/50 ${cfg.color || 'text-sidebar-primary'}`}>
+                              <Icon className="h-3.5 w-3.5" />
                             </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {isPod && (canExec || canLogs) && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-medium text-sm truncate">
+                                  <Highlight text={result.name} query={query} />
+                                </span>
+                              </div>
+                              {result.namespace && (
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  <span className="opacity-60">ns/</span><Highlight text={result.namespace} query={query} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
                               {canExec && (
                                 <button
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    handlePodAction(result, 'terminal')
-                                  }}
-                                  className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
-                                >
-                                  Shell
-                                </button>
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePodAction(result, 'terminal') }}
+                                  className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
+                                >Shell</button>
                               )}
                               {canLogs && (
                                 <button
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    handlePodAction(result, 'logs')
-                                  }}
-                                  className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
-                                >
-                                  Logs
-                                </button>
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePodAction(result, 'logs') }}
+                                  className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
+                                >Logs</button>
                               )}
+                              <QuickYamlDialog
+                                resourceType={result.resourceType as ResourceType}
+                                name={result.name}
+                                namespace={result.namespace}
+                                triggerVariant="ghost"
+                                triggerSize="icon"
+                                className="h-6 w-6 p-0"
+                              />
                             </div>
-                          )}
-                          <QuickYamlDialog
-                            resourceType={result.resourceType as ResourceType}
-                            name={result.name}
-                            namespace={result.namespace}
-                            triggerVariant="ghost"
-                            triggerSize="icon"
-                            className="h-7 w-7 p-0"
-                          />
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            toggleFavorite(result, e)
-                          }}
-                          className="p-1 hover:bg-accent rounded transition-colors z-10 relative"
-                        >
-                          {isFav ? (
-                            <IconStarFilled className="h-3 w-3 text-yellow-500" />
-                          ) : (
-                            <IconStar className="h-3 w-3 text-muted-foreground opacity-50" />
-                          )}
-                        </button>
-                      </CommandItem>
-                    )
-                  })}
-              </CommandGroup>
-            )}
+                            <button
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }}
+                              className="p-1 hover:bg-accent rounded transition-colors z-10 relative shrink-0"
+                            >
+                              {isFav ? <IconStarFilled className="h-3 w-3 text-yellow-500" /> : <IconStar className="h-3 w-3 text-muted-foreground opacity-0 group-hover/item:opacity-50" />}
+                            </button>
+                          </CommandItem>
+                        )
+                      })}
+                    </CommandGroup>
+                  ))}
+                </>
+              )
+            })()}
           </CommandList>
         </Command>
       </DialogContent>

@@ -278,61 +278,67 @@ export function PodDetail(props: { namespace: string; name: string }) {
             content: (
               <div className="space-y-4">
                 {/* Status Overview */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Status Overview</CardTitle>
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <PodStatusIcon status={podStatus?.reason} className="w-4 h-4" />
+                      Status Overview
+                      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+                        podStatus.reason === 'Running' ? 'bg-green-500/10 text-green-600' :
+                        podStatus.reason === 'Completed' || podStatus.reason === 'Succeeded' ? 'bg-blue-500/10 text-blue-600' :
+                        podStatus.reason === 'Pending' ? 'bg-yellow-500/10 text-yellow-600' :
+                        'bg-red-500/10 text-red-600'
+                      }`}>{podStatus.reason}</span>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <PodStatusIcon
-                            status={podStatus?.reason}
-                            className="w-4 h-4"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Phase</p>
-                          <p className="text-sm font-medium">
-                            {podStatus.reason}
-                          </p>
-                          <p className="text-xs text-red-500">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Phase */}
+                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Phase</p>
+                        <p className="text-sm font-semibold">{podStatus.reason}</p>
+                        {getPodErrorMessage(pod) && (
+                          <p className="text-xs text-red-500 truncate" title={getPodErrorMessage(pod) || ''}>
                             {getPodErrorMessage(pod)}
                           </p>
-                        </div>
+                        )}
                       </div>
 
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Ready Containers
-                        </p>
-                        <p className="text-sm font-medium">
-                          {podStatus.readyContainers} /{' '}
+                      {/* Containers */}
+                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Containers</p>
+                        <p className="text-sm font-semibold">
+                          <span className="text-green-600">{podStatus.readyContainers}</span>
+                          <span className="text-muted-foreground mx-1">/</span>
                           {podStatus.totalContainers}
                         </p>
+                        <p className="text-xs text-muted-foreground">Ready</p>
                       </div>
 
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Restart Count
-                        </p>
-                        <p className="text-sm font-medium">
-                          {podStatus.restartString}
-                        </p>
+                      {/* Restarts */}
+                      <div className={`p-3 rounded-xl border space-y-1 ${
+                        parseInt(podStatus.restartString) > 5 ? 'bg-red-500/5 border-red-500/20' :
+                        parseInt(podStatus.restartString) > 0 ? 'bg-yellow-500/5 border-yellow-500/20' :
+                        'bg-muted/30 border-border/40'
+                      }`}>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Restarts</p>
+                        <p className={`text-sm font-semibold ${
+                          parseInt(podStatus.restartString) > 5 ? 'text-red-600' :
+                          parseInt(podStatus.restartString) > 0 ? 'text-yellow-600' : ''
+                        }`}>{podStatus.restartString}</p>
+                        <p className="text-xs text-muted-foreground">Total</p>
                       </div>
 
-                      <div>
-                        <p className="text-xs text-muted-foreground">Node</p>
-                        <p className="text-sm font-medium truncate">
+                      {/* Node */}
+                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Node</p>
+                        <p className="text-sm font-semibold truncate">
                           {pod.spec?.nodeName ? (
-                            <Link
-                              to={`/nodes/${pod.spec.nodeName}`}
-                              className="text-blue-600 hover:text-blue-800 hover:underline"
-                            >
+                            <Link to={`/nodes/${pod.spec.nodeName}`} className="text-primary hover:underline">
                               {pod.spec.nodeName}
                             </Link>
                           ) : (
-                            'Not assigned'
+                            <span className="text-muted-foreground">Unscheduled</span>
                           )}
                         </p>
                       </div>

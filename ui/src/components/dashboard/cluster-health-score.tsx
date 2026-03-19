@@ -20,7 +20,9 @@ import {
     IconTrendingUp,
     IconTrendingDown,
     IconMinus,
+    IconChevronRight,
 } from '@tabler/icons-react'
+import { useNavigate } from 'react-router-dom'
 
 import { OverviewData } from '@/types/api'
 import { useResources } from '@/lib/api'
@@ -112,6 +114,7 @@ function BreakdownItem({
     detail,
     weight,
     color,
+    navigateTo,
 }: {
     icon: React.ElementType
     label: string
@@ -119,7 +122,9 @@ function BreakdownItem({
     detail: string
     weight: string
     color: string
+    navigateTo?: string
 }) {
+    const navigate = useNavigate()
     const TrendIcon = value >= 90 ? IconTrendingUp : value >= 50 ? IconMinus : IconTrendingDown
     const trendColor = value >= 90 ? 'text-emerald-500' : value >= 50 ? 'text-amber-500' : 'text-red-500'
 
@@ -127,13 +132,19 @@ function BreakdownItem({
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors cursor-default">
-                        <div className={`p-1.5 rounded-md ${color}`}>
+                    <div
+                        className={`flex items-center gap-2.5 py-1.5 px-2 rounded-md transition-all duration-150 group ${navigateTo ? 'hover:bg-muted/60 cursor-pointer active:scale-[0.98]' : 'hover:bg-muted/50 cursor-default'}`}
+                        onClick={() => navigateTo && navigate(navigateTo)}
+                    >
+                        <div className={`p-1.5 rounded-md ${color} ${navigateTo ? 'group-hover:scale-110 transition-transform duration-150' : ''}`}>
                             <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium">{label}</span>
+                                <span className={`text-xs font-medium flex items-center gap-1 ${navigateTo ? 'group-hover:text-primary transition-colors' : ''}`}>
+                                    {label}
+                                    {navigateTo && <IconChevronRight className="h-2.5 w-2.5 opacity-0 group-hover:opacity-60 transition-opacity" />}
+                                </span>
                                 <div className="flex items-center gap-1">
                                     <TrendIcon className={`h-3 w-3 ${trendColor}`} />
                                     <span className="text-xs font-bold tabular-nums">{value}</span>
@@ -155,6 +166,7 @@ function BreakdownItem({
                 <TooltipContent side="right" className="text-xs">
                     <div className="font-medium">{detail}</div>
                     <div className="text-muted-foreground">Weight: {weight}</div>
+                    {navigateTo && <div className="text-primary mt-1">Click to view →</div>}
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
@@ -296,6 +308,7 @@ export function ClusterHealthScore({ overview, isLoading }: ClusterHealthScorePr
                             detail={scores.node.detail}
                             weight="30%"
                             color="bg-blue-500/10 text-blue-500"
+                            navigateTo="/nodes"
                         />
                         <BreakdownItem
                             icon={IconBox}
@@ -304,6 +317,7 @@ export function ClusterHealthScore({ overview, isLoading }: ClusterHealthScorePr
                             detail={scores.pod.detail}
                             weight="30%"
                             color="bg-green-500/10 text-green-500"
+                            navigateTo="/pods"
                         />
                         <BreakdownItem
                             icon={IconAlertTriangle}
@@ -312,6 +326,7 @@ export function ClusterHealthScore({ overview, isLoading }: ClusterHealthScorePr
                             detail={scores.event.detail}
                             weight="20%"
                             color="bg-amber-500/10 text-amber-500"
+                            navigateTo="/events"
                         />
                         <BreakdownItem
                             icon={IconCpu}
@@ -320,6 +335,7 @@ export function ClusterHealthScore({ overview, isLoading }: ClusterHealthScorePr
                             detail={scores.resource.detail}
                             weight="20%"
                             color="bg-purple-500/10 text-purple-500"
+                            navigateTo="/nodes"
                         />
                     </div>
                 </div>

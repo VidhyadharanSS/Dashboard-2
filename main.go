@@ -106,6 +106,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 		userGroup.POST("/sidebar_preference", authHandler.RequireAuth(), handlers.UpdateSidebarPreference)
 		userGroup.GET("/sessions", authHandler.RequireAuth(), handlers.ListUserSessions)
 		userGroup.DELETE("/sessions/:id", authHandler.RequireAuth(), handlers.DeleteUserSession)
+		userGroup.DELETE("/sessions", authHandler.RequireAuth(), handlers.RevokeAllUserSessions)
 		// Permission introspection — any authenticated user can query their own permissions
 		userGroup.GET("/permissions", authHandler.RequireAuth(), rbac.GetMyPermissions)
 		userGroup.GET("/permissions/check", authHandler.RequireAuth(), rbac.CheckPermission)
@@ -161,6 +162,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 
 		adminAPI.GET("/system/logs/:filename", handlers.StreamLogFile)
 		adminAPI.GET("/sessions", handlers.ListAllSessions)
+		adminAPI.DELETE("/sessions/:id", handlers.AdminDeleteSession)
 
 		userAPI := adminAPI.Group("/users")
 		{

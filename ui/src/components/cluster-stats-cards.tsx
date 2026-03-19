@@ -7,9 +7,10 @@ import {
   IconServer,
   IconAlertTriangle,
   IconClock,
+  IconChevronRight,
 } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { OverviewData } from '@/types/api'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -51,6 +52,7 @@ export function ClusterStatsCards({
   isLoading,
 }: ClusterStatsCardsProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
 
   if (isLoading || !stats) {
     return (
@@ -155,26 +157,26 @@ export function ClusterStatsCards({
           const allReady = !hasSubValue || stat.subValue === stat.value
 
           return (
-            <Card key={stat.label} className="@container/card group hover:shadow-md transition-all duration-200 card-elevated card-shine">
+            <Card
+              key={stat.label}
+              className="@container/card group hover:shadow-md transition-all duration-200 card-elevated card-shine cursor-pointer"
+              onClick={() => stat.routePath && navigate(stat.routePath)}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${stat.bgColor} group-hover:scale-105 transition-transform`}>
+                    <div className={`p-2 rounded-lg ${stat.bgColor} group-hover:scale-110 transition-transform duration-200`}>
                       <Icon className={`size-6 ${stat.color}`} />
                     </div>
                     <div>
-                      <CardDescription>{stat.label}</CardDescription>
-                      <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {stat.routePath ? (
-                          <Link
-                            to={stat.routePath}
-                            className="hover:text-primary/80 hover:underline transition-colors cursor-pointer"
-                          >
-                            {stat.value}
-                          </Link>
-                        ) : (
-                          stat.value
+                      <CardDescription className="flex items-center gap-1">
+                        {stat.label}
+                        {stat.routePath && (
+                          <IconChevronRight className="size-3 opacity-0 group-hover:opacity-60 transition-opacity duration-200" />
                         )}
+                      </CardDescription>
+                      <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl transition-all duration-200 group-hover:text-primary">
+                        {stat.value}
                       </CardTitle>
                       <div className="text-sm text-muted-foreground">
                         {allReady ? (
