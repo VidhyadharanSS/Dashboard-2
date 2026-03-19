@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Pod } from 'kubernetes-types/core/v1'
+import { Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import { PodWithMetrics } from '@/types/api'
 import { getPodStatus } from '@/lib/k8s'
@@ -47,15 +49,28 @@ export function PodListPage() {
             : image
 
           return (
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <div
-                className={`font-medium hover:underline truncate ${isUnhealthy ? 'text-red-500' : 'text-blue-500'}`}
-              >
-                <Link
-                  to={`/pods/${row.original.metadata?.namespace || ''}/${row.original.metadata?.name || ''}`}
+            <div className="flex flex-col gap-0.5 min-w-0 group/name">
+              <div className="flex items-center gap-1 min-w-0">
+                <div
+                  className={`font-medium hover:underline truncate ${isUnhealthy ? 'text-red-500' : 'text-blue-500'}`}
                 >
-                  {row.original.metadata!.name}
-                </Link>
+                  <Link
+                    to={`/pods/${row.original.metadata?.namespace || ''}/${row.original.metadata?.name || ''}`}
+                  >
+                    {row.original.metadata!.name}
+                  </Link>
+                </div>
+                <button
+                  className="opacity-0 group-hover/name:opacity-100 transition-opacity duration-150 text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(row.original.metadata!.name || '')
+                    toast.success('Name copied to clipboard')
+                  }}
+                  title="Copy name"
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
               </div>
               {shortImage && (
                 <Tooltip>

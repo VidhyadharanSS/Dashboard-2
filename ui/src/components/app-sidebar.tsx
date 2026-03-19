@@ -102,7 +102,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   if (isLoading || !config) {
     return (
-      <Sidebar collapsible="offcanvas" {...props}>
+      <Sidebar collapsible="icon" {...props}>
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -124,7 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar collapsible="offcanvas" className="border-r border-border/40 bg-sidebar/70 backdrop-blur-xl" {...props}>
+    <Sidebar collapsible="icon" className="border-r border-border/40 bg-sidebar/70 backdrop-blur-xl" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -281,6 +281,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 bg-gradient-to-r from-muted/40 to-muted/20 border border-border/40 backdrop-blur-sm transition-all duration-200 hover:border-border/60 hover:shadow-sm">
           <ClusterSelector />
+        </div>
+        <div className="group-data-[collapsible=icon]:hidden flex items-center justify-center px-2 py-1">
+          <kbd className="text-[10px] text-muted-foreground/60 font-mono">
+            ⌘B to toggle sidebar
+          </kbd>
         </div>
       </SidebarFooter>
     </Sidebar>

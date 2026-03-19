@@ -53,30 +53,28 @@ function ClusterAwareApp() {
 }
 
 function SidebarFloatingToggle() {
-  const { open, toggleSidebar } = useSidebar()
+  const { state, toggleSidebar } = useSidebar()
+  const isCollapsed = state === 'collapsed'
   return (
     <button
       onClick={toggleSidebar}
       className={`
-        fixed bottom-6 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full
+        fixed bottom-6 z-50 flex items-center gap-1.5 rounded-full
         bg-background/90 backdrop-blur-md border border-border/60
         shadow-lg shadow-black/10 text-muted-foreground hover:text-foreground
-        hover:border-border hover:shadow-xl hover:shadow-black/15
+        hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10
         transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
         group text-xs font-medium
-        ${open ? 'left-[var(--sidebar-width)] -translate-x-full ml-2' : 'left-4'}
+        ${isCollapsed ? 'left-[calc(var(--sidebar-width-icon)+0.5rem)] px-2.5 py-2' : 'left-[calc(var(--sidebar-width)+0.5rem)] px-3 py-2'}
       `}
-      title={open ? 'Collapse sidebar (⌘B)' : 'Expand sidebar (⌘B)'}
+      title={isCollapsed ? 'Expand sidebar (⌘B)' : 'Collapse sidebar (⌘B)'}
     >
-      {open ? (
+      {isCollapsed ? (
+        <PanelLeftOpen className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+      ) : (
         <>
           <PanelLeftClose className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
           <span className="hidden sm:inline">Collapse</span>
-        </>
-      ) : (
-        <>
-          <PanelLeftOpen className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-          <span className="hidden sm:inline">Expand</span>
         </>
       )}
     </button>

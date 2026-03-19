@@ -1,4 +1,4 @@
-import { IconDeviceDesktop, IconTrash, IconKey, IconShieldX, IconWifi, IconMobile, IconMonitor, IconServer } from '@tabler/icons-react'
+import { IconDeviceDesktop, IconTrash, IconKey, IconShieldX, IconWifi, IconDeviceMobile, IconDeviceLaptop, IconServer } from '@tabler/icons-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { useTranslation } from 'react-i18next'
@@ -18,9 +18,9 @@ interface SessionWithCurrent extends UserSession {
 
 function getDeviceIcon(userAgent: string) {
     const ua = userAgent.toLowerCase()
-    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) return IconMobile
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) return IconDeviceMobile
     if (ua.includes('curl') || ua.includes('python') || ua.includes('go-http') || ua.includes('kite')) return IconServer
-    return IconMonitor
+    return IconDeviceLaptop
 }
 
 function parseUserAgent(ua: string): { browser: string; os: string } {

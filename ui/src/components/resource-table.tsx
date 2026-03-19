@@ -65,6 +65,11 @@ import { ErrorMessage } from './error-message'
 import { ResourceTableView } from './resource-table-view'
 import { NamespaceSelector } from './selector/namespace-selector'
 import { Combobox } from '@/components/ui/combobox'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export interface ResourceTableProps<T> {
   resourceName: string
@@ -212,6 +217,7 @@ export function ResourceTable<T>({
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [clusterScope])
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const [useSSE, setUseSSE] = useState(false)
   const {
     isLoading: queryLoading,
@@ -359,7 +365,7 @@ export function ResourceTable<T>({
             return metadata?.namespace || '-'
           },
           cell: ({ getValue }: { getValue: () => string }) => (
-            <Badge variant="outline" className="ml-2 ">
+            <Badge variant="outline" className="font-medium">
               {getValue()}
             </Badge>
           ),
@@ -378,6 +384,13 @@ export function ResourceTable<T>({
     if (useSSE) return watchData
     return queryData
   }, [useSSE, watchData, queryData])
+
+  // Track last refresh time
+  useEffect(() => {
+    if (data && (data as T[]).length >= 0) {
+      setLastRefreshed(new Date())
+    }
+  }, [data])
   const isLoading = useSSE ? watchLoading : queryLoading
   const isError = useSSE ? Boolean(watchError) : queryIsError
   const error = useSSE
@@ -579,6 +592,45 @@ export function ResourceTable<T>({
     }
   }, [table, clusterScope, resourceType, resourceName, t, useSSE, refetch])
   // Calculate total and filtered row counts
+  // Resource health summary computation
+  const healthSummary = useMemo(() => {
+    if (!data || (data as T[]).length === 0) return null
+    const items = data as any[]
+    let healthy = 0
+    let warning = 0
+    let error = 0
+    let other = 0
+
+    items.forEach((item) => {
+      // Pods
+      const phase = item?.status?.phase
+      if (phase === 'Running' || phase === 'Succeeded' || phase === 'Active') {
+        healthy++
+      } else if (phase === 'Pending') {
+        warning++
+      } else if (phase === 'Failed') {
+        error++
+      } else {
+        // Deployments / StatefulSets / DaemonSets
+        const replicas = item?.status?.replicas || item?.status?.desiredNumberScheduled || 0
+        const ready = item?.status?.readyReplicas || item?.status?.numberReady || 0
+        if (replicas > 0 && ready === replicas) {
+          healthy++
+        } else if (replicas > 0 && ready > 0) {
+          warning++
+        } else if (replicas > 0 && ready === 0) {
+          error++
+        } else {
+          other++
+        }
+      }
+    })
+
+    const total = items.length
+    if (total === 0) return null
+    return { healthy, warning, error, other, total }
+  }, [data])
+
   const totalRowCount = useMemo(
     () => (data as T[] | undefined)?.length || 0,
     [data]
@@ -676,6 +728,18 @@ export function ResourceTable<T>({
                 {(data as T[]).length}
               </Badge>
             )}
+            {lastRefreshed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] text-muted-foreground/50 tabular-nums cursor-default ml-1">
+                    updated {lastRefreshed.toLocaleTimeString()}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Last refreshed at {lastRefreshed.toLocaleString()}
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
           {!clusterScope && selectedNamespace && (
             <div className="text-muted-foreground flex items-center mt-1.5 text-sm">
@@ -685,6 +749,72 @@ export function ResourceTable<T>({
                   ? 'All Namespaces'
                   : selectedNamespace}
               </Badge>
+            </div>
+          )}
+          {/* Resource Health Summary Bar */}
+          {healthSummary && healthSummary.total > 0 && (
+            <div className="flex items-center gap-2 mt-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex h-1.5 w-48 rounded-full overflow-hidden bg-muted/50 cursor-default">
+                    {healthSummary.healthy > 0 && (
+                      <div
+                        className="bg-green-500 transition-all duration-500"
+                        style={{ width: `${(healthSummary.healthy / healthSummary.total) * 100}%` }}
+                      />
+                    )}
+                    {healthSummary.warning > 0 && (
+                      <div
+                        className="bg-amber-500 transition-all duration-500"
+                        style={{ width: `${(healthSummary.warning / healthSummary.total) * 100}%` }}
+                      />
+                    )}
+                    {healthSummary.error > 0 && (
+                      <div
+                        className="bg-red-500 transition-all duration-500"
+                        style={{ width: `${(healthSummary.error / healthSummary.total) * 100}%` }}
+                      />
+                    )}
+                    {healthSummary.other > 0 && (
+                      <div
+                        className="bg-muted-foreground/30 transition-all duration-500"
+                        style={{ width: `${(healthSummary.other / healthSummary.total) * 100}%` }}
+                      />
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-green-500" />
+                      Healthy: {healthSummary.healthy}
+                    </div>
+                    {healthSummary.warning > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+                        Warning: {healthSummary.warning}
+                      </div>
+                    )}
+                    {healthSummary.error > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-red-500" />
+                        Error: {healthSummary.error}
+                      </div>
+                    )}
+                    {healthSummary.other > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-muted-foreground/30" />
+                        Other: {healthSummary.other}
+                      </div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" />{healthSummary.healthy}</span>
+                {healthSummary.warning > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{healthSummary.warning}</span>}
+                {healthSummary.error > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-red-500" />{healthSummary.error}</span>}
+              </div>
             </div>
           )}
         </div>        {/* Controls column - two rows stacked */}

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Deployment } from 'kubernetes-types/apps/v1'
+import { Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -41,13 +42,26 @@ export function DeploymentListPage() {
           const image = containers[0]?.image || ''
           const shortImage = image.includes('/') ? image.split('/').pop() || image : image
           return (
-            <div className="flex flex-col gap-0.5">
-              <div className="font-medium text-blue-500 hover:underline">
-                <Link
-                  to={`/deployments/${row.original.metadata!.namespace}/${row.original.metadata!.name}`}
+            <div className="flex flex-col gap-0.5 group/name">
+              <div className="flex items-center gap-1 min-w-0">
+                <div className="font-medium text-blue-500 hover:underline truncate">
+                  <Link
+                    to={`/deployments/${row.original.metadata!.namespace}/${row.original.metadata!.name}`}
+                  >
+                    {row.original.metadata!.name}
+                  </Link>
+                </div>
+                <button
+                  className="opacity-0 group-hover/name:opacity-100 transition-opacity duration-150 text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(row.original.metadata!.name || '')
+                    toast.success('Name copied to clipboard')
+                  }}
+                  title="Copy name"
                 >
-                  {row.original.metadata!.name}
-                </Link>
+                  <Copy className="h-3 w-3" />
+                </button>
               </div>
               {shortImage && (
                 <Tooltip>

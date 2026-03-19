@@ -57,26 +57,49 @@ const RESOURCE_CONFIG: Record<
   string,
   {
     label: string
+    displayLabel: string
     icon: React.ComponentType<{ className?: string }>
     group?: string
     color?: string
+    badgeColor?: string
   }
 > = {
-  pods: { label: 'nav.pods', icon: IconBox, group: 'Workloads', color: 'text-green-500' },
-  deployments: { label: 'nav.deployments', icon: IconRocket, group: 'Workloads', color: 'text-blue-500' },
-  daemonsets: { label: 'nav.daemonsets', icon: IconTopologyBus, group: 'Workloads', color: 'text-blue-400' },
-  statefulsets: { label: 'nav.statefulsets', icon: IconServer2, group: 'Workloads', color: 'text-blue-400' },
-  jobs: { label: 'nav.jobs', icon: IconPlayerPlay, group: 'Workloads', color: 'text-amber-500' },
-  cronjobs: { label: 'nav.cronJobs', icon: IconPlayerPlay, group: 'Workloads', color: 'text-amber-400' },
-  services: { label: 'nav.services', icon: IconNetwork, group: 'Networking', color: 'text-purple-500' },
-  ingresses: { label: 'nav.ingresses', icon: IconRouter, group: 'Networking', color: 'text-purple-400' },
-  gateways: { label: 'nav.gateways', icon: IconLoadBalancer, group: 'Networking', color: 'text-purple-400' },
-  httproutes: { label: 'nav.httproutes', icon: IconRoute, group: 'Networking', color: 'text-purple-300' },
-  configmaps: { label: 'nav.configMaps', icon: IconMap, group: 'Config', color: 'text-orange-500' },
-  secrets: { label: 'nav.secrets', icon: IconLock, group: 'Config', color: 'text-red-400' },
-  namespaces: { label: 'nav.namespaces', icon: IconBoxMultiple, group: 'Cluster', color: 'text-cyan-500' },
-  nodes: { label: 'nav.nodes', icon: IconServer2, group: 'Cluster', color: 'text-cyan-400' },
-  horizontalpodautoscalers: { label: 'nav.horizontalpodautoscalers', icon: IconArrowsHorizontal, group: 'Scaling', color: 'text-teal-500' },
+  pods:                    { label: 'nav.pods',                    displayLabel: 'Pod',          icon: IconBox,             group: 'Workloads',  color: 'text-green-500',  badgeColor: 'bg-green-500/10 text-green-600 border-green-500/30 dark:text-green-400' },
+  deployments:             { label: 'nav.deployments',             displayLabel: 'Deployment',   icon: IconRocket,          group: 'Workloads',  color: 'text-blue-500',   badgeColor: 'bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400' },
+  daemonsets:              { label: 'nav.daemonsets',              displayLabel: 'DaemonSet',    icon: IconTopologyBus,     group: 'Workloads',  color: 'text-blue-400',   badgeColor: 'bg-blue-400/10 text-blue-500 border-blue-400/30 dark:text-blue-300' },
+  statefulsets:            { label: 'nav.statefulsets',            displayLabel: 'StatefulSet',  icon: IconServer2,         group: 'Workloads',  color: 'text-blue-400',   badgeColor: 'bg-blue-400/10 text-blue-500 border-blue-400/30 dark:text-blue-300' },
+  jobs:                    { label: 'nav.jobs',                    displayLabel: 'Job',          icon: IconPlayerPlay,      group: 'Workloads',  color: 'text-amber-500',  badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400' },
+  cronjobs:                { label: 'nav.cronJobs',                displayLabel: 'CronJob',      icon: IconPlayerPlay,      group: 'Workloads',  color: 'text-amber-400',  badgeColor: 'bg-amber-400/10 text-amber-500 border-amber-400/30 dark:text-amber-300' },
+  services:                { label: 'nav.services',                displayLabel: 'Service',      icon: IconNetwork,         group: 'Networking', color: 'text-purple-500', badgeColor: 'bg-purple-500/10 text-purple-600 border-purple-500/30 dark:text-purple-400' },
+  ingresses:               { label: 'nav.ingresses',               displayLabel: 'Ingress',      icon: IconRouter,          group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
+  gateways:                { label: 'nav.gateways',                displayLabel: 'Gateway',      icon: IconLoadBalancer,    group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
+  httproutes:              { label: 'nav.httproutes',              displayLabel: 'HTTPRoute',    icon: IconRoute,           group: 'Networking', color: 'text-purple-300', badgeColor: 'bg-purple-300/10 text-purple-400 border-purple-300/30 dark:text-purple-200' },
+  configmaps:              { label: 'nav.configMaps',              displayLabel: 'ConfigMap',    icon: IconMap,             group: 'Config',     color: 'text-orange-500', badgeColor: 'bg-orange-500/10 text-orange-600 border-orange-500/30 dark:text-orange-400' },
+  secrets:                 { label: 'nav.secrets',                 displayLabel: 'Secret',       icon: IconLock,            group: 'Config',     color: 'text-red-400',    badgeColor: 'bg-red-400/10 text-red-500 border-red-400/30 dark:text-red-300' },
+  namespaces:              { label: 'nav.namespaces',              displayLabel: 'Namespace',    icon: IconBoxMultiple,     group: 'Cluster',    color: 'text-cyan-500',   badgeColor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30 dark:text-cyan-400' },
+  nodes:                   { label: 'nav.nodes',                   displayLabel: 'Node',         icon: IconServer2,         group: 'Cluster',    color: 'text-cyan-400',   badgeColor: 'bg-cyan-400/10 text-cyan-500 border-cyan-400/30 dark:text-cyan-300' },
+  horizontalpodautoscalers:{ label: 'nav.horizontalpodautoscalers',displayLabel: 'HPA',          icon: IconArrowsHorizontal,group: 'Scaling',   color: 'text-teal-500',   badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-500/30 dark:text-teal-400' },
+  persistentvolumeclaims:  { label: 'nav.pvcs',                    displayLabel: 'PVC',          icon: IconServer,          group: 'Storage',    color: 'text-slate-500',  badgeColor: 'bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-400' },
+  persistentvolumes:       { label: 'nav.pvs',                     displayLabel: 'PV',           icon: IconServer,          group: 'Storage',    color: 'text-slate-400',  badgeColor: 'bg-slate-400/10 text-slate-500 border-slate-400/30 dark:text-slate-300' },
+  storageclasses:          { label: 'nav.storageClasses',          displayLabel: 'StorageClass', icon: IconServer,          group: 'Storage',    color: 'text-slate-400',  badgeColor: 'bg-slate-400/10 text-slate-500 border-slate-400/30 dark:text-slate-300' },
+  serviceaccounts:         { label: 'nav.serviceAccounts',         displayLabel: 'ServiceAcct',  icon: IconSettings,        group: 'Config',     color: 'text-orange-400', badgeColor: 'bg-orange-400/10 text-orange-500 border-orange-400/30 dark:text-orange-300' },
+  crs:                     { label: 'nav.crs',                     displayLabel: 'CustomRes',    icon: IconSettings,        group: 'Other',      color: 'text-slate-500',  badgeColor: 'bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-400' },
+}
+
+/** Returns a human-readable, properly capitalised label for a resource type */
+const getResourceTypeLabel = (resourceType: string): { displayLabel: string; badgeColor: string } => {
+  const cfg = RESOURCE_CONFIG[resourceType]
+  if (cfg) return { displayLabel: cfg.displayLabel, badgeColor: cfg.badgeColor || '' }
+  // Fallback: capitalise first letter, singularise naive plurals
+  const singular = resourceType.endsWith('ses')
+    ? resourceType.slice(0, -2)          // "ingresses" → "ingress"
+    : resourceType.endsWith('s')
+      ? resourceType.slice(0, -1)        // "pods" → "pod"
+      : resourceType
+  return {
+    displayLabel: singular.charAt(0).toUpperCase() + singular.slice(1),
+    badgeColor: 'bg-muted text-muted-foreground border-border',
+  }
 }
 
 // Ordered groups for display
@@ -693,18 +716,27 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                 return (
                   <CommandGroup heading={t('globalSearch.favorites')}>
                     {filtered.map((result) => {
-                      const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, icon: IconBox, color: '' }
+                      const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, displayLabel: result.resourceType, icon: IconBox, color: '', badgeColor: '' }
+                      const { displayLabel, badgeColor } = getResourceTypeLabel(result.resourceType)
                       const Icon = cfg.icon
                       const isFav = isFavorite(result.id)
                       const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
                       return (
                         <CommandItem key={result.id} value={`fav-${result.id}`} onSelect={() => handleSelect(path)} className="flex items-center gap-3 py-2.5">
-                          <Icon className={`h-4 w-4 ${cfg.color || 'text-sidebar-primary'}`} />
+                          <div className={`p-1.5 rounded-md bg-muted/50 ${cfg.color || 'text-sidebar-primary'}`}>
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
                           <div className="flex-1 min-w-0">
                             <span className="font-medium text-sm truncate">{result.name}</span>
-                            {result.namespace && <div className="text-xs text-muted-foreground">{result.namespace}</div>}
+                            {result.namespace && <div className="text-xs text-muted-foreground"><span className="opacity-60">ns/</span>{result.namespace}</div>}
                           </div>
-                          <Badge variant="outline" className="text-[10px] h-4">{result.resourceType}</Badge>
+                          {/* Resource type badge — always visible */}
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
+                          >
+                            {displayLabel}
+                          </Badge>
                           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }} className="p-1 hover:bg-accent rounded transition-colors">
                             {isFav ? <IconStarFilled className="h-3 w-3 text-yellow-500" /> : <IconStar className="h-3 w-3 text-muted-foreground opacity-50" />}
                           </button>
@@ -738,7 +770,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                       </span>
                     }>
                       {grouped[group].map((result) => {
-                        const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, icon: IconBox, color: '' }
+                        const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, displayLabel: result.resourceType, icon: IconBox, color: '', badgeColor: '' }
+                        const { displayLabel, badgeColor } = getResourceTypeLabel(result.resourceType)
                         const Icon = cfg.icon
                         const isFav = isFavorite(result.id)
                         const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
@@ -762,10 +795,21 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                               </div>
                               {result.namespace && (
                                 <div className="text-xs text-muted-foreground mt-0.5">
-                                  <span className="opacity-60">ns/</span><Highlight text={result.namespace} query={query} />
+                                  <span className="opacity-60">ns/</span>
+                                  <Highlight text={result.namespace} query={query} />
                                 </div>
                               )}
                             </div>
+
+                            {/* ── Resource type badge — always visible, colour-coded per type ── */}
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
+                            >
+                              {displayLabel}
+                            </Badge>
+
+                            {/* ── Action buttons (shell / logs / yaml) — appear on hover ── */}
                             <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
                               {canExec && (
                                 <button
@@ -788,11 +832,15 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                                 className="h-6 w-6 p-0"
                               />
                             </div>
+
+                            {/* ── Favourite star ── */}
                             <button
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }}
                               className="p-1 hover:bg-accent rounded transition-colors z-10 relative shrink-0"
                             >
-                              {isFav ? <IconStarFilled className="h-3 w-3 text-yellow-500" /> : <IconStar className="h-3 w-3 text-muted-foreground opacity-0 group-hover/item:opacity-50" />}
+                              {isFav
+                                ? <IconStarFilled className="h-3 w-3 text-yellow-500" />
+                                : <IconStar className="h-3 w-3 text-muted-foreground opacity-0 group-hover/item:opacity-50" />}
                             </button>
                           </CommandItem>
                         )

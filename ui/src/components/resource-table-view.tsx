@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react'
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import {
   flexRender,
   PaginationState,
   Table as TableInstance,
 } from '@tanstack/react-table'
+import { ArrowUp } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -64,7 +65,7 @@ const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex }:
     className="transition-all duration-150 hover:bg-accent/40 group/row"
     style={{ '--stagger-index': rowIndex } as React.CSSProperties}
   >
-    {row.getVisibleCells().map((cell: any, index: number) => {
+    {row.getVisibleCells().map((cell: any) => {
       const content = cell.column.columnDef.cell
         ? flexRender(cell.column.columnDef.cell, cell.getContext())
         : String(cell.getValue() || '-')
@@ -72,7 +73,7 @@ const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex }:
       return (
         <TableCell
           key={cell.id}
-          className={`align-middle ${index <= 1 ? 'text-left' : 'text-center'}`}
+          className="align-middle text-left"
         >
           {typeof content === 'string' ? (
             <Highlight text={content} query={searchQuery} />
@@ -103,6 +104,23 @@ export function ResourceTableView<T>({
   pagination,
   setPagination,
 }: ResourceTableViewProps<T>) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const handleScroll = () => {
+      setShowScrollTop(el.scrollTop > 300)
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const scrollToTop = useCallback(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   const renderRows = () => {
     const rows = table.getRowModel().rows
 
@@ -149,10 +167,10 @@ export function ResourceTableView<T>({
   const renderSkeletonRows = () => {
     return Array.from({ length: 5 }).map((_, i) => (
       <TableRow key={`skeleton-${i}`}>
-        {table.getAllLeafColumns().map((col, index) => (
+        {table.getAllLeafColumns().map((col) => (
           <TableCell
             key={col.id}
-            className={`align-middle ${index <= 1 ? 'text-left' : 'text-center'}`}
+            className="align-middle text-left"
           >
             <Skeleton className="h-4 w-full opacity-50" />
           </TableCell>
@@ -174,16 +192,26 @@ export function ResourceTableView<T>({
         >
           {emptyState || (
             <div
+              ref={scrollContainerRef}
               className={`relative ${maxBodyHeightClassName} overflow-auto scrollbar-hide`}
             >
+              {showScrollTop && (
+                <button
+                  onClick={scrollToTop}
+                  className="absolute bottom-4 right-4 z-20 flex items-center justify-center h-8 w-8 rounded-full bg-primary/90 text-primary-foreground shadow-lg hover:bg-primary hover:shadow-xl transition-all duration-200 animate-fade-slide-in"
+                  title="Scroll to top"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+              )}
               <Table>
                 <TableHeader className="bg-muted/40 backdrop-blur-sm sticky top-0 z-10 border-b shadow-[0_1px_0_oklch(0_0_0/0.03)]">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header, index) => (
+                      {headerGroup.headers.map((header) => (
                         <TableHead
                           key={header.id}
-                          className={index <= 1 ? 'text-left' : 'text-center'}
+                          className="text-left"
                         >
                           {header.isPlaceholder ? null : header.column.getCanSort() ? (
                             <Button
