@@ -317,6 +317,29 @@ func SetUserEnabled(c *gin.Context) {
 	c.JSON(200, gin.H{"success": true})
 }
 
+func GetFavorites(c *gin.Context) {
+	user := c.MustGet("user").(model.User)
+	c.JSON(200, gin.H{"favorites": user.Favorites})
+}
+
+func UpdateFavorites(c *gin.Context) {
+	user := c.MustGet("user").(model.User)
+	var req struct {
+		Favorites string `json:"favorites" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	user.Favorites = req.Favorites
+	if err := model.UpdateUser(&user); err != nil {
+		klog.Errorf("failed to update favorites for user %s: %v", user.Username, err)
+		c.JSON(500, gin.H{"error": "failed to update favorites"})
+		return
+	}
+	c.JSON(200, gin.H{"success": true})
+}
+
 func UpdateSidebarPreference(c *gin.Context) {
 	user := c.MustGet("user").(model.User)
 	var req struct {

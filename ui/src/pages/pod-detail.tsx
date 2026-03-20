@@ -52,6 +52,7 @@ import { ContainerSelector } from '@/components/selector/container-selector'
 import { Terminal } from '@/components/terminal'
 import { VolumeTable } from '@/components/volume-table'
 import { YamlEditor } from '@/components/yaml-editor'
+import { FavoriteButton } from '@/components/favorite-button'
 import { ResourceTopology } from '@/components/resource-topology'
 
 export function PodDetail(props: { namespace: string; name: string }) {
@@ -234,6 +235,7 @@ export function PodDetail(props: { namespace: string; name: string }) {
           </p>
         </div>
         <div className="flex gap-2">
+          <FavoriteButton resourceType="pods" name={name} namespace={namespace} />
           <Button variant="outline" size="sm" onClick={handleManualRefresh}>
             <IconRefresh className="w-4 h-4" />
             Refresh

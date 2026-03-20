@@ -30,6 +30,12 @@ import { withSubPath } from '@/lib/subpath'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/contexts/auth-context'
 import { useAppearance } from '@/components/appearance-provider'
@@ -522,9 +528,9 @@ export function ResourceTopology({
         )
     }
 
-    return (
-        <Card className={`overflow-hidden bg-dot-pattern bg-slate-50/50 dark:bg-slate-950/50 border relative ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
-            {/* Toolbar */}
+const topologyContent = (fullscreen = false) => (
+        <>
+            {/* Controls */}
             <div className="absolute top-3 left-3 z-50 flex flex-col gap-1.5">
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={handleZoomIn} title="Zoom In">
                     <IconZoomIn size={15} />
@@ -544,9 +550,11 @@ export function ResourceTopology({
                 >
                     <IconSearch size={15} />
                 </Button>
-                <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={() => setIsFullscreen(f => !f)} title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-                    {isFullscreen ? <IconMinimize size={15} /> : <IconMaximize size={15} />}
-                </Button>
+                {!fullscreen && (
+                    <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={() => setIsFullscreen(true)} title="Expand View">
+                        <IconMaximize size={15} />
+                    </Button>
+                )}
                 <div className="h-px w-6 bg-border/50 self-center" />
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-md" onClick={() => handleExportImage('png')} title="Export as PNG">
                     <IconPhoto size={15} />
@@ -577,7 +585,7 @@ export function ResourceTopology({
                 </div>
             )}
 
-            {/* Stats badge + Legend toggle + Export options */}
+            {/* Info badges */}
             <div className="absolute top-3 right-3 z-50 flex flex-col items-end gap-1.5">
                 <Badge variant="secondary" className="text-xs shadow-md">
                     {totalNodes} resource{totalNodes !== 1 ? 's' : ''} · {related?.links?.length || 0} link{(related?.links?.length || 0) !== 1 ? 's' : ''}
@@ -611,69 +619,94 @@ export function ResourceTopology({
                 )}
             </div>
 
-            {/* Zoom level indicator */}
+            {/* Zoom indicator */}
             <div className="absolute bottom-3 left-3 z-50">
                 <Badge variant="outline" className="text-xs font-mono opacity-60">
                     {Math.round(zoom * 100)}%
                 </Badge>
             </div>
 
-            <CardContent
-                className={`p-0 relative ${isFullscreen ? 'h-full' : 'min-h-[520px]'} cursor-grab active:cursor-grabbing overflow-hidden`}
-                ref={containerRef}
-                onWheel={handleWheel}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-            >
-                <div
-                    ref={contentRef}
-                    className="absolute inset-0"
-                    style={{
-                        transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-                        transformOrigin: '50% 50%',
-                        transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                    }}
-                >
-                    <div className="p-10 min-w-full min-h-full inline-block">
-                        {/* Connection Lines */}
-                        {related && <TopologyLines links={related.links || []} positions={nodePositions} hoveredNode={hoveredNode} connectedNodes={connectedNodes} />}
-
-                        {/* Layered nodes */}
-                        <div className="flex flex-col items-center justify-start gap-12 relative z-10">
-                            {layers.map((layer, lIdx) => (
-                                <div key={`layer-${lIdx}`} className="flex justify-center gap-6 flex-wrap w-full">
-                                    {layer.map((node) => {
-                                        const isSearchMatch = highlightedNodes.size > 0 && highlightedNodes.has(node.id)
-                                        const isSearchDimmed = highlightedNodes.size > 0 && !highlightedNodes.has(node.id)
-                                        return (
-                                        <TopologyNode
-                                            key={node.id}
-                                            id={node.id}
-                                            node={node}
-                                            isRoot={node.id === rootId}
-                                            isHighlighted={hoveredNode ? connectedNodes.has(node.id) : (highlightedNodes.size === 0 || isSearchMatch)}
-                                            isDimmed={(hoveredNode !== null && !connectedNodes.has(node.id)) || isSearchDimmed}
-                                            isSearchMatch={isSearchMatch}
-                                            onHover={setHoveredNode}
-                                        />
-                                        )
-                                    })}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-
-            {/* Hint text */}
+            {/* Hint */}
             <div className="absolute bottom-3 right-3 z-50 text-[10px] text-muted-foreground/50 hidden md:block">
                 Scroll + Ctrl to zoom · Drag to pan · Click to open overview · Hover for connections
             </div>
-        </Card>
+        </>
     )
-}
+
+    const topologyCanvas = (fullscreen = false) => (
+        <CardContent
+            className={`p-0 relative ${fullscreen ? 'h-full' : 'min-h-[520px]'} cursor-grab active:cursor-grabbing overflow-hidden`}
+            ref={containerRef}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+        >
+            {topologyContent(fullscreen)}
+            <div
+                ref={contentRef}
+                className="absolute inset-0"
+                style={{
+                    transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+                    transformOrigin: '50% 50%',
+                    transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                }}
+            >
+                <div className="p-10 min-w-full min-h-full inline-block">
+                    {related && <TopologyLines links={related.links || []} positions={nodePositions} hoveredNode={hoveredNode} connectedNodes={connectedNodes} />}
+                    <div className="flex flex-col items-center justify-start gap-12 relative z-10">
+                        {layers.map((layer, lIdx) => (
+                            <div key={`layer-${lIdx}`} className="flex justify-center gap-6 flex-wrap w-full">
+                                {layer.map((node) => {
+                                    const isSearchMatch = highlightedNodes.size > 0 && highlightedNodes.has(node.id)
+                                    const isSearchDimmed = highlightedNodes.size > 0 && !highlightedNodes.has(node.id)
+                                    return (
+                                    <TopologyNode
+                                        key={node.id}
+                                        id={node.id}
+                                        node={node}
+                                        isRoot={node.id === rootId}
+                                        isHighlighted={hoveredNode ? connectedNodes.has(node.id) : (highlightedNodes.size === 0 || isSearchMatch)}
+                                        isDimmed={(hoveredNode !== null && !connectedNodes.has(node.id)) || isSearchDimmed}
+                                        isSearchMatch={isSearchMatch}
+                                        onHover={setHoveredNode}
+                                    />
+                                    )
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </CardContent>
+    )
+
+    return (
+        <>
+            <Card className="overflow-hidden bg-dot-pattern bg-slate-50/50 dark:bg-slate-950/50 border relative">
+                {topologyCanvas(false)}
+            </Card>
+
+            {/* Fullscreen opens in a Dialog like port preview */}
+            <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+                <DialogContent className="!max-w-[95vw] w-[95vw] h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+                    <DialogHeader className="px-4 py-3 border-b shrink-0">
+                        <DialogTitle className="flex items-center gap-2 text-sm">
+                            <IconServer2 size={16} />
+                            Resource Topology — {name}
+                            <Badge variant="secondary" className="text-[10px] ml-2">
+                                {totalNodes} resource{totalNodes !== 1 ? 's' : ''} · {related?.links?.length || 0} link{(related?.links?.length || 0) !== 1 ? 's' : ''}
+                            </Badge>
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-hidden bg-dot-pattern bg-slate-50/50 dark:bg-slate-950/50 relative">
+                        {topologyCanvas(true)}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    )}
 
 function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, isSearchMatch, onHover }: {
     id: string

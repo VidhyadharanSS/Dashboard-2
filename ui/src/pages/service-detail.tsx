@@ -32,6 +32,7 @@ import { RelatedResourcesTable } from '@/components/related-resource-table'
 import { ResourceDeleteConfirmationDialog } from '@/components/resource-delete-confirmation-dialog'
 import { ResourceHistoryTable } from '@/components/resource-history-table'
 import { YamlEditor } from '@/components/yaml-editor'
+import { FavoriteButton } from '@/components/favorite-button'
 import { ResourceTopology } from '@/components/resource-topology'
 
 export function ServiceDetail(props: { name: string; namespace?: string }) {
@@ -131,6 +132,7 @@ export function ServiceDetail(props: { name: string; namespace?: string }) {
           )}
         </div>
         <div className="flex gap-2">
+          <FavoriteButton resourceType="services" name={name} namespace={namespace} />
           <Button
             disabled={isLoading}
             variant="outline"

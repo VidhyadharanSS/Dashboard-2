@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { SearchResult } from '@/lib/api'
 import {
   addToFavorites as addToFavoritesStorage,
   getFavorites as getFavoritesFromStorage,
   isFavorite as isFavoriteStorage,
+  loadFavoritesFromBackend,
   removeFromFavorites as removeFromFavoritesStorage,
   toggleFavorite as toggleFavoriteStorage,
 } from '@/lib/favorites'
@@ -12,10 +13,17 @@ import {
 export function useFavorites() {
   const [favorites, setFavorites] = useState<SearchResult[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
+  const hasSynced = useRef(false)
 
-  // Load favorites on mount
+  // Load favorites on mount and sync from backend once
   useEffect(() => {
     setFavorites(getFavoritesFromStorage())
+    if (!hasSynced.current) {
+      hasSynced.current = true
+      loadFavoritesFromBackend().then(merged => {
+        setFavorites(merged)
+      }).catch(() => {})
+    }
   }, [refreshKey])
 
   // Refresh favorites list

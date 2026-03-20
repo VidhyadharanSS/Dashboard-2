@@ -59,6 +59,21 @@ const Highlight = ({ text, query }: { text: string; query: string }) => {
   )
 }
 
+function getColumnAlignClass(column: any): string {
+  // Check column meta for explicit alignment
+  const meta = column.columnDef?.meta as { align?: 'left' | 'center' | 'right' } | undefined
+  if (meta?.align === 'center') return 'text-center'
+  if (meta?.align === 'right') return 'text-right'
+  if (meta?.align === 'left') return 'text-left'
+
+  // Infer alignment from column id
+  const id = column.id as string
+  if (id === 'select') return 'text-center'
+  if (id === 'actions') return 'text-right'
+
+  return 'text-left'
+}
+
 const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex }: { row: any; searchQuery: string; isSelected: boolean; rowIndex: number }) => (
   <TableRow
     data-state={isSelected && 'selected'}
@@ -70,10 +85,12 @@ const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex }:
         ? flexRender(cell.column.columnDef.cell, cell.getContext())
         : String(cell.getValue() || '-')
 
+      const alignClass = getColumnAlignClass(cell.column)
+
       return (
         <TableCell
           key={cell.id}
-          className="align-middle text-left"
+          className={`align-middle ${alignClass}`}
         >
           {typeof content === 'string' ? (
             <Highlight text={content} query={searchQuery} />
@@ -167,14 +184,17 @@ export function ResourceTableView<T>({
   const renderSkeletonRows = () => {
     return Array.from({ length: 5 }).map((_, i) => (
       <TableRow key={`skeleton-${i}`}>
-        {table.getAllLeafColumns().map((col) => (
-          <TableCell
-            key={col.id}
-            className="align-middle text-left"
-          >
-            <Skeleton className="h-4 w-full opacity-50" />
-          </TableCell>
-        ))}
+        {table.getAllLeafColumns().map((col) => {
+          const alignClass = getColumnAlignClass(col)
+          return (
+            <TableCell
+              key={col.id}
+              className={`align-middle ${alignClass}`}
+            >
+              <Skeleton className="h-4 w-full opacity-50" />
+            </TableCell>
+          )
+        })}
       </TableRow>
     ))
   }
@@ -205,49 +225,61 @@ export function ResourceTableView<T>({
                 </button>
               )}
               <Table>
-                <TableHeader className="bg-muted/40 backdrop-blur-sm sticky top-0 z-10 border-b shadow-[0_1px_0_oklch(0_0_0/0.03)]">
+                <TableHeader className="bg-muted/80 sticky top-0 z-10 border-b">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          className="text-left"
-                        >
-                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                            <button
-                              onClick={header.column.getToggleSortingHandler()}
-                              className={`inline-flex items-center gap-1 cursor-pointer select-none font-medium text-xs hover:text-foreground transition-colors ${
-                                header.column.getIsSorted()
-                                  ? 'text-primary'
-                                  : 'text-muted-foreground'
-                              }`}
-                            >
-                              {flexRender(
+                      {headerGroup.headers.map((header) => {
+                        const alignClass = getColumnAlignClass(header.column)
+                        return (
+                          <TableHead
+                            key={header.id}
+                            className={alignClass}
+                          >
+                            {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                              <button
+                                onClick={header.column.getToggleSortingHandler()}
+                                className={`inline-flex items-center gap-1 cursor-pointer select-none font-medium text-xs hover:text-foreground transition-colors ${
+                                  alignClass === 'text-right' ? 'ml-auto' : alignClass === 'text-center' ? 'mx-auto' : ''
+                                } ${
+                                  header.column.getIsSorted()
+                                    ? 'text-primary'
+                                    : 'text-muted-foreground'
+                                }`}
+                              >
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                                {header.column.getIsSorted() && (
+                                  <span className="ml-1">
+                                    {header.column.getIsSorted() === 'asc'
+                                      ? '↑'
+                                      : '↓'}
+                                  </span>
+                                )}
+                              </button>
+                            ) : typeof header.column.columnDef.header === 'string' ? (
+                              <span className={`text-xs font-medium text-muted-foreground ${
+                                alignClass === 'text-right' ? 'block text-right' : alignClass === 'text-center' ? 'block text-center' : ''
+                              }`}>
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                              </span>
+                            ) : (
+                              flexRender(
                                 header.column.columnDef.header,
                                 header.getContext()
-                              )}
-                              {header.column.getIsSorted() && (
-                                <span className="ml-1">
-                                  {header.column.getIsSorted() === 'asc'
-                                    ? '↑'
-                                    : '↓'}
-                                </span>
-                              )}
-                            </button>
-                          ) : (
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                            </span>
-                          )}
-                        </TableHead>
-                      ))}
+                              )
+                            )}
+                          </TableHead>
+                        )
+                      })}
                     </TableRow>
                   ))}
                 </TableHeader>
-                <TableBody className="**:data-[slot=table-cell]:first:w-0">
+                <TableBody>
                   {isLoading && dataLength === 0 ? (
                     renderSkeletonRows()
                   ) : (

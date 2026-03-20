@@ -46,6 +46,7 @@ import { PodMonitoring } from '@/components/pod-monitoring'
 import { PodTable } from '@/components/pod-table'
 import { RelatedResourcesTable } from '@/components/related-resource-table'
 import { ResourceDeleteConfirmationDialog } from '@/components/resource-delete-confirmation-dialog'
+import { FavoriteButton } from '@/components/favorite-button'
 import { ResourceTopology } from '@/components/resource-topology'
 import { ResourceHistoryTable } from '@/components/resource-history-table'
 import { Terminal } from '@/components/terminal'
@@ -286,6 +287,7 @@ export function StatefulSetDetail(props: { namespace: string; name: string }) {
           </p>
         </div>
         <div className="flex gap-2">
+          <FavoriteButton resourceType="statefulsets" name={name} namespace={namespace} />
           <Button
             disabled={isLoadingStatefulSet}
             variant="outline"

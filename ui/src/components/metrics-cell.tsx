@@ -74,7 +74,7 @@ export function MetricCell({
     }
 
     return (
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="w-14 h-2 relative">

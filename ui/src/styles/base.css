@@ -371,12 +371,14 @@ table tbody tr {
   transition: width 0.25s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-/* Row highlight on hover with smooth left accent */
-table tbody tr {
+/* Row highlight on hover with smooth left accent –
+   IMPORTANT: ::before on <tr> creates anonymous table-cells and breaks column alignment.
+   Apply the accent bar on the first <td> instead. */
+table tbody tr td:first-child {
   position: relative;
 }
 
-table tbody tr::before {
+table tbody tr td:first-child::before {
   content: '';
   position: absolute;
   left: 0;
@@ -386,9 +388,11 @@ table tbody tr::before {
   background: var(--primary);
   border-radius: 0 2px 2px 0;
   transition: width 0.15s ease;
+  pointer-events: none;
+  z-index: 1;
 }
 
-table tbody tr:hover::before {
+table tbody tr:hover td:first-child::before {
   width: 3px;
 }
 

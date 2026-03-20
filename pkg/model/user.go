@@ -30,6 +30,7 @@ type User struct {
 	ExpiresAt  *time.Time `json:"expiresAt,omitempty" gorm:"type:timestamp;index"`
 
 	SidebarPreference string `json:"sidebar_preference,omitempty" gorm:"type:text"`
+	Favorites         string `json:"favorites,omitempty" gorm:"type:text"`
 }
 
 type UserSession struct {
@@ -137,6 +138,10 @@ func FindWithSubOrUpsertUser(user *User) error {
 	// Preserve local preferences
 	if user.SidebarPreference == "" {
 		user.SidebarPreference = existingUser.SidebarPreference
+	}
+
+	if user.Favorites == "" {
+		user.Favorites = existingUser.Favorites
 	}
 
 	// If matched by Email but didn't have a Sub, update it now

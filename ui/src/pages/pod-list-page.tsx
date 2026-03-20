@@ -22,6 +22,24 @@ import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 import { NodeLabelSelector } from '@/components/selector/node-label-selector'
 
+function fallbackCopy(text: string) {
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    textarea.style.top = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+    toast.success('Name copied to clipboard')
+  } catch {
+    toast.error('Failed to copy to clipboard')
+  }
+}
+
 export function PodListPage() {
   const { t } = useTranslation()
   const [nodeNameFilter, setNodeNameFilter] = useState<string[] | null>(null)
@@ -64,8 +82,17 @@ export function PodListPage() {
                   className="opacity-0 group-hover/name:opacity-100 transition-opacity duration-150 text-muted-foreground hover:text-foreground shrink-0"
                   onClick={(e) => {
                     e.stopPropagation()
-                    navigator.clipboard.writeText(row.original.metadata!.name || '')
-                    toast.success('Name copied to clipboard')
+                    e.preventDefault()
+                    const name = row.original.metadata?.name || ''
+                    if (navigator.clipboard && window.isSecureContext) {
+                      navigator.clipboard.writeText(name).then(() => {
+                        toast.success('Name copied to clipboard')
+                      }).catch(() => {
+                        fallbackCopy(name)
+                      })
+                    } else {
+                      fallbackCopy(name)
+                    }
                   }}
                   title="Copy name"
                 >

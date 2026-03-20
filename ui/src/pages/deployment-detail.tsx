@@ -47,6 +47,7 @@ import { PodMonitoring } from '@/components/pod-monitoring'
 import { PodTable } from '@/components/pod-table'
 import { RelatedResourcesTable } from '@/components/related-resource-table'
 import { ResourceDeleteConfirmationDialog } from '@/components/resource-delete-confirmation-dialog'
+import { FavoriteButton } from '@/components/favorite-button'
 import { ResourceTopology } from '@/components/resource-topology'
 import { ResourceHistoryTable } from '@/components/resource-history-table'
 import { RolloutMonitor } from '@/components/rollout-monitor'
@@ -287,6 +288,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
           </p>
         </div>
         <div className="flex gap-2">
+          <FavoriteButton resourceType="deployments" name={name} namespace={namespace} />
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <IconRefresh className="w-4 h-4" />
             Refresh

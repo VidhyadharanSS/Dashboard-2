@@ -40,6 +40,7 @@ import { ResourceHistoryTable } from '@/components/resource-history-table'
 import { Column, SimpleTable } from '@/components/simple-table'
 import { VolumeTable } from '@/components/volume-table'
 import { YamlEditor } from '@/components/yaml-editor'
+import { FavoriteButton } from '@/components/favorite-button'
 import { ResourceTopology } from '@/components/resource-topology'
 
 interface JobStatusBadge {
@@ -369,6 +370,7 @@ export function CronJobDetail(props: { namespace: string; name: string }) {
           </p>
         </div>
         <div className="flex gap-2">
+          <FavoriteButton resourceType="cronjobs" name={name} namespace={namespace} />
           <Button variant="outline" size="sm" onClick={handleManualRefresh}>
             <IconRefresh className="w-4 h-4" />
             Refresh

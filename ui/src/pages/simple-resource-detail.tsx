@@ -24,6 +24,7 @@ import { RelatedResourcesTable } from '@/components/related-resource-table'
 import { ResourceDeleteConfirmationDialog } from '@/components/resource-delete-confirmation-dialog'
 import { ResourceHistoryTable } from '@/components/resource-history-table'
 import { YamlEditor } from '@/components/yaml-editor'
+import { FavoriteButton } from '@/components/favorite-button'
 import { ResourceTopology } from '@/components/resource-topology'
 
 export function SimpleResourceDetail<T extends ResourceType>(props: {
@@ -127,6 +128,7 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
           )}
         </div>
         <div className="flex gap-2">
+          <FavoriteButton resourceType={resourceType} name={name} namespace={namespace} />
           <Button
             disabled={isLoading}
             variant="outline"

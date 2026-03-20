@@ -104,6 +104,8 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 	userGroup := r.Group("/api/users")
 	{
 		userGroup.POST("/sidebar_preference", authHandler.RequireAuth(), handlers.UpdateSidebarPreference)
+		userGroup.GET("/favorites", authHandler.RequireAuth(), handlers.GetFavorites)
+		userGroup.POST("/favorites", authHandler.RequireAuth(), handlers.UpdateFavorites)
 		userGroup.GET("/sessions", authHandler.RequireAuth(), handlers.ListUserSessions)
 		userGroup.DELETE("/sessions/:id", authHandler.RequireAuth(), handlers.DeleteUserSession)
 		userGroup.DELETE("/sessions", authHandler.RequireAuth(), handlers.RevokeAllUserSessions)
