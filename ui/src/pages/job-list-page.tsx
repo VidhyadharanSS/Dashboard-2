@@ -240,5 +240,3 @@ export function JobListPage() {
     />
   )
 }
-  )
-}

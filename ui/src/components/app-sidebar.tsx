@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import Icon from '@/assets/icon.svg'
 import { useSidebarConfig } from '@/contexts/sidebar-config-context'
 import { CollapsibleContent } from '@radix-ui/react-collapsible'
-import { IconLayoutDashboard, IconSearch } from '@tabler/icons-react'
+import { IconLayoutDashboard, IconSearch, IconChartBar } from '@tabler/icons-react'
 import { ChevronDown, BookOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
@@ -182,6 +182,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
 
             {/* Advanced Search link */}
+{}
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Advanced Search"
@@ -195,7 +196,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          </SidebarMenu>
+
+            {}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Prometheus Metrics"
+                asChild
+                isActive={isActive('/prometheus')}
+                className="transition-all duration-200 hover:bg-accent/60 active:scale-95 data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:shadow-sm"
+              >
+                <Link to="/prometheus" onClick={handleMenuItemClick}>
+                  <IconChartBar className="text-sidebar-primary h-4 w-4" />
+                  <span className="font-medium">Metrics</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
         </SidebarGroup>
 
         {visiblePinnedItems.length > 0 && (

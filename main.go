@@ -203,6 +203,9 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 		promHandler := handlers.NewPromHandler()
 		api.GET("/prometheus/resource-usage-history", promHandler.GetResourceUsageHistory)
 		api.GET("/prometheus/pods/:namespace/:podName/metrics", promHandler.GetPodMetrics)
+		api.GET("/prometheus/cluster-metrics", promHandler.GetClusterMetrics)
+		api.GET("/prometheus/namespace-metrics", promHandler.GetNamespaceMetrics)
+		api.GET("/prometheus/node-filesystem", promHandler.GetNodeFilesystemMetrics)
 
 		logsHandler := handlers.NewLogsHandler()
 		api.GET("/logs/:namespace/:podName/ws", logsHandler.HandleLogsWebSocket)

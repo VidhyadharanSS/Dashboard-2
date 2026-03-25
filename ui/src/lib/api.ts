@@ -8,8 +8,11 @@ import {
   APIKey,
   AuditLogResponse,
   Cluster,
+  ClusterMetrics,
   FetchUserListResponse,
   ImageTagInfo,
+  NamespaceMetrics,
+  NodeFilesystemMetrics,
   OAuthProvider,
   OverviewData,
   PodMetrics,
@@ -519,6 +522,72 @@ export const useResourceUsageHistory = (
     refetchInterval: 30000, // Auto refresh every 30 seconds for historical data
     retry: 0,
     placeholderData: (prevData) => prevData, // Keep previous data while loading new data
+  })
+}
+
+// ─── Cluster Metrics API ─────────────────────────────────────────────────────
+
+export const fetchClusterMetrics = (): Promise<ClusterMetrics> => {
+  return fetchAPI<ClusterMetrics>('/prometheus/cluster-metrics')
+}
+
+export const useClusterMetrics = (options?: {
+  staleTime?: number
+  enabled?: boolean
+  refetchInterval?: number
+}) => {
+  return useQuery({
+    queryKey: ['cluster-metrics'],
+    queryFn: fetchClusterMetrics,
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 15000,
+    refetchInterval: options?.refetchInterval ?? 30000,
+    retry: 0,
+    placeholderData: (prevData) => prevData,
+  })
+}
+
+// ─── Namespace Metrics API ────────────────────────────────────────────────────
+
+export const fetchNamespaceMetrics = (): Promise<NamespaceMetrics[]> => {
+  return fetchAPI<NamespaceMetrics[]>('/prometheus/namespace-metrics')
+}
+
+export const useNamespaceMetrics = (options?: {
+  staleTime?: number
+  enabled?: boolean
+  refetchInterval?: number
+}) => {
+  return useQuery({
+    queryKey: ['namespace-metrics'],
+    queryFn: fetchNamespaceMetrics,
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 15000,
+    refetchInterval: options?.refetchInterval ?? 30000,
+    retry: 0,
+    placeholderData: (prevData) => prevData,
+  })
+}
+
+// ─── Node Filesystem Metrics API ─────────────────────────────────────────────
+
+export const fetchNodeFilesystemMetrics = (): Promise<NodeFilesystemMetrics[]> => {
+  return fetchAPI<NodeFilesystemMetrics[]>('/prometheus/node-filesystem')
+}
+
+export const useNodeFilesystemMetrics = (options?: {
+  staleTime?: number
+  enabled?: boolean
+  refetchInterval?: number
+}) => {
+  return useQuery({
+    queryKey: ['node-filesystem-metrics'],
+    queryFn: fetchNodeFilesystemMetrics,
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 15000,
+    refetchInterval: options?.refetchInterval ?? 60000,
+    retry: 0,
+    placeholderData: (prevData) => prevData,
   })
 }
 

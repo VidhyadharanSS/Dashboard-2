@@ -206,6 +206,63 @@ func (h *PromHandler) fetchPodMetricsFromMetricsServer(c *gin.Context, namespace
 	}, nil
 }
 
+// GetClusterMetrics returns real-time cluster-wide metrics from Prometheus
+func (h *PromHandler) GetClusterMetrics(c *gin.Context) {
+	ctx := c.Request.Context()
+	cs := c.MustGet("cluster").(*cluster.ClientSet)
+
+	if cs.PromClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Prometheus client not available"})
+		return
+	}
+
+	metrics, err := cs.PromClient.GetClusterMetrics(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get cluster metrics: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}
+
+// GetNamespaceMetrics returns CPU/memory/pod breakdown per namespace
+func (h *PromHandler) GetNamespaceMetrics(c *gin.Context) {
+	ctx := c.Request.Context()
+	cs := c.MustGet("cluster").(*cluster.ClientSet)
+
+	if cs.PromClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Prometheus client not available"})
+		return
+	}
+
+	metrics, err := cs.PromClient.GetNamespaceResourceUsage(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get namespace metrics: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}
+
+// GetNodeFilesystemMetrics returns disk usage per node
+func (h *PromHandler) GetNodeFilesystemMetrics(c *gin.Context) {
+	ctx := c.Request.Context()
+	cs := c.MustGet("cluster").(*cluster.ClientSet)
+
+	if cs.PromClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Prometheus client not available"})
+		return
+	}
+
+	metrics, err := cs.PromClient.GetNodeFilesystemUsage(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get filesystem metrics: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}
+
 func mergeUsageDataPointsSum(points []prometheus.UsageDataPoint) []prometheus.UsageDataPoint {
 	m := make(map[int64]float64)
 	for _, pt := range points {

@@ -28,6 +28,15 @@ type WorkloadCounts struct {
 	TotalCronJobs         int `json:"totalCronJobs"`
 }
 
+type RealtimeUsage struct {
+	CPUUsageCores   float64 `json:"cpuUsageCores"`
+	CPUTotalCores   float64 `json:"cpuTotalCores"`
+	CPUUsagePercent float64 `json:"cpuUsagePercent"`
+	MemUsageBytes   float64 `json:"memUsageBytes"`
+	MemTotalBytes   float64 `json:"memTotalBytes"`
+	MemUsagePercent float64 `json:"memUsagePercent"`
+}
+
 type OverviewData struct {
 	TotalNodes      int                   `json:"totalNodes"`
 	ReadyNodes      int                   `json:"readyNodes"`
@@ -41,6 +50,7 @@ type OverviewData struct {
 	PromEnabled     bool                  `json:"prometheusEnabled"`
 	Resource        common.ResourceMetric `json:"resource"`
 	Workloads       WorkloadCounts        `json:"workloads"`
+	Realtime        *RealtimeUsage        `json:"realtime,omitempty"`
 }
 
 // isPodFailing returns true when a pod is in a known failure / crash state.
@@ -221,6 +231,21 @@ func GetOverview(c *gin.Context) {
 			},
 		},
 		Workloads: wc,
+	}
+
+	// Inject real-time CPU/Memory usage from Prometheus if available
+	if cs.PromClient != nil {
+		clusterMetrics, err := cs.PromClient.GetClusterMetrics(ctx)
+		if err == nil && clusterMetrics != nil {
+			overview.Realtime = &RealtimeUsage{
+				CPUUsageCores:   clusterMetrics.CPUUsageCores,
+				CPUTotalCores:   clusterMetrics.CPUTotalCores,
+				CPUUsagePercent: clusterMetrics.CPUUsagePercent,
+				MemUsageBytes:   clusterMetrics.MemUsageBytes,
+				MemTotalBytes:   clusterMetrics.MemTotalBytes,
+				MemUsagePercent: clusterMetrics.MemUsagePercent,
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, overview)

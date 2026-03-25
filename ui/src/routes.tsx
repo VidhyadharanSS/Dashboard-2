@@ -9,6 +9,7 @@ import { CRListPage } from './pages/cr-list-page'
 import { InitializationPage } from './pages/initialization'
 import { LoginPage } from './pages/login'
 import { Overview } from './pages/overview'
+import { PrometheusPage } from './pages/prometheus-page'
 import { ResourceDetail } from './pages/resource-detail'
 import { ResourceList } from './pages/resource-list'
 import { SettingsPage } from './pages/settings'
@@ -69,6 +70,10 @@ export const router = createBrowserRouter(
         {
           path: 'expression-search',
           element: <ExpressionSearchPage />,
+        },
+        {
+          path: 'prometheus',
+          element: <PrometheusPage />,
         },
         {
           path: 'crds/:crd',

@@ -323,6 +323,286 @@ func (c *Client) GetDiskWriteUsage(ctx context.Context, namespace, podNamePrefix
 	return c.queryRange(ctx, query, start, now, step)
 }
 
+// ─── Namespace Resource Metrics ─────────────────────────────────────────────
+
+type NamespaceMetrics struct {
+	Namespace string  `json:"namespace"`
+	CPUUsage  float64 `json:"cpuUsage"`  // cores
+	MemUsage  float64 `json:"memUsage"`  // bytes
+	PodCount  int     `json:"podCount"`
+}
+
+// GetNamespaceResourceUsage returns CPU and memory usage broken down by namespace
+func (c *Client) GetNamespaceResourceUsage(ctx context.Context) ([]NamespaceMetrics, error) {
+	// CPU usage per namespace (cores)
+	cpuQuery := `sum by (namespace) (rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[5m]))`
+	cpuResult, _, err := c.client.Query(ctx, cpuQuery, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("error querying namespace CPU: %w", err)
+	}
+
+	// Memory usage per namespace (bytes)
+	memQuery := `sum by (namespace) (container_memory_working_set_bytes{container!="POD",container!=""})`
+	memResult, _, err := c.client.Query(ctx, memQuery, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("error querying namespace memory: %w", err)
+	}
+
+	// Pod count per namespace
+	podQuery := `count by (namespace) (kube_pod_info)`
+	podResult, _, err := c.client.Query(ctx, podQuery, time.Now())
+	if err != nil {
+		// Non-critical — continue without pod counts
+		klog.Warningf("Failed to query pod counts: %v", err)
+	}
+
+	nsMap := make(map[string]*NamespaceMetrics)
+
+	if cpuResult.Type() == model.ValVector {
+		for _, sample := range cpuResult.(model.Vector) {
+			ns := string(sample.Metric["namespace"])
+			if ns == "" {
+				continue
+			}
+			if _, ok := nsMap[ns]; !ok {
+				nsMap[ns] = &NamespaceMetrics{Namespace: ns}
+			}
+			nsMap[ns].CPUUsage = float64(sample.Value)
+		}
+	}
+
+	if memResult.Type() == model.ValVector {
+		for _, sample := range memResult.(model.Vector) {
+			ns := string(sample.Metric["namespace"])
+			if ns == "" {
+				continue
+			}
+			if _, ok := nsMap[ns]; !ok {
+				nsMap[ns] = &NamespaceMetrics{Namespace: ns}
+			}
+			nsMap[ns].MemUsage = float64(sample.Value)
+		}
+	}
+
+	if podResult != nil && podResult.Type() == model.ValVector {
+		for _, sample := range podResult.(model.Vector) {
+			ns := string(sample.Metric["namespace"])
+			if ns == "" {
+				continue
+			}
+			if _, ok := nsMap[ns]; !ok {
+				nsMap[ns] = &NamespaceMetrics{Namespace: ns}
+			}
+			nsMap[ns].PodCount = int(sample.Value)
+		}
+	}
+
+	result := make([]NamespaceMetrics, 0, len(nsMap))
+	for _, m := range nsMap {
+		result = append(result, *m)
+	}
+	return result, nil
+}
+
+// ─── Cluster-Level Metrics ──────────────────────────────────────────────────
+
+type ClusterMetrics struct {
+	// Real-time usage (from Prometheus instant queries)
+	CPUUsageCores   float64 `json:"cpuUsageCores"`
+	CPUTotalCores   float64 `json:"cpuTotalCores"`
+	MemUsageBytes   float64 `json:"memUsageBytes"`
+	MemTotalBytes   float64 `json:"memTotalBytes"`
+	CPUUsagePercent float64 `json:"cpuUsagePercent"`
+	MemUsagePercent float64 `json:"memUsagePercent"`
+	// Pod counts
+	RunningPods int `json:"runningPods"`
+	TotalPods   int `json:"totalPods"`
+	// Kubernetes component health
+	APIServerUp    bool    `json:"apiServerUp"`
+	APIServerLatP99 float64 `json:"apiServerLatencyP99Ms"` // ms
+	SchedulerUp    bool    `json:"schedulerUp"`
+	EtcdUp         bool    `json:"etcdUp"`
+	// Container restarts in last hour
+	ContainerRestarts1h int `json:"containerRestarts1h"`
+	// OOMKill events in last hour
+	OOMKills1h int `json:"oomKills1h"`
+}
+
+// GetClusterMetrics returns real-time cluster-wide metrics
+func (c *Client) GetClusterMetrics(ctx context.Context) (*ClusterMetrics, error) {
+	m := &ClusterMetrics{APIServerUp: true, SchedulerUp: true, EtcdUp: true}
+
+	// CPU usage (cores)
+	cpuVal, err := c.instantQuery(ctx, `sum(rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[5m]))`)
+	if err == nil {
+		m.CPUUsageCores = cpuVal
+	}
+
+	// CPU total allocatable
+	cpuTotal, err := c.instantQuery(ctx, `sum(kube_node_status_allocatable{resource="cpu"})`)
+	if err == nil {
+		m.CPUTotalCores = cpuTotal
+	}
+
+	if m.CPUTotalCores > 0 {
+		m.CPUUsagePercent = (m.CPUUsageCores / m.CPUTotalCores) * 100
+	}
+
+	// Memory usage (working set bytes)
+	memVal, err := c.instantQuery(ctx, `sum(container_memory_working_set_bytes{container!="POD",container!=""})`)
+	if err == nil {
+		m.MemUsageBytes = memVal
+	}
+
+	// Memory total allocatable
+	memTotal, err := c.instantQuery(ctx, `sum(kube_node_status_allocatable{resource="memory"})`)
+	if err == nil {
+		m.MemTotalBytes = memTotal
+	}
+
+	if m.MemTotalBytes > 0 {
+		m.MemUsagePercent = (m.MemUsageBytes / m.MemTotalBytes) * 100
+	}
+
+	// Running pods
+	runPods, err := c.instantQuery(ctx, `count(kube_pod_status_phase{phase="Running"})`)
+	if err == nil {
+		m.RunningPods = int(runPods)
+	}
+
+	// Total pods
+	totalPods, err := c.instantQuery(ctx, `count(kube_pod_info)`)
+	if err == nil {
+		m.TotalPods = int(totalPods)
+	}
+
+	// API Server latency P99 (ms)
+	apiLat, err := c.instantQuery(ctx, `histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!="WATCH"}[5m])) by (le)) * 1000`)
+	if err == nil {
+		m.APIServerLatP99 = apiLat
+	}
+
+	// API Server up
+	apiUp, err := c.instantQuery(ctx, `up{job=~"apiserver|kubernetes"}`)
+	if err != nil || apiUp == 0 {
+		m.APIServerUp = false
+	}
+
+	// Scheduler up
+	schedUp, err := c.instantQuery(ctx, `up{job=~".*scheduler.*"}`)
+	if err != nil || schedUp == 0 {
+		m.SchedulerUp = false // May not be exposed, default true
+	}
+
+	// Etcd up
+	etcdUp, err := c.instantQuery(ctx, `up{job=~".*etcd.*"}`)
+	if err != nil || etcdUp == 0 {
+		m.EtcdUp = false // May not be exposed
+	}
+
+	// Container restarts in last hour
+	restarts, err := c.instantQuery(ctx, `sum(increase(kube_pod_container_status_restarts_total[1h]))`)
+	if err == nil {
+		m.ContainerRestarts1h = int(restarts)
+	}
+
+	// OOM kills in last hour
+	oomKills, err := c.instantQuery(ctx, `sum(increase(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[1h]))`)
+	if err == nil {
+		m.OOMKills1h = int(oomKills)
+	}
+
+	return m, nil
+}
+
+// ─── Node Filesystem Metrics ────────────────────────────────────────────────
+
+type NodeFilesystemMetrics struct {
+	Node       string  `json:"node"`
+	TotalBytes float64 `json:"totalBytes"`
+	UsedBytes  float64 `json:"usedBytes"`
+	UsedPct    float64 `json:"usedPercent"`
+}
+
+// GetNodeFilesystemUsage returns filesystem usage per node
+func (c *Client) GetNodeFilesystemUsage(ctx context.Context) ([]NodeFilesystemMetrics, error) {
+	totalQuery := `max by (instance) (node_filesystem_size_bytes{mountpoint="/",fstype!="rootfs"})`
+	usedQuery := `max by (instance) (node_filesystem_size_bytes{mountpoint="/",fstype!="rootfs"} - node_filesystem_avail_bytes{mountpoint="/",fstype!="rootfs"})`
+
+	totalResult, _, err := c.client.Query(ctx, totalQuery, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("error querying filesystem total: %w", err)
+	}
+
+	usedResult, _, err := c.client.Query(ctx, usedQuery, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("error querying filesystem used: %w", err)
+	}
+
+	nodeMap := make(map[string]*NodeFilesystemMetrics)
+
+	if totalResult.Type() == model.ValVector {
+		for _, sample := range totalResult.(model.Vector) {
+			node := string(sample.Metric["instance"])
+			if node == "" {
+				continue
+			}
+			nodeMap[node] = &NodeFilesystemMetrics{
+				Node:       node,
+				TotalBytes: float64(sample.Value),
+			}
+		}
+	}
+
+	if usedResult.Type() == model.ValVector {
+		for _, sample := range usedResult.(model.Vector) {
+			node := string(sample.Metric["instance"])
+			if node == "" {
+				continue
+			}
+			if m, ok := nodeMap[node]; ok {
+				m.UsedBytes = float64(sample.Value)
+				if m.TotalBytes > 0 {
+					m.UsedPct = (m.UsedBytes / m.TotalBytes) * 100
+				}
+			}
+		}
+	}
+
+	result := make([]NodeFilesystemMetrics, 0, len(nodeMap))
+	for _, m := range nodeMap {
+		result = append(result, *m)
+	}
+	return result, nil
+}
+
+// instantQuery runs an instant query and returns the scalar value
+func (c *Client) instantQuery(ctx context.Context, query string) (float64, error) {
+	result, warnings, err := c.client.Query(ctx, query, time.Now())
+	if err != nil {
+		return 0, err
+	}
+	if len(warnings) > 0 {
+		klog.V(2).Infof("Prometheus warnings for %q: %v", query, warnings)
+	}
+
+	switch result.Type() {
+	case model.ValVector:
+		vec := result.(model.Vector)
+		if len(vec) == 0 {
+			// Treat empty result as 0 instead of erroring out so higher-level
+			// handlers can still return partial metrics without 500.
+			return 0, nil
+		}
+		return float64(vec[0].Value), nil
+	case model.ValScalar:
+		scalar := result.(*model.Scalar)
+		return float64(scalar.Value), nil
+	default:
+		return 0, fmt.Errorf("unexpected result type: %s", result.Type())
+	}
+}
+
 func FillMissingDataPoints(timeRange time.Duration, step time.Duration, existing []UsageDataPoint) []UsageDataPoint {
 	if len(existing) == 0 {
 		return existing

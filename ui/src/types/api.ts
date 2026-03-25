@@ -287,6 +287,15 @@ export interface WorkloadCounts {
   totalCronJobs: number
 }
 
+export interface RealtimeUsage {
+  cpuUsageCores: number
+  cpuTotalCores: number
+  cpuUsagePercent: number
+  memUsageBytes: number
+  memTotalBytes: number
+  memUsagePercent: number
+}
+
 export interface OverviewData {
   totalNodes: number
   readyNodes: number
@@ -311,6 +320,40 @@ export interface OverviewData {
     }
   }
   workloads: WorkloadCounts
+  realtime?: RealtimeUsage
+}
+
+// ─── Prometheus Enhanced Types ──────────────────────────────────────────────
+
+export interface ClusterMetrics {
+  cpuUsageCores: number
+  cpuTotalCores: number
+  memUsageBytes: number
+  memTotalBytes: number
+  cpuUsagePercent: number
+  memUsagePercent: number
+  runningPods: number
+  totalPods: number
+  apiServerUp: boolean
+  apiServerLatencyP99Ms: number
+  schedulerUp: boolean
+  etcdUp: boolean
+  containerRestarts1h: number
+  oomKills1h: number
+}
+
+export interface NamespaceMetrics {
+  namespace: string
+  cpuUsage: number  // cores
+  memUsage: number  // bytes
+  podCount: number
+}
+
+export interface NodeFilesystemMetrics {
+  node: string
+  totalBytes: number
+  usedBytes: number
+  usedPercent: number
 }
 
 // Pagination types
