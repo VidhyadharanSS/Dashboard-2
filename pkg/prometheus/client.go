@@ -626,6 +626,135 @@ func FillMissingDataPoints(timeRange time.Duration, step time.Duration, existing
 	return append(result, existing...)
 }
 
+// GetWorkloadMetricsBySelector fetches aggregated metrics for all pods matching a label selector in a namespace.
+// This is used for workload-scoped monitoring (deployments, statefulsets, daemonsets, etc.)
+func (c *Client) GetWorkloadMetricsBySelector(ctx context.Context, namespace, labelSelector, container string, duration string) (*PodMetrics, error) {
+	var step time.Duration
+	var timeRange time.Duration
+
+	switch duration {
+	case "30m":
+		timeRange = 30 * time.Minute
+		step = 15 * time.Second
+	case "1h":
+		timeRange = 1 * time.Hour
+		step = 1 * time.Minute
+	case "24h":
+		timeRange = 24 * time.Hour
+		step = 5 * time.Minute
+	default:
+		return nil, fmt.Errorf("unsupported duration: %s", duration)
+	}
+
+	now := time.Now()
+	start := now.Add(-timeRange)
+
+	// Build label conditions from Kubernetes label selector
+	// Label selector format: "app=nginx,env=prod" → prometheus: app="nginx",env="prod"
+	promConditions := buildPromConditions(namespace, labelSelector, container)
+
+	cpuQuery := fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{%s}[1m]))`, strings.Join(promConditions, ","))
+	cpuData, err := c.queryRange(ctx, cpuQuery, start, now, step)
+	if err != nil {
+		return nil, fmt.Errorf("error querying workload CPU: %w", err)
+	}
+
+	memQuery := fmt.Sprintf(`sum(container_memory_working_set_bytes{%s}) / 1024 / 1024`, strings.Join(promConditions, ","))
+	memData, err := c.queryRange(ctx, memQuery, start, now, step)
+	if err != nil {
+		return nil, fmt.Errorf("error querying workload memory: %w", err)
+	}
+
+	netConditions := buildNetConditions(namespace, labelSelector)
+	netInQuery := fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[1m]))`, strings.Join(netConditions, ","))
+	netInData, err := c.queryRange(ctx, netInQuery, start, now, step)
+	if err != nil {
+		netInData = nil
+	}
+
+	netOutQuery := fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[1m]))`, strings.Join(netConditions, ","))
+	netOutData, err := c.queryRange(ctx, netOutQuery, start, now, step)
+	if err != nil {
+		netOutData = nil
+	}
+
+	diskReadQuery := fmt.Sprintf(`sum(rate(container_fs_reads_bytes_total{%s}[1m]))`, strings.Join(promConditions, ","))
+	diskReadData, err := c.queryRange(ctx, diskReadQuery, start, now, step)
+	if err != nil {
+		diskReadData = nil
+	}
+
+	diskWriteQuery := fmt.Sprintf(`sum(rate(container_fs_writes_bytes_total{%s}[1m]))`, strings.Join(promConditions, ","))
+	diskWriteData, err := c.queryRange(ctx, diskWriteQuery, start, now, step)
+	if err != nil {
+		diskWriteData = nil
+	}
+
+	return &PodMetrics{
+		CPU:        FillMissingDataPoints(timeRange, step, cpuData),
+		Memory:     FillMissingDataPoints(timeRange, step, memData),
+		NetworkIn:  FillMissingDataPoints(timeRange, step, netInData),
+		NetworkOut: FillMissingDataPoints(timeRange, step, netOutData),
+		DiskRead:   FillMissingDataPoints(timeRange, step, diskReadData),
+		DiskWrite:  FillMissingDataPoints(timeRange, step, diskWriteData),
+		Fallback:   false,
+	}, nil
+}
+
+// buildPromConditions converts a k8s label selector string to prometheus label conditions
+func buildPromConditions(namespace, labelSelector, container string) []string {
+	conditions := []string{
+		`container!="POD"`,
+		`container!=""`,
+	}
+	if namespace != "" {
+		conditions = append(conditions, fmt.Sprintf(`namespace="%s"`, namespace))
+	}
+	if container != "" {
+		conditions = append(conditions, fmt.Sprintf(`container="%s"`, container))
+	}
+	if labelSelector != "" {
+		for _, part := range strings.Split(labelSelector, ",") {
+			kv := strings.SplitN(strings.TrimSpace(part), "=", 2)
+			if len(kv) == 2 {
+				conditions = append(conditions, fmt.Sprintf(`label_%s="%s"`, sanitizeLabelName(kv[0]), kv[1]))
+			}
+		}
+	}
+	return conditions
+}
+
+// buildNetConditions for network (pod-level, no container filter)
+func buildNetConditions(namespace, labelSelector string) []string {
+	conditions := []string{}
+	if namespace != "" {
+		conditions = append(conditions, fmt.Sprintf(`namespace="%s"`, namespace))
+	}
+	if labelSelector != "" {
+		for _, part := range strings.Split(labelSelector, ",") {
+			kv := strings.SplitN(strings.TrimSpace(part), "=", 2)
+			if len(kv) == 2 {
+				conditions = append(conditions, fmt.Sprintf(`label_%s="%s"`, sanitizeLabelName(kv[0]), kv[1]))
+			}
+		}
+	}
+	return conditions
+}
+
+// sanitizeLabelName replaces characters that are invalid in Prometheus label names
+func sanitizeLabelName(name string) string {
+	result := make([]byte, len(name))
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
+			result[i] = c
+		} else {
+			result[i] = '_'
+		}
+	}
+	return string(result)
+}
+
 // GetPodMetrics fetches metrics for a specific pod
 func (c *Client) GetPodMetrics(ctx context.Context, namespace, podName, container string, duration string) (*PodMetrics, error) {
 	var step time.Duration

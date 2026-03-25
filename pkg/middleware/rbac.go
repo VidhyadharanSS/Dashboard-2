@@ -72,3 +72,17 @@ func url2namespaceresource(url string) (namespace string, resource string) {
 	}
 	return
 }
+
+// prometheusResourceFromPath extracts the effective namespace from a prometheus API path.
+// Prometheus pod-metrics paths have the shape: /prometheus/pods/:namespace/:podName/metrics
+// We return ("prometheus", namespace) so RBAC can gate on the "prometheus" virtual resource.
+func prometheusResourceFromPath(url string) (namespace string, resource string) {
+	// /api/v1/prometheus/pods/:namespace/:podName/metrics
+	parts := strings.Split(url, "/")
+	// parts[0]="" [1]="api" [2]="v1" [3]="prometheus" [4]="pods" [5]=namespace [6]=podName ...
+	if len(parts) >= 6 && parts[3] == "prometheus" && parts[4] == "pods" {
+		return parts[5], "prometheus"
+	}
+	// All other prometheus paths are cluster-wide
+	return "_all", "prometheus"
+}

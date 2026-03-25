@@ -125,15 +125,28 @@ const MemoryUsageChart = React.memo((prop: MemoryUsageChartProps) => {
     )
   }
 
+  const maxVal = React.useMemo(() => Math.max(...processedMemoryChartData.map((d) => d.memory), 0.001), [processedMemoryChartData])
+  const latestVal = processedMemoryChartData.length > 0 ? processedMemoryChartData[processedMemoryChartData.length - 1].memory : 0
+  const unit = useGB ? 'GiB' : 'MiB'
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Memory Usage</CardTitle>
+    <Card className="hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <div className="size-2 rounded-full bg-emerald-500" />
+            Memory Usage
+          </CardTitle>
+          <span className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            {useGB ? latestVal.toFixed(2) : latestVal.toFixed(0)}<span className="text-xs font-normal text-muted-foreground ml-1">{unit}</span>
+          </span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">Peak: {useGB ? maxVal.toFixed(2) : maxVal.toFixed(0)} {unit}</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <ChartContainer
           config={dynamicMemoryChartConfig}
-          className="h-[250px] w-full"
+          className="h-[220px] w-full"
         >
           <AreaChart data={processedMemoryChartData} syncId={syncId}>
             <CartesianGrid vertical={false} />
@@ -162,12 +175,20 @@ const MemoryUsageChart = React.memo((prop: MemoryUsageChartProps) => {
                 />
               }
             />
+            <defs>
+              <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-memory)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="var(--color-memory)" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
             <Area
               isAnimationActive={false}
               dataKey="memory"
               type="monotone"
-              fill="var(--color-memory)"
+              fill="url(#memGrad)"
               stroke="var(--color-memory)"
+              strokeWidth={2}
+              dot={false}
             />
           </AreaChart>
         </ChartContainer>

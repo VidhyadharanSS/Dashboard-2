@@ -206,6 +206,50 @@ func (h *PromHandler) fetchPodMetricsFromMetricsServer(c *gin.Context, namespace
 	}, nil
 }
 
+// GetWorkloadMetrics returns historical metrics for a workload identified by namespace+labelSelector.
+// This is scoped to a specific namespace+labelSelector so it respects RBAC boundaries naturally.
+func (h *PromHandler) GetWorkloadMetrics(c *gin.Context) {
+	ctx := c.Request.Context()
+	cs := c.MustGet("cluster").(*cluster.ClientSet)
+
+	namespace := c.Param("namespace")
+	if namespace == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "namespace is required"})
+		return
+	}
+
+	labelSelector := c.Query("labelSelector")
+	duration := c.DefaultQuery("duration", "1h")
+	container := c.Query("container")
+
+	validDurations := map[string]bool{"30m": true, "1h": true, "24h": true}
+	if !validDurations[duration] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid duration. Must be one of: 30m, 1h, 24h"})
+		return
+	}
+
+	if cs.PromClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Prometheus client not available"})
+		return
+	}
+
+	// Use pod metrics with label selector for workload-scoped query
+	podMetrics, err := cs.PromClient.GetPodMetrics(ctx, namespace, "", container, duration)
+	if err != nil || podMetrics == nil {
+		// Fallback: use label selector if direct name fails
+		if labelSelector != "" {
+			podMetrics, err = cs.PromClient.GetWorkloadMetricsBySelector(ctx, namespace, labelSelector, container, duration)
+		}
+	}
+
+	if err != nil || podMetrics == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get workload metrics: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, podMetrics)
+}
+
 // GetClusterMetrics returns real-time cluster-wide metrics from Prometheus
 func (h *PromHandler) GetClusterMetrics(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { LayoutGrid } from 'lucide-react'
+import { BarChart2, Cpu, HardDrive, LayoutGrid, MemoryStick, Zap } from 'lucide-react'
 
 import { NodeWithMetrics } from '@/types/api'
 import { formatDate } from '@/lib/utils'
@@ -14,6 +14,7 @@ import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 import { Button } from '@/components/ui/button'
 import { ClusterHeatmap } from '@/components/cluster-heatmap'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 function getNodeStatus(node: NodeWithMetrics): string {
   const conditions = node.status?.conditions || []
@@ -177,20 +178,51 @@ export function NodeListPage() {
       }),
       columnHelper.accessor((row) => row.metrics, {
         id: 'pods',
-        header: 'Pods',
-        cell: ({ row }) => (
-          <Link
-            to={`/nodes/${row.original.metadata!.name}?tab=pods`}
-            className="text-muted-foreground hover:text-primary/80 hover:underline transition-colors cursor-pointer text-xs font-mono"
-          >
-            {row.original.metrics?.pods || 0} /{' '}
-            {row.original.metrics?.podsLimit || 0}
-          </Link>
+        header: () => (
+          <span className="flex items-center gap-1">
+            <BarChart2 className="size-3 text-blue-500" />
+            Pods
+          </span>
         ),
+        cell: ({ row }) => {
+          const pods = row.original.metrics?.pods || 0
+          const limit = row.original.metrics?.podsLimit || 0
+          const pct = limit > 0 ? (pods / limit) * 100 : 0
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={`/nodes/${row.original.metadata!.name}?tab=pods`}
+                    className="flex items-center gap-1.5 group"
+                  >
+                    <div className="w-10 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-blue-500'}`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-mono text-muted-foreground group-hover:text-primary transition-colors">
+                      {pods}/{limit}
+                    </span>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">{pods} running / {limit} max ({pct.toFixed(0)}% capacity)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )
+        },
       }),
       columnHelper.accessor((row) => row.metrics?.cpuUsage || 0, {
         id: 'cpu',
-        header: 'CPU',
+        header: () => (
+          <span className="flex items-center gap-1">
+            <Cpu className="size-3 text-indigo-500" />
+            CPU
+          </span>
+        ),
         cell: ({ row }) => (
           <MetricCell
             metrics={row.original.metrics}
@@ -202,7 +234,12 @@ export function NodeListPage() {
       }),
       columnHelper.accessor((row) => row.metrics?.memoryUsage || 0, {
         id: 'memory',
-        header: 'Memory',
+        header: () => (
+          <span className="flex items-center gap-1">
+            <MemoryStick className="size-3 text-emerald-500" />
+            Memory
+          </span>
+        ),
         cell: ({ row }) => (
           <MetricCell
             metrics={row.original.metrics}
@@ -214,16 +251,27 @@ export function NodeListPage() {
       }),
       columnHelper.accessor((row) => row.metrics?.gpuRequest || 0, {
         id: 'gpu',
-        header: 'GPU',
-        cell: ({ row }) => (
-          <MetricCell
-            metrics={row.original.metrics}
-            type="gpu"
-            limitLabel="Capacity"
-            showPercentage={true}
-            useRequestBasedUsage={true}
-          />
+        header: () => (
+          <span className="flex items-center gap-1">
+            <Zap className="size-3 text-amber-500" />
+            GPU
+          </span>
         ),
+        cell: ({ row }) => {
+          const metrics = row.original.metrics
+          if (!metrics?.gpuLimit || metrics.gpuLimit === 0) {
+            return <span className="text-muted-foreground/40 text-xs">—</span>
+          }
+          return (
+            <MetricCell
+              metrics={metrics}
+              type="gpu"
+              limitLabel="Capacity"
+              showPercentage={true}
+              useRequestBasedUsage={true}
+            />
+          )
+        },
       }),
       columnHelper.accessor((row) => getNodeIP(row), {
         id: 'ip',

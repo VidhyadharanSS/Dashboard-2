@@ -591,6 +591,40 @@ export const useNodeFilesystemMetrics = (options?: {
   })
 }
 
+// Workload monitoring API (namespace + labelSelector scoped)
+export const fetchWorkloadMetrics = (
+  namespace: string,
+  duration: string,
+  labelSelector?: string,
+  container?: string
+): Promise<PodMetrics> => {
+  const params = new URLSearchParams({ duration })
+  if (labelSelector) params.append('labelSelector', labelSelector)
+  if (container) params.append('container', container)
+  return fetchAPI<PodMetrics>(`/prometheus/workload/${namespace}/metrics?${params.toString()}`)
+}
+
+export const useWorkloadMetrics = (
+  namespace: string,
+  duration: string,
+  options?: {
+    labelSelector?: string
+    container?: string
+    refreshInterval?: number
+    enabled?: boolean
+  }
+) => {
+  return useQuery({
+    queryKey: ['workload-metrics', namespace, duration, options?.labelSelector, options?.container],
+    queryFn: () => fetchWorkloadMetrics(namespace, duration, options?.labelSelector, options?.container),
+    enabled: (options?.enabled ?? true) && !!namespace,
+    staleTime: 10000,
+    refetchInterval: options?.refreshInterval ?? 30000,
+    retry: 0,
+    placeholderData: (prevData) => prevData,
+  })
+}
+
 // Pod monitoring API functions
 export const fetchPodMetrics = (
   namespace: string,

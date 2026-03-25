@@ -108,13 +108,25 @@ const CPUUsageChart = React.memo((prop: CpuUsageChartProps) => {
     )
   }
 
+  const maxVal = React.useMemo(() => Math.max(...cpuChartData.map((d) => d.cpu), 0.001), [cpuChartData])
+  const latestVal = cpuChartData.length > 0 ? cpuChartData[cpuChartData.length - 1].cpu : 0
+
   return (
-    <Card className="@container/card">
-      <CardHeader>
-        <CardTitle>CPU Usage</CardTitle>
+    <Card className="@container/card hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <div className="size-2 rounded-full bg-blue-500" />
+            CPU Usage
+          </CardTitle>
+          <span className="text-lg font-bold tabular-nums text-blue-600 dark:text-blue-400">
+            {latestVal.toFixed(3)}<span className="text-xs font-normal text-muted-foreground ml-1">cores</span>
+          </span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">Peak: {maxVal.toFixed(3)} cores</p>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={cpuChartConfig} className="h-[250px] w-full">
+      <CardContent className="pt-0">
+        <ChartContainer config={cpuChartConfig} className="h-[220px] w-full">
           <AreaChart data={cpuChartData} syncId={syncId}>
             <CartesianGrid vertical={false} />
             <XAxis
@@ -139,12 +151,20 @@ const CPUUsageChart = React.memo((prop: CpuUsageChartProps) => {
                 />
               }
             />
+            <defs>
+              <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-cpu)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="var(--color-cpu)" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
             <Area
               isAnimationActive={false}
               dataKey="cpu"
               type="monotone"
-              fill="var(--color-cpu)"
+              fill="url(#cpuGrad)"
               stroke="var(--color-cpu)"
+              strokeWidth={2}
+              dot={false}
             />
           </AreaChart>
         </ChartContainer>
