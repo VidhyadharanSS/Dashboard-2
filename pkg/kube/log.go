@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
+	"time"
 
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
@@ -18,8 +20,16 @@ type PodLogStream struct {
 	Done   chan struct{}
 }
 
+// BatchLogHandler streams logs from one or more pods over a single WebSocket.
+//
+// gorilla/websocket allows one concurrent reader + one concurrent writer.
+// We enforce this with:
+//   - Single reader:  the heartbeat goroutine owns all reads
+//   - Single writer:  writeMu serializes writes from heartbeat (pings/pongs),
+//     per-pod log streamers, and AddPod/RemovePod notifications.
 type BatchLogHandler struct {
 	conn      *websocket.Conn
+	writeMu   sync.Mutex // serializes all writes to conn
 	pods      map[string]*PodLogStream // key: namespace/name
 	k8sClient *K8sClient
 	opts      *corev1.PodLogOptions
@@ -29,6 +39,15 @@ type BatchLogHandler struct {
 
 func NewBatchLogHandler(conn *websocket.Conn, client *K8sClient, opts *corev1.PodLogOptions) *BatchLogHandler {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// Set up the pong handler for native RFC 6455 pings.
+	// When the browser responds to our Ping frame, extend the read deadline.
+	conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+	conn.SetPongHandler(func(appData string) error {
+		conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+		return nil
+	})
+
 	l := &BatchLogHandler{
 		conn:      conn,
 		pods:      make(map[string]*PodLogStream),
@@ -67,7 +86,9 @@ func (l *BatchLogHandler) startPodLogStream(podStream *PodLogStream) {
 	req := l.k8sClient.ClientSet.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, l.opts)
 	podLogs, err := req.Stream(podCtx)
 	if err != nil {
-		_ = sendErrorMessage(l.conn, fmt.Sprintf("Failed to get pod logs for %s: %v", pod.Name, err))
+		l.writeMu.Lock()
+		_ = l.sendErrorMessage(fmt.Sprintf("Failed to get pod logs for %s: %v", pod.Name, err))
+		l.writeMu.Unlock()
 		return
 	}
 	defer func() {
@@ -84,7 +105,9 @@ func (l *BatchLogHandler) startPodLogStream(podStream *PodLogStream) {
 			if len(l.pods) > 1 {
 				line = fmt.Sprintf("[%s]: %s", pod.Name, line)
 			}
-			err := sendMessage(l.conn, "log", line)
+			l.writeMu.Lock()
+			err := l.sendMessage("log", line)
+			l.writeMu.Unlock()
 			if err != nil {
 				return 0, err
 			}
@@ -95,37 +118,101 @@ func (l *BatchLogHandler) startPodLogStream(podStream *PodLogStream) {
 
 	_, err = io.Copy(lw, podLogs)
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, context.Canceled) {
-		_ = sendErrorMessage(l.conn, fmt.Sprintf("Failed to stream pod logs for %s: %v", pod.Name, err))
+		l.writeMu.Lock()
+		_ = l.sendErrorMessage(fmt.Sprintf("Failed to stream pod logs for %s: %v", pod.Name, err))
+		l.writeMu.Unlock()
 	}
 
-	_ = sendMessage(l.conn, "close", fmt.Sprintf("{\"status\":\"closed\",\"pod\":\"%s\"}", pod.Name))
+	l.writeMu.Lock()
+	_ = l.sendMessage("close", fmt.Sprintf("{\"status\":\"closed\",\"pod\":\"%s\"}", pod.Name))
+	l.writeMu.Unlock()
 }
 
+// heartbeat reads client messages, sends periodic server-side keepalive pings,
+// and manages the read side of the WebSocket.
+//
+// This is the ONLY goroutine that reads from the WebSocket.  Writes are
+// serialized through writeMu.
+//
+// Keepalive strategy:
+//  1. RFC 6455 Ping control frames via WriteControl (concurrent-safe with
+//     WriteJSON in gorilla) — these are invisible to JS but reset all proxy
+//     idle timers.
+//  2. Application-level data-frame pings {"type":"ping"} — these are visible
+//     to the frontend's onmessage handler and serve as a secondary keepalive.
 func (l *BatchLogHandler) heartbeat(ctx context.Context) {
+	keepaliveTicker := time.NewTicker(20 * time.Second)
+	defer keepaliveTicker.Stop()
+
+	// Channel for WebSocket reads (unblocks select on receive)
+	type wsRead struct {
+		msgType int
+		data    []byte
+		err     error
+	}
+	readCh := make(chan wsRead, 1)
+
+	// Spawn a goroutine that blocks on conn.ReadMessage.
+	// When the connection closes, ReadMessage returns an error and this
+	// goroutine exits.
+	go func() {
+		for {
+			msgType, data, err := l.conn.ReadMessage()
+			readCh <- wsRead{msgType: msgType, data: data, err: err}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
-			klog.Info("Heartbeat stopping due to context cancellation")
+			klog.V(1).Info("Heartbeat stopping due to context cancellation")
 			return
 		case <-l.ctx.Done():
-			klog.Info("Heartbeat stopping due to internal context cancellation")
+			klog.V(1).Info("Heartbeat stopping due to internal context cancellation")
 			return
-		default:
-			var temp []byte
-			err := websocket.Message.Receive(l.conn, &temp)
-			if err != nil {
-				if !errors.Is(err, io.EOF) {
-					klog.Errorf("WebSocket connection error in heartbeat, cancelling internal context: %v", err)
-				}
-				l.cancel() // Cancel internal context when connection is lost
+
+		case <-keepaliveTicker.C:
+			// 1. Send an RFC 6455 Ping control frame.
+			// WriteControl is safe to call concurrently with WriteJSON.
+			deadline := time.Now().Add(10 * time.Second)
+			if err := l.conn.WriteControl(websocket.PingMessage, []byte("keepalive"), deadline); err != nil {
+				klog.V(2).Infof("RFC 6455 ping failed, cancelling: %v", err)
+				l.cancel()
 				return
 			}
-			if strings.Contains(string(temp), "ping") {
-				err = sendMessage(l.conn, "pong", "pong")
-				if err != nil {
-					klog.Infof("Failed to send pong, cancelling internal context: %v", err)
-					l.cancel() // Cancel internal context when send fails
-					return
+
+			// 2. Send an application-level data-frame ping.
+			l.writeMu.Lock()
+			err := l.sendMessage("ping", "")
+			l.writeMu.Unlock()
+			if err != nil {
+				klog.V(2).Infof("Keepalive data-frame ping failed, cancelling: %v", err)
+				l.cancel()
+				return
+			}
+
+		case msg := <-readCh:
+			if msg.err != nil {
+				if !websocket.IsCloseError(msg.err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					klog.Errorf("WebSocket connection error in heartbeat, cancelling: %v", msg.err)
+				}
+				l.cancel()
+				return
+			}
+			// Handle text messages (application-level pings from frontend)
+			if msg.msgType == websocket.TextMessage {
+				if strings.Contains(string(msg.data), "ping") {
+					l.writeMu.Lock()
+					err := l.sendMessage("pong", "pong")
+					l.writeMu.Unlock()
+					if err != nil {
+						klog.Infof("Failed to send pong, cancelling: %v", err)
+						l.cancel()
+						return
+					}
 				}
 			}
 		}
@@ -149,8 +236,10 @@ func (l *BatchLogHandler) AddPod(pod corev1.Pod) {
 	// Start streaming for this pod
 	go l.startPodLogStream(podStream)
 
-	_ = sendMessage(l.conn, "pod_added", fmt.Sprintf("{\"pod\":\"%s\",\"namespace\":\"%s\"}",
+	l.writeMu.Lock()
+	_ = l.sendMessage("pod_added", fmt.Sprintf("{\"pod\":\"%s\",\"namespace\":\"%s\"}",
 		pod.Name, pod.Namespace))
+	l.writeMu.Unlock()
 }
 
 // RemovePod removes a pod from the batch log handler and stops streaming its logs
@@ -167,8 +256,10 @@ func (l *BatchLogHandler) RemovePod(pod corev1.Pod) {
 
 	go func() {
 		<-podStream.Done
-		_ = sendMessage(l.conn, "pod_removed", fmt.Sprintf("{\"pod\":\"%s\",\"namespace\":\"%s\"}",
+		l.writeMu.Lock()
+		_ = l.sendMessage("pod_removed", fmt.Sprintf("{\"pod\":\"%s\",\"namespace\":\"%s\"}",
 			pod.Name, pod.Namespace))
+		l.writeMu.Unlock()
 	}()
 
 	delete(l.pods, key)
@@ -193,26 +284,33 @@ func (wf writerFunc) Write(p []byte) (int, error) {
 }
 
 type LogsMessage struct {
-	Type string `json:"type"` // "log", "error", "connected", "close"
+	Type string `json:"type"` // "log", "error", "connected", "close", "ping", "pong"
 	Data string `json:"data"`
 }
 
-func sendMessage(ws *websocket.Conn, msgType, data string) error {
+// sendMessage writes a JSON message to the WebSocket.
+// Caller MUST hold l.writeMu (or be the only writer).
+func (l *BatchLogHandler) sendMessage(msgType, data string) error {
 	msg := LogsMessage{
 		Type: msgType,
 		Data: data,
 	}
-	if err := websocket.JSON.Send(ws, msg); err != nil {
-		return err
+	return l.conn.WriteJSON(msg)
+}
+
+// sendErrorMessage writes an error message to the WebSocket.
+// Caller MUST hold l.writeMu (or be the only writer).
+func (l *BatchLogHandler) sendErrorMessage(errMsg string) error {
+	return l.sendMessage("error", errMsg)
+}
+
+// SendErrorMessage is an exported wrapper for use from handler code BEFORE
+// the BatchLogHandler takes ownership of the connection.  It writes directly
+// to the connection.
+func SendErrorMessage(conn *websocket.Conn, errMsg string) error {
+	msg := LogsMessage{
+		Type: "error",
+		Data: errMsg,
 	}
-	return nil
-}
-
-func sendErrorMessage(ws *websocket.Conn, errMsg string) error {
-	return sendMessage(ws, "error", errMsg)
-}
-
-// SendErrorMessage is an exported wrapper for use from other packages (e.g. handlers).
-func SendErrorMessage(ws *websocket.Conn, errMsg string) error {
-	return sendErrorMessage(ws, errMsg)
+	return conn.WriteJSON(msg)
 }

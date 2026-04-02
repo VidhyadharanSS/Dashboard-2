@@ -53,10 +53,9 @@ import { ConnectionIndicator } from './connection-indicator'
 
 // --- Local Helper Functions ---
 
-const getWebSocketUrl = (path: string) => {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}${path}`
-}
+// Use the shared subpath-aware URL builder so the WebSocket goes through the
+// correct host and base path — critical when served behind an Ingress.
+import { getWebSocketUrl } from '@/lib/subpath'
 
 const toSimpleContainer = (initContainers: any[] = [], containers: any[] = []) => {
   // Main containers first so the first main container is auto-selected,
@@ -371,15 +370,17 @@ export function Terminal({
         }
       }
 
-      // Aggressive keepalive: send ping every 15s to keep the connection alive
-      // through corporate proxies (which often have 30-60s idle timeouts).
+      // Keepalive: send a ping data-frame every 20s.  The backend also sends
+      // {"type":"ping"} every 20s, so even if the user is idle there is
+      // always a data-frame flowing in each direction within the 60s default
+      // proxy_read_timeout of ingress-nginx.
       if (pingTimerRef.current) clearInterval(pingTimerRef.current)
       pingTimerRef.current = setInterval(() => {
         if (websocket.readyState === WebSocket.OPEN) {
           const pingMessage = JSON.stringify({ type: 'ping' })
           websocket.send(pingMessage)
         }
-      }, 15000)
+      }, 20000)
 
       terminal.writeln(`\x1b[32mConnected to ${type} terminal!\x1b[0m\r\n`)
     }
@@ -404,7 +405,16 @@ export function Terminal({
             )
             setIsConnected(false)
             break
+          case 'ping':
+            // Server-side keepalive — reply so the server knows we're alive.
+            // This also generates an upstream data frame that resets the
+            // proxy_read_timeout in ingress-nginx.
+            if (websocket.readyState === WebSocket.OPEN) {
+              websocket.send(JSON.stringify({ type: 'pong' }))
+            }
+            break
           case 'pong':
+            // Response to our client-side ping — no action needed
             break
         }
       } catch (err) {

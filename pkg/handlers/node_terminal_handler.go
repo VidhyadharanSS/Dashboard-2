@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 
 	"github.com/zxh326/kite/pkg/cluster"
 	"github.com/zxh326/kite/pkg/common"
@@ -69,10 +69,17 @@ func (h *NodeTerminalHandler) HandleNodeTerminalWebSocket(c *gin.Context) {
 	user := c.MustGet("user").(model.User)
 	clientIP := c.ClientIP()
 
-	websocket.Handler(func(conn *websocket.Conn) {
-		defer func() {
-			_ = conn.Close()
-		}()
+	// Upgrade HTTP → WebSocket using gorilla/websocket
+	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		klog.Errorf("WebSocket upgrade failed for node terminal: %v", err)
+		return
+	}
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	{
 
 		// ─── Security Gate: Admin or explicit node exec permission ───
 		if !rbac.CanAccess(user, "nodes", "exec", cs.Name, "") {
@@ -105,12 +112,19 @@ func (h *NodeTerminalHandler) HandleNodeTerminalWebSocket(c *gin.Context) {
 		defer cancel()
 
 		// ─── Start WebSocket keepalive BEFORE any slow operations ───
-		// This MUST come before pod creation/wait so that the corporate proxy
-		// (HTTP_PROXY: http://192.168.100.100:3128) and any nginx reverse proxy
-		// don't close the idle WebSocket during the pod startup window (~30-120s).
+		// This MUST run during pod creation/wait so that ingress-nginx and
+		// corporate proxies don't close the idle WebSocket during the pod
+		// startup window (~30-120s).
+		//
+		// With gorilla/websocket, the keepalive sends native RFC 6455 Ping
+		// frames via WriteControl, which is safe to call concurrently with
+		// WriteJSON.  So there's no concurrent-write corruption risk.
+		//
+		// We still stop the keepalive before the TerminalSession starts because
+		// the session has its own heartbeat mechanism (both RFC 6455 pings AND
+		// application-level pings), and running two ping sources is wasteful.
 		keepalive := kube.NewWebSocketKeepalive(conn)
 		keepalive.Start(ctx)
-		defer keepalive.Stop()
 
 		// ─── Create the privileged node agent pod ───
 		nodeAgentName, err := h.createNodeAgent(ctx, cs, nodeName, user.Key())
@@ -139,6 +153,11 @@ func (h *NodeTerminalHandler) HandleNodeTerminalWebSocket(c *gin.Context) {
 			return
 		}
 
+		// ─── Stop the keepalive before starting the terminal session ───
+		// The TerminalSession will handle its own ping/pong via Read() and
+		// the frontend's 20s keepalive pings provide bidirectional traffic.
+		keepalive.Stop()
+
 		// ─── Open a real host shell via nsenter ───
 		// nsenter enters the host's mount, UTS, IPC, net, and PID namespaces,
 		// then chroots into the host filesystem — identical to SSHing into the node.
@@ -157,7 +176,7 @@ func (h *NodeTerminalHandler) HandleNodeTerminalWebSocket(c *gin.Context) {
 		}); err != nil {
 			klog.Errorf("Node terminal session error for %s: %v", nodeName, err)
 		}
-	}).ServeHTTP(c.Writer, c.Request)
+	}
 }
 
 // createNodeAgent creates a privileged pod on the target node.
@@ -332,7 +351,7 @@ func (h *NodeTerminalHandler) cleanupNodeAgentPod(cs *cluster.ClientSet, podName
 
 func (h *NodeTerminalHandler) sendErrorMessage(conn *websocket.Conn, message string) {
 	msg := map[string]any{"type": "error", "data": message}
-	if err := websocket.JSON.Send(conn, msg); err != nil {
+	if err := conn.WriteJSON(msg); err != nil {
 		log.Printf("Failed to send error message: %v", err)
 	}
 }
@@ -370,7 +389,7 @@ func sanitizeLabelValue(s string) string {
 
 func (h *NodeTerminalHandler) sendMessage(conn *websocket.Conn, msgType, message string) {
 	msg := map[string]any{"type": msgType, "data": message}
-	if err := websocket.JSON.Send(conn, msg); err != nil {
+	if err := conn.WriteJSON(msg); err != nil {
 		log.Printf("Failed to send message: %v", err)
 	}
 }

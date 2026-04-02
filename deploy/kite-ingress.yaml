@@ -4,34 +4,52 @@ metadata:
   name: kite-ingress
   namespace: kite-system
   annotations:
-    # WebSocket support
+    # ── WebSocket support ──
+    # Force HTTP/1.1 for upstream so Upgrade/Connection headers are forwarded.
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+
+    # Use a server-snippet (scoped to THIS ingress host) to define the
+    # $connection_upgrade map variable and set conditional upgrade headers.
+    # This ensures:
+    #   - WebSocket requests get  Connection: upgrade
+    #   - Normal HTTP requests get Connection: "" (keepalive)
+    # NOTE: The map is defined in the server context; the proxy_set_header
+    # directives go in the configuration-snippet (location context).
+    nginx.ingress.kubernetes.io/server-snippet: |
+      set $connection_upgrade "";
+      if ($http_upgrade) {
+        set $connection_upgrade "upgrade";
+      }
+
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection "upgrade";
+      proxy_set_header Connection $connection_upgrade;
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto $scheme;
-    
-    # Disable buffering for WebSocket
+
+    # ── Disable buffering for WebSocket / SSE ──
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
-    
-    # Extended timeouts for long-lived WebSocket connections
-    # These work together with the backend keepalive (30s pings)
+
+    # ── Extended timeouts for long-lived WebSocket connections ──
+    # ingress-nginx resets read-timeout on EVERY data frame received from
+    # upstream.  Our backend sends keepalive data every 20s, so 3600s is
+    # more than enough — nginx will never actually reach this timeout as
+    # long as the backend keepalive is working.
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    
-    # SSL settings
+
+    # ── SSL settings ──
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
     nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
 spec:
   ingressClassName: nginx
   rules:
-  - host: dashboard-beta.kites.localzoho.com
+  - host: dashboard.kites.localzoho.com
     http:
       paths:
       - path: /

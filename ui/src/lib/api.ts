@@ -652,6 +652,7 @@ export const usePodMetrics = (
     container?: string
     refreshInterval?: number
     labelSelector?: string
+    enabled?: boolean
   }
 ) => {
   return useQuery({
@@ -671,7 +672,7 @@ export const usePodMetrics = (
         options?.container,
         options?.labelSelector
       ),
-    enabled: !!namespace && !!podName,
+    enabled: (options?.enabled ?? true) && !!namespace && !!podName,
     staleTime: options?.staleTime || 10000, // 10 seconds cache
     // 1 second
     refetchInterval: (options?.refreshInterval && options.refreshInterval < 15000) ? 15000 : (options?.refreshInterval || 30000),

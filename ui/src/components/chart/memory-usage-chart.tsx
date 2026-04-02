@@ -60,7 +60,7 @@ const MemoryUsageChart = React.memo((prop: MemoryUsageChartProps) => {
     }))
   }, [memoryChartData, useGB])
 
-  const dynamicMemoryChartConfig = React.useMemo(
+  const dynamicMemoryChartConfig: ChartConfig = React.useMemo(
     () => ({
       memory: {
         label: `Memory (${useGB ? 'GB' : 'MB'})`,
@@ -71,7 +71,18 @@ const MemoryUsageChart = React.memo((prop: MemoryUsageChartProps) => {
       },
     }),
     [useGB]
-  ) satisfies ChartConfig
+  )
+
+  // ALL hooks must be called before any early returns — Rules of Hooks
+  const maxVal = React.useMemo(
+    () => Math.max(...processedMemoryChartData.map((d) => d.memory), 0.001),
+    [processedMemoryChartData]
+  )
+  const latestVal =
+    processedMemoryChartData.length > 0
+      ? processedMemoryChartData[processedMemoryChartData.length - 1].memory
+      : 0
+  const unit = useGB ? 'GiB' : 'MiB'
 
   // Show loading skeleton
   if (isLoading) {
@@ -124,10 +135,6 @@ const MemoryUsageChart = React.memo((prop: MemoryUsageChartProps) => {
       </Card>
     )
   }
-
-  const maxVal = React.useMemo(() => Math.max(...processedMemoryChartData.map((d) => d.memory), 0.001), [processedMemoryChartData])
-  const latestVal = processedMemoryChartData.length > 0 ? processedMemoryChartData[processedMemoryChartData.length - 1].memory : 0
-  const unit = useGB ? 'GiB' : 'MiB'
 
   return (
     <Card className="hover:shadow-md transition-shadow duration-200">

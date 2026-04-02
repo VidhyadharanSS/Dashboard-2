@@ -56,6 +56,14 @@ const CPUUsageChart = React.memo((prop: CpuUsageChartProps) => {
     return first.toDateString() === last.toDateString()
   }, [cpuChartData])
 
+  // ALL hooks must be above early returns — Rules of Hooks
+  const maxVal = React.useMemo(
+    () => Math.max(...cpuChartData.map((d) => d.cpu), 0.001),
+    [cpuChartData]
+  )
+  const latestVal =
+    cpuChartData.length > 0 ? cpuChartData[cpuChartData.length - 1].cpu : 0
+
   // Show loading skeleton
   if (isLoading) {
     return (
@@ -107,9 +115,6 @@ const CPUUsageChart = React.memo((prop: CpuUsageChartProps) => {
       </Card>
     )
   }
-
-  const maxVal = React.useMemo(() => Math.max(...cpuChartData.map((d) => d.cpu), 0.001), [cpuChartData])
-  const latestVal = cpuChartData.length > 0 ? cpuChartData[cpuChartData.length - 1].cpu : 0
 
   return (
     <Card className="@container/card hover:shadow-md transition-shadow duration-200">

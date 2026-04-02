@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -17,16 +18,21 @@ const EndOfTransmission = "\u0004"
 
 // TerminalMessage represents messages sent over the WebSocket
 type TerminalMessage struct {
-	Type string `json:"type"` // "stdin", "resize", "ping"
+	Type string `json:"type"` // "stdin", "resize", "ping", "pong", "stdout", "error", "connected", "info"
 	Data string `json:"data"`
 	Rows uint16 `json:"rows,omitempty"`
 	Cols uint16 `json:"cols,omitempty"`
 }
 
-// TerminalSession manages a WebSocket connection for terminal communication
+// TerminalSession manages a WebSocket connection for terminal communication.
+//
+// gorilla/websocket guarantees: one concurrent reader + one concurrent writer
+// is safe.  Read() is the single reader (called by the SPDY exec stream).
+// Write() and SendMessage() are writers — we use writeMu to serialize them.
 type TerminalSession struct {
 	k8sClient *K8sClient
 	conn      *websocket.Conn
+	writeMu   sync.Mutex // serializes writes (Write + SendMessage + checkHeartbeat)
 	sizeChan  chan *remotecommand.TerminalSize
 	namespace string
 	podName   string
@@ -37,6 +43,15 @@ type TerminalSession struct {
 }
 
 func NewTerminalSession(client *K8sClient, conn *websocket.Conn, namespace, podName, container string) *TerminalSession {
+	// Set up native pong handler — the browser automatically sends Pong in
+	// response to our RFC 6455 Ping frames.  We update the read deadline so
+	// that ReadJSON doesn't time out.
+	conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+	conn.SetPongHandler(func(appData string) error {
+		conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+		return nil
+	})
+
 	return &TerminalSession{
 		k8sClient:     client,
 		conn:          conn,
@@ -120,6 +135,14 @@ func (session *TerminalSession) execute(ctx context.Context, subResource string,
 }
 
 func (session *TerminalSession) Close() {
+	// Send a close message before closing the connection
+	session.writeMu.Lock()
+	_ = session.conn.WriteMessage(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session ended"),
+	)
+	session.writeMu.Unlock()
+
 	if err := session.conn.Close(); err != nil {
 		klog.Errorf("WebSocket close error %s: %v", session.conn.RemoteAddr(), err)
 	}
@@ -139,7 +162,7 @@ func (session *TerminalSession) Read(p []byte) (int, error) {
 	// effectively blocking until actual data arrives or the connection closes.
 	for {
 		var msg TerminalMessage
-		err := websocket.JSON.Receive(session.conn, &msg)
+		err := session.conn.ReadJSON(&msg)
 		if err != nil {
 			return copy(p, EndOfTransmission), err
 		}
@@ -171,6 +194,12 @@ func (session *TerminalSession) Read(p []byte) (int, error) {
 			session.SendMessage("pong", "")
 			// Continue loop to get next message
 
+		case "pong":
+			// Client responding to our server-side keepalive ping.
+			// Update heartbeat so the liveness check passes.
+			session.lastHeartbeat = time.Now()
+			// Continue loop to get next message
+
 		default:
 			// Log unknown types but don't break connection
 			klog.Warningf("Unknown message type received: %s", msg.Type)
@@ -183,7 +212,9 @@ func (session *TerminalSession) Write(p []byte) (int, error) {
 		Type: "stdout",
 		Data: string(p),
 	}
-	err := websocket.JSON.Send(session.conn, msg)
+	session.writeMu.Lock()
+	err := session.conn.WriteJSON(msg)
+	session.writeMu.Unlock()
 	if err != nil {
 		log.Printf("Write stdout error: %v", err)
 		return 0, err
@@ -200,7 +231,9 @@ func (session *TerminalSession) SendMessage(msgType, data string) {
 		Type: msgType,
 		Data: data,
 	}
-	err := websocket.JSON.Send(session.conn, msg)
+	session.writeMu.Lock()
+	err := session.conn.WriteJSON(msg)
+	session.writeMu.Unlock()
 	if err != nil {
 		klog.Errorf("Send message error: %v", err)
 	}
@@ -210,9 +243,25 @@ func (session *TerminalSession) SendErrorMessage(errMsg string) {
 	session.SendMessage("error", errMsg)
 }
 
+// checkHeartbeat monitors connection liveness and sends keepalive pings.
+//
+// Keepalive strategy (belt and suspenders):
+//
+//  1. RFC 6455 Ping control frames (via WriteControl) — these are handled
+//     transparently by the browser and reset proxy idle timers.  WriteControl
+//     is safe to call concurrently with WriteJSON (gorilla guarantee).
+//
+//  2. Application-level data-frame pings {"type":"ping"} — these are visible
+//     to the frontend and serve as a liveness heartbeat.  The frontend
+//     responds with {"type":"pong"} which updates lastHeartbeat.
+//
+// Why both?  The RFC 6455 Pings are invisible to application code and are the
+// most reliable way to keep proxies alive.  The application-level pings let
+// us detect truly dead clients (browser crashed, network cable pulled) by
+// checking lastHeartbeat.
 func (session *TerminalSession) checkHeartbeat(ctx context.Context) {
 	session.lastHeartbeat = time.Now()
-	ticker := time.NewTicker(15 * time.Second)
+	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -220,9 +269,20 @@ func (session *TerminalSession) checkHeartbeat(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			// Allow up to 90s without heartbeat (3x the 15s keepalive interval + buffer
-			// for proxy latency). This prevents false disconnects through slow proxies.
-			if time.Since(session.lastHeartbeat) > 90*time.Second {
+			// 1. Send an RFC 6455 Ping control frame.
+			// WriteControl is safe to call concurrently with WriteJSON.
+			deadline := time.Now().Add(10 * time.Second)
+			if err := session.conn.WriteControl(websocket.PingMessage, []byte("heartbeat"), deadline); err != nil {
+				klog.V(2).Infof("RFC 6455 ping failed for %s/%s: %v", session.namespace, session.podName, err)
+				// Don't return — the connection might still be usable for data frames
+			}
+
+			// 2. Send an application-level data-frame ping.
+			session.SendMessage("ping", "")
+
+			// 3. Check client liveness — the frontend should have sent us a ping
+			// or pong (handled in Read() which updates lastHeartbeat).
+			if time.Since(session.lastHeartbeat) > 120*time.Second {
 				klog.Warningf("Terminal heartbeat timeout for %s/%s (last heartbeat %v ago)",
 					session.namespace, session.podName, time.Since(session.lastHeartbeat))
 				if err := session.conn.Close(); err != nil {
