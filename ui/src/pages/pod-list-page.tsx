@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { MetricCell } from '@/components/metrics-cell'
@@ -100,19 +101,21 @@ export function PodListPage() {
                 </button>
               </div>
               {shortImage && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-[11px] text-muted-foreground truncate max-w-[240px] font-mono cursor-default">
-                      {shortImage}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="bottom"
-                    className="max-w-sm font-mono text-xs break-all"
-                  >
-                    {image}
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-[11px] text-muted-foreground truncate max-w-[240px] font-mono cursor-default">
+                        {shortImage}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      className="max-w-sm font-mono text-xs break-all"
+                    >
+                      {image}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
           )
@@ -139,22 +142,50 @@ export function PodListPage() {
         enableColumnFilter: true,
         cell: ({ row }) => {
           const status = getPodStatus(row.original).reason
+          
+          // Check for missing resource limits
+          const containers = row.original.spec?.containers || []
+          const hasMissingLimits = containers.some(
+            (c) => !c.resources?.limits?.cpu || !c.resources?.limits?.memory
+          )
+          const isLive = status !== 'Completed' && status !== 'Succeeded' && status !== 'Failed'
+
           return (
-            <Badge
-              variant="outline"
-              className={`px-1.5 shrink-0 ${
-                status === 'Running'
-                  ? 'border-green-500/40 text-green-600 dark:text-green-400'
-                  : status === 'Completed' || status === 'Succeeded'
-                    ? 'border-muted text-muted-foreground'
-                    : status === 'Pending' || status === 'ContainerCreating'
-                      ? 'border-amber-500/40 text-amber-600'
-                      : 'border-red-500/40 text-red-500'
-              }`}
-            >
-              <PodStatusIcon status={status} />
-              {status}
-            </Badge>
+            <div className="flex flex-wrap gap-1 items-center">
+              <Badge
+                variant="outline"
+                className={`px-1.5 shrink-0 gap-1 ${
+                  status === 'Running'
+                    ? 'border-green-500/40 text-green-600 dark:text-green-400'
+                    : status === 'Completed' || status === 'Succeeded'
+                      ? 'border-muted text-muted-foreground'
+                      : status === 'Pending' || status === 'ContainerCreating'
+                        ? 'border-amber-500/40 text-amber-600'
+                        : 'border-red-500/40 text-red-500'
+                }`}
+              >
+                <PodStatusIcon status={status} className="size-3" />
+                {status}
+              </Badge>
+
+              {isLive && hasMissingLimits && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge 
+                        variant="outline" 
+                        className="px-1 text-[9px] h-4 leading-none uppercase border-orange-500/50 text-orange-600 dark:text-orange-400 bg-orange-500/5 cursor-help"
+                      >
+                        No Limits
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">One or more containers lack CPU/Memory limits</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           )
         },
       }),
@@ -163,17 +194,31 @@ export function PodListPage() {
         header: t('pods.restarts'),
         cell: ({ row }) => {
           const s = getPodStatus(row.original)
-          // Highlight high restart counts
+          // Find the last termination reason if available
+          const lastState = row.original.status?.containerStatuses?.[0]?.lastState?.terminated?.reason
+
           const highRestarts =
             s.restartCount > 10
-              ? 'text-red-500 font-semibold'
+              ? 'text-red-500 font-bold'
               : s.restartCount > 3
                 ? 'text-amber-500'
                 : 'text-muted-foreground'
+          
           return (
-            <span className={`text-sm tabular-nums ${highRestarts}`}>
-              {s.restartString}
-            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={`text-sm tabular-nums cursor-default ${highRestarts}`}>
+                    {s.restartString}
+                  </span>
+                </TooltipTrigger>
+                {lastState && (
+                  <TooltipContent>
+                    <p className="text-xs font-medium">Last termination: <span className="text-red-500">{lastState}</span></p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )
         },
       }),
@@ -219,14 +264,16 @@ export function PodListPage() {
         id: 'creationTimestamp',
         header: t('common.created'),
         cell: ({ getValue }) => (
-          <Tooltip>
-            <TooltipTrigger>
-              <span className="text-muted-foreground text-sm">
-                {getAge(getValue() || '')}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{formatDate(getValue() || '')}</TooltipContent>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-muted-foreground text-sm cursor-default">
+                  {getAge(getValue() || '')}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{formatDate(getValue() || '')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ),
       }),
       columnHelper.display({
@@ -261,18 +308,19 @@ export function PodListPage() {
       ) {
         return false
       }
+      const lowerQuery = query.toLowerCase()
       return (
-        (pod.metadata?.name?.toLowerCase() || '').includes(query) ||
-        (pod.spec?.nodeName?.toLowerCase() || '').includes(query) ||
-        (pod.status?.podIP?.toLowerCase() || '').includes(query) ||
-        (pod.metadata?.namespace?.toLowerCase() || '').includes(query)
+        (pod.metadata?.name?.toLowerCase() || '').includes(lowerQuery) ||
+        (pod.spec?.nodeName?.toLowerCase() || '').includes(lowerQuery) ||
+        (pod.status?.podIP?.toLowerCase() || '').includes(lowerQuery) ||
+        (pod.metadata?.namespace?.toLowerCase() || '').includes(lowerQuery)
       )
     },
     [nodeNameFilter]
   )
 
   const extraToolbars = [
-    <NodeLabelSelector onNodeNamesChange={setNodeNameFilter} />,
+    <NodeLabelSelector key="node-selector" onNodeNamesChange={setNodeNameFilter} />,
   ]
 
   return (

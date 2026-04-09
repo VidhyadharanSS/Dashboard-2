@@ -45,7 +45,7 @@ export interface WebSocketActions {
 
 const defaultOptions: Required<WebSocketOptions> = {
   enabled: true,
-  pingInterval: 20000, // 20s — must be < shortest proxy idle timeout (nginx default 60s)
+  pingInterval: 15000, // 15s — must be < shortest proxy idle timeout in the chain (ZGS ~30s, nginx 60s)
   speedUpdateInterval: 500,
   speedResetInterval: 3000,
   reconnectOnClose: false,
@@ -438,3 +438,4 @@ export function useWebSocket(
 }
 
 export default useWebSocket
+

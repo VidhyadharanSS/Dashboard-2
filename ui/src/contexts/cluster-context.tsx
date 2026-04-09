@@ -132,3 +132,10 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({
     <ClusterContext.Provider value={value}>{children}</ClusterContext.Provider>
   )
 }
+export const useCluster = () => {
+  const context = React.useContext(ClusterContext);
+  if (context === undefined) {
+    throw new Error('useCluster must be used within a ClusterProvider');
+  }
+  return context;
+};

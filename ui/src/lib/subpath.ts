@@ -25,7 +25,7 @@ export function getWebSocketUrl(path: string): string {
   const subPath = getSubPath()
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const isDev = process.env.NODE_ENV === 'development'
-  const host = isDev ? 'localhost:8080' : window.location.host
+  const host = isDev ? `${window.location.hostname}:8080` : window.location.host
 
   // Ensure path starts with /
   const normalizedPath = path.startsWith('/') ? path : `/${path}`

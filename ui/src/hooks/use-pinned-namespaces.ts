@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 
-const STORAGE_KEY = 'kite:pinned-namespaces'
+const STORAGE_KEY_PREFIX = 'kite:pinned-namespaces:'
 
-function load(): string[] {
+function load(clusterName: string | null): string[] {
+    if (!clusterName) return []
     try {
-        const raw = localStorage.getItem(STORAGE_KEY)
+        const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${clusterName}`)
         if (!raw) return []
         return JSON.parse(raw) as string[]
     } catch {
@@ -12,16 +13,23 @@ function load(): string[] {
     }
 }
 
-function save(namespaces: string[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(namespaces))
+function save(clusterName: string | null, namespaces: string[]) {
+    if (!clusterName) return
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${clusterName}`, JSON.stringify(namespaces))
 }
 
-export function usePinnedNamespaces() {
-    const [pinned, setPinned] = useState<string[]>(load)
+export function usePinnedNamespaces(clusterName: string | null) {
+    const [pinned, setPinned] = useState<string[]>(() => load(clusterName))
 
+    // Refresh state when cluster changes
     useEffect(() => {
-        save(pinned)
-    }, [pinned])
+        setPinned(load(clusterName))
+    }, [clusterName])
+
+    // Save to specific cluster key whenever pinned state changes
+    useEffect(() => {
+        save(clusterName, pinned)
+    }, [pinned, clusterName])
 
     const pin = useCallback((ns: string) => {
         setPinned(prev => prev.includes(ns) ? prev : [ns, ...prev])

@@ -60,8 +60,10 @@ func (h *GenericResourceHandler[T, V]) ToYAML(obj T) string {
 	if reflect.ValueOf(obj).IsNil() {
 		return ""
 	}
-	obj.SetManagedFields(nil)
-	yamlBytes, err := yaml.Marshal(obj)
+	// Deep copy to prevent side effects when stripping managed fields for logging
+	clone := obj.DeepCopyObject().(T)
+	clone.SetManagedFields(nil)
+	yamlBytes, err := yaml.Marshal(clone)
 	if err != nil {
 		return ""
 	}
@@ -77,10 +79,13 @@ func (h *GenericResourceHandler[T, V]) getGroupKind() schema.GroupKind {
 	return gvks[0].GroupKind()
 }
 
-func (h *GenericResourceHandler[T, V]) recordHistory(c *gin.Context, opType string, prev, curr T, success bool, errMsg string) {
+// recordHistory centralizes both Database History (for UI) and File-based Audit (for logs)
+func (h *GenericResourceHandler[T, V]) recordHistory(c *gin.Context, opType string, prev, curr T, success bool, errMsg string, start time.Time) {
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
 	user := c.MustGet("user").(model.User)
+	duration := time.Since(start)
 
+	// 1. Record to Database History
 	history := model.ResourceHistory{
 		ClusterName:   cs.Name,
 		ResourceType:  h.name,
@@ -94,8 +99,20 @@ func (h *GenericResourceHandler[T, V]) recordHistory(c *gin.Context, opType stri
 		OperatorID:    user.ID,
 	}
 	if err := model.DB.Create(&history).Error; err != nil {
-		klog.Errorf("Failed to create resource history: %v", err)
+		klog.Errorf("AUDIT_DB_FAIL: Failed to save history for %s/%s: %v", h.name, curr.GetName(), err)
 	}
+
+	// 2. Record to Structured Audit Log File
+	statusLabel := "SUCCESS"
+	if !success {
+		statusLabel = "FAILED"
+	}
+	logMsg := fmt.Sprintf("[%s] %s resource %s", statusLabel, strings.Title(opType), curr.GetName())
+	if !success && errMsg != "" {
+		logMsg += fmt.Sprintf(" | Error: %s", errMsg)
+	}
+
+	logger.Audit(user.Key(), strings.Title(opType), h.name, curr.GetNamespace(), cs.Name, logMsg, duration)
 }
 
 func (h *GenericResourceHandler[T, V]) IsClusterScoped() bool {
@@ -152,9 +169,7 @@ func (h *GenericResourceHandler[T, V]) Get(c *gin.Context) {
 func (h *GenericResourceHandler[T, V]) list(c *gin.Context) (V, error) {
 	var zero V
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
-	
 	objectList := reflect.New(h.listType).Interface().(V)
-
 	ctx := c.Request.Context()
 
 	var listOpts []client.ListOption
@@ -166,42 +181,28 @@ func (h *GenericResourceHandler[T, V]) list(c *gin.Context) (V, error) {
 	}
 	if c.Query("limit") != "" {
 		limit, err := strconv.ParseInt(c.Query("limit"), 10, 64)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit parameter"})
-			return zero, err
+		if err == nil {
+			listOpts = append(listOpts, client.Limit(limit))
 		}
-		listOpts = append(listOpts, client.Limit(limit))
 	}
 
 	if c.Query("continue") != "" {
-		continueToken := c.Query("continue")
-		listOpts = append(listOpts, client.Continue(continueToken))
+		listOpts = append(listOpts, client.Continue(c.Query("continue")))
 	}
 
-	// Add label selector support
 	if c.Query("labelSelector") != "" {
-		labelSelector := c.Query("labelSelector")
-		selector, err := metav1.ParseToLabelSelector(labelSelector)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid labelSelector parameter: " + err.Error()})
-			return zero, err
+		selector, err := metav1.ParseToLabelSelector(c.Query("labelSelector"))
+		if err == nil {
+			labelSelectorOption, _ := metav1.LabelSelectorAsSelector(selector)
+			listOpts = append(listOpts, client.MatchingLabelsSelector{Selector: labelSelectorOption})
 		}
-		labelSelectorOption, err := metav1.LabelSelectorAsSelector(selector)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to convert labelSelector: " + err.Error()})
-			return zero, err
-		}
-		listOpts = append(listOpts, client.MatchingLabelsSelector{Selector: labelSelectorOption})
 	}
 
 	if c.Query("fieldSelector") != "" {
-		fieldSelector := c.Query("fieldSelector")
-		fieldSelectorOption, err := fields.ParseSelector(fieldSelector)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid fieldSelector parameter: " + err.Error()})
-			return zero, err
+		fieldSelectorOption, err := fields.ParseSelector(c.Query("fieldSelector"))
+		if err == nil {
+			listOpts = append(listOpts, client.MatchingFieldsSelector{Selector: fieldSelectorOption})
 		}
-		listOpts = append(listOpts, client.MatchingFieldsSelector{Selector: fieldSelectorOption})
 	}
 
 	if err := cs.K8sClient.List(ctx, objectList, listOpts...); err != nil {
@@ -209,53 +210,49 @@ func (h *GenericResourceHandler[T, V]) list(c *gin.Context) (V, error) {
 		return zero, err
 	}
 
-	// Sort by creation timestamp in descending order (newest first)
-	// Extract items using reflection and sort them directly
-
-	items, err := meta.ExtractList(objectList)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to extract items from list"})
-		return zero, err
-	}
+	items, _ := meta.ExtractList(objectList)
 	sort.Slice(items, func(i, j int) bool {
 		o1, _ := meta.Accessor(items[i])
 		o2, _ := meta.Accessor(items[j])
 		if o1 == nil || o2 == nil {
-			return false // Handle nil cases gracefully
+			return false
 		}
-
-		t1 := o1.GetCreationTimestamp()
-		t2 := o2.GetCreationTimestamp()
+		t1, t2 := o1.GetCreationTimestamp(), o2.GetCreationTimestamp()
 		if t1.Equal(&t2) {
 			return o1.GetName() < o2.GetName()
 		}
-
 		return t1.After(t2.Time)
 	})
 
 	user := c.MustGet("user").(model.User)
+	isSuperUser := rbac.UserHasRole(user, "cluster-admin")
+
 	filterItems := make([]runtime.Object, 0, len(items))
 	for i := range items {
 		obj, err := meta.Accessor(items[i])
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to access object metadata"})
-			return zero, err
+			continue
 		}
 		obj.SetManagedFields(nil)
-		anno := obj.GetAnnotations()
-		if anno != nil {
+		if anno := obj.GetAnnotations(); anno != nil {
 			delete(anno, common.KubectlAnnotation)
 		}
-		if h.Name() == "namespaces" && !rbac.CanAccessNamespace(user, cs.Name, obj.GetName()) {
-			continue
-		}
-		if namespace == "_all" && obj.GetNamespace() != "" && !rbac.CanAccessNamespace(user, cs.Name, obj.GetNamespace()) {
-			continue
+
+		if !isSuperUser {
+			ns := obj.GetNamespace()
+			if h.Name() == "namespaces" {
+				if !rbac.CanAccessNamespace(user, cs.Name, obj.GetName()) {
+					continue
+				}
+			} else if namespace == "_all" && ns != "" {
+				if !rbac.CanAccessNamespace(user, cs.Name, ns) {
+					continue
+				}
+			}
 		}
 		filterItems = append(filterItems, items[i])
 	}
 	_ = meta.SetList(objectList, filterItems)
-
 	return objectList, nil
 }
 
@@ -265,8 +262,7 @@ func (h *GenericResourceHandler[T, V]) List(c *gin.Context) {
 		return
 	}
 
-	reduce := c.Query("reduce") == "true"
-	if reduce {
+	if c.Query("reduce") == "true" {
 		items, err := meta.ExtractList(objectList)
 		if err == nil {
 			reducedItems := make([]runtime.Object, 0, len(items))
@@ -276,29 +272,17 @@ func (h *GenericResourceHandler[T, V]) List(c *gin.Context) {
 					reducedItems = append(reducedItems, item)
 					continue
 				}
-
-				// Create a shallow copy and strip heavy fields
-				reduced := obj.DeepCopyObject().(client.Object)
-				reduced.SetManagedFields(nil)
-				
-				// Keep only basic metadata
-				metaInfo := metav1.ObjectMeta{
-					Name:              reduced.GetName(),
-					Namespace:         reduced.GetNamespace(),
-					UID:               reduced.GetUID(),
-					CreationTimestamp: reduced.GetCreationTimestamp(),
-					Labels:            reduced.GetLabels(),
-				}
-				
-				// Use reflection to set bit-reduced metadata
-				reflect.ValueOf(reduced).Elem().FieldByName("ObjectMeta").Set(reflect.ValueOf(metaInfo))
-				
+				reduced := reflect.New(h.objectType).Interface().(client.Object)
+				reduced.SetName(obj.GetName())
+				reduced.SetNamespace(obj.GetNamespace())
+				reduced.SetUID(obj.GetUID())
+				reduced.SetCreationTimestamp(obj.GetCreationTimestamp())
+				reduced.SetLabels(obj.GetLabels())
 				reducedItems = append(reducedItems, reduced)
 			}
 			_ = meta.SetList(objectList, reducedItems)
 		}
 	}
-
 	c.JSON(http.StatusOK, objectList)
 }
 
@@ -311,22 +295,15 @@ func (h *GenericResourceHandler[T, V]) Create(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-
 	var success bool
 	var errMsg string
 	var empty T
 	start := time.Now()
 	defer func() {
-		h.recordHistory(c, "create", empty, resource, success, errMsg)
-		if success {
-			user := c.MustGet("user").(model.User)
-			cs := c.MustGet("cluster").(*cluster.ClientSet)
-			logger.Audit(user.Key(), "Create", h.name, resource.GetNamespace(), cs.Name, fmt.Sprintf("Created resource %s", resource.GetName()), time.Since(start))
-		}
+		h.recordHistory(c, "create", empty, resource, success, errMsg, start)
 	}()
 
-	if err := cs.K8sClient.Create(ctx, resource); err != nil {
+	if err := cs.K8sClient.Create(c.Request.Context(), resource); err != nil {
 		success, errMsg = false, err.Error()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -352,7 +329,7 @@ func (h *GenericResourceHandler[T, V]) Update(c *gin.Context) {
 		namespacedName = types.NamespacedName{Name: name}
 	}
 	if err := cs.K8sClient.Get(c.Request.Context(), namespacedName, oldObj); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch existing resource: " + err.Error()})
 		return
 	}
 
@@ -360,25 +337,16 @@ func (h *GenericResourceHandler[T, V]) Update(c *gin.Context) {
 	var errMsg string
 	start := time.Now()
 	defer func() {
-		h.recordHistory(c, "update", oldObj, resource, success, errMsg)
-		if success {
-			user := c.MustGet("user").(model.User)
-			cs := c.MustGet("cluster").(*cluster.ClientSet)
-			logger.Audit(user.Key(), "Update", h.name, resource.GetNamespace(), cs.Name, fmt.Sprintf("Updated resource %s", resource.GetName()), time.Since(start))
-		}
+		h.recordHistory(c, "update", oldObj, resource, success, errMsg, start)
 	}()
 
 	resource.SetName(name)
 	if !h.isClusterScoped {
-		namespace := c.Param("namespace")
-		if namespace != "" && namespace != "_all" {
-			resource.SetNamespace(namespace)
-		}
+		resource.SetNamespace(c.Param("namespace"))
 	}
 
-	ctx := c.Request.Context()
-	if err := cs.K8sClient.Update(ctx, resource); err != nil {
-		errMsg = err.Error()
+	if err := cs.K8sClient.Update(c.Request.Context(), resource); err != nil {
+		success, errMsg = false, err.Error()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -407,38 +375,25 @@ func (h *GenericResourceHandler[T, V]) Patch(c *gin.Context) {
 	oldObj := reflect.New(h.objectType).Interface().(T)
 	namespacedName := types.NamespacedName{Name: name}
 	if !h.isClusterScoped {
-		namespace := c.Param("namespace")
-		if namespace != "" && namespace != "_all" {
-			namespacedName.Namespace = namespace
-		}
+		namespacedName.Namespace = c.Param("namespace")
 	}
-	ctx := c.Request.Context()
-	if err := cs.K8sClient.Get(ctx, namespacedName, oldObj); err != nil {
-		if errors.IsNotFound(err) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
+
+	if err := cs.K8sClient.Get(c.Request.Context(), namespacedName, oldObj); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	prevObj := oldObj.DeepCopyObject().(T)
-
-	success := false
+	var success bool
 	var errMsg string
 	start := time.Now()
 	defer func() {
-		h.recordHistory(c, "patch", prevObj, oldObj, success, errMsg)
-		if success {
-			user := c.MustGet("user").(model.User)
-			cs := c.MustGet("cluster").(*cluster.ClientSet)
-			logger.Audit(user.Key(), "Patch", h.name, oldObj.GetNamespace(), cs.Name, fmt.Sprintf("Patched resource %s", oldObj.GetName()), time.Since(start))
-		}
+		h.recordHistory(c, "patch", prevObj, oldObj, success, errMsg, start)
 	}()
 
 	patch := client.RawPatch(patchType, patchBytes)
-	if err := cs.K8sClient.Patch(ctx, oldObj, patch); err != nil {
-		errMsg = err.Error()
+	if err := cs.K8sClient.Patch(c.Request.Context(), oldObj, patch); err != nil {
+		success, errMsg = false, err.Error()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -454,48 +409,46 @@ func (h *GenericResourceHandler[T, V]) Delete(c *gin.Context) {
 
 	namespacedName := types.NamespacedName{Name: name}
 	if !h.isClusterScoped {
-		namespace := c.Param("namespace")
-		if namespace != "" && namespace != "_all" {
-			namespacedName.Namespace = namespace
-		}
+		namespacedName.Namespace = c.Param("namespace")
 	}
 
 	ctx := c.Request.Context()
-	start := time.Now()
 	if err := cs.K8sClient.Get(ctx, namespacedName, resource); err != nil {
-		if errors.IsNotFound(err) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Capture state for history/audit before deletion
+	prevObj := resource.DeepCopyObject().(T)
+	start := time.Now()
 
 	cascadeDelete := c.Query("cascade") != "false"
 	forceDelete := c.Query("force") == "true"
 	wait := c.Query("wait") != "false"
 
-	// Set propagation policy based on the cascadeDelete flag
 	deleteOptions := &client.DeleteOptions{}
-	if cascadeDelete {
-		propagationPolicy := metav1.DeletePropagationForeground
-		deleteOptions.PropagationPolicy = &propagationPolicy
-	} else {
-		propagationPolicy := metav1.DeletePropagationOrphan
-		deleteOptions.PropagationPolicy = &propagationPolicy
+	propagationPolicy := metav1.DeletePropagationForeground
+	if !cascadeDelete {
+		propagationPolicy = metav1.DeletePropagationOrphan
 	}
+	deleteOptions.PropagationPolicy = &propagationPolicy
 
 	if forceDelete {
 		gracePeriodSeconds := int64(0)
 		deleteOptions.GracePeriodSeconds = &gracePeriodSeconds
 	}
+
+	var success bool
+	var errMsg string
+	defer func() {
+		h.recordHistory(c, "delete", prevObj, resource, success, errMsg, start)
+	}()
+
 	if err := cs.K8sClient.Delete(ctx, resource, deleteOptions); err != nil {
+		success, errMsg = false, err.Error()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	user := c.MustGet("user").(model.User)
-	logger.Audit(user.Key(), "Delete", h.name, resource.GetNamespace(), cs.Name, fmt.Sprintf("Deleted resource %s", resource.GetName()), time.Since(start))
 
 	if wait {
 		timeout := 1 * time.Minute
@@ -503,19 +456,15 @@ func (h *GenericResourceHandler[T, V]) Delete(c *gin.Context) {
 			timeout = 3 * time.Second
 		}
 		err := kube.WaitForResourceDeletion(ctx, cs.K8sClient, resource, timeout)
-		if err != nil {
-			if forceDelete {
-				klog.Infof("Force deleting resource %s/%s timed out, will attempt to remove finalizers", resource.GetNamespace(), resource.GetName())
-				patch := client.MergeFrom(resource.DeepCopyObject().(T))
-				resource.SetFinalizers([]string{})
-				if err := cs.K8sClient.Patch(context.Background(), resource, patch); err != nil {
-					klog.Errorf("Failed to remove finalizers: %v", err)
-				}
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+		if err != nil && forceDelete {
+			klog.Warningf("Force delete timeout for %s, removing finalizers", resource.GetName())
+			patch := client.MergeFrom(resource.DeepCopyObject().(T))
+			resource.SetFinalizers([]string{})
+			_ = cs.K8sClient.Patch(context.Background(), resource, patch)
 		}
 	}
+
+	success = true
 	c.JSON(http.StatusOK, gin.H{"message": "deleted successfully"})
 }
 
@@ -524,53 +473,32 @@ func (h *GenericResourceHandler[T, V]) Search(c *gin.Context, q string, limit in
 		return nil, nil
 	}
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
-	ctx := c.Request.Context()
 	objectList := reflect.New(h.listType).Interface().(V)
+
 	var listOpts []client.ListOption
 	if idx := strings.Index(q, ":"); idx > 0 {
-		labelKey := strings.TrimSpace(q[:idx])
-		labelValue := strings.TrimSpace(q[idx+1:])
-		listOpts = append(listOpts, client.MatchingLabels{labelKey: labelValue})
-	} else if idx := strings.Index(q, "="); idx > 0 {
-		labelKey := strings.TrimSpace(q[:idx])
-		labelValue := strings.TrimSpace(q[idx+1:])
-		listOpts = append(listOpts, client.MatchingLabels{labelKey: labelValue})
+		listOpts = append(listOpts, client.MatchingLabels{q[:idx]: q[idx+1:]})
 	}
-	if err := cs.K8sClient.List(ctx, objectList, listOpts...); err != nil {
-		klog.Errorf("failed to list %s: %v", h.name, err)
-		return nil, err
-	}
-	isLabelSearch := strings.Contains(q, ":") || strings.Contains(q, "=")
-	items, err := meta.ExtractList(objectList)
-	if err != nil {
-		klog.Errorf("failed to extract items from list: %v", err)
+
+	if err := cs.K8sClient.List(c.Request.Context(), objectList, listOpts...); err != nil {
 		return nil, err
 	}
 
+	items, _ := meta.ExtractList(objectList)
 	results := make([]common.SearchResult, 0, limit)
-
 	for _, item := range items {
-		obj, ok := item.(client.Object)
-		if !ok {
-			klog.Errorf("item is not a client.Object: %v", item)
+		obj := item.(client.Object)
+		if !strings.Contains(strings.ToLower(obj.GetName()), strings.ToLower(q)) && !strings.Contains(q, ":") {
 			continue
 		}
-		if !isLabelSearch && !strings.Contains(strings.ToLower(obj.GetName()), strings.ToLower(q)) {
-			continue
-		}
-		result := common.SearchResult{
-			ID:           string(obj.GetUID()),
-			Name:         obj.GetName(),
-			Namespace:    obj.GetNamespace(),
-			ResourceType: h.name,
-			CreatedAt:    obj.GetCreationTimestamp().String(),
-		}
-		results = append(results, result)
+		results = append(results, common.SearchResult{
+			ID: string(obj.GetUID()), Name: obj.GetName(), Namespace: obj.GetNamespace(),
+			ResourceType: h.name, CreatedAt: obj.GetCreationTimestamp().String(),
+		})
 		if limit > 0 && int64(len(results)) >= limit {
 			break
 		}
 	}
-
 	return results, nil
 }
 
@@ -578,66 +506,33 @@ func (h *GenericResourceHandler[T, V]) registerCustomRoutes(group *gin.RouterGro
 
 func (h *GenericResourceHandler[T, V]) ListHistory(c *gin.Context) {
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
-	namespace := c.Param("namespace")
-	resourceName := c.Param("name")
-	pageSize, err := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pageSize parameter"})
-		return
-	}
-	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page parameter"})
-		return
-	}
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	// Get total count
 	var total int64
-	if err := model.DB.Model(&model.ResourceHistory{}).Where("cluster_name = ? AND resource_type = ? AND resource_name = ? AND namespace = ?", cs.Name, h.name, resourceName, namespace).Count(&total).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	query := model.DB.Model(&model.ResourceHistory{}).Where("cluster_name = ? AND resource_type = ? AND resource_name = ? AND namespace = ?", cs.Name, h.name, c.Param("name"), c.Param("namespace"))
+	query.Count(&total)
 
-	// Get paginated history
 	history := []model.ResourceHistory{}
-	if err := model.DB.Preload("Operator").Where("cluster_name = ? AND resource_type = ? AND resource_name = ? AND namespace = ?", cs.Name, h.name, resourceName, namespace).Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&history).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	query.Preload("Operator").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&history)
 
-	// Calculate pagination info
-	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
-	hasNextPage := page < totalPages
-	hasPrevPage := page > 1
-
-	response := gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"data": history,
 		"pagination": gin.H{
-			"page":        page,
-			"pageSize":    pageSize,
-			"total":       total,
-			"totalPages":  totalPages,
-			"hasNextPage": hasNextPage,
-			"hasPrevPage": hasPrevPage,
+			"page": page, "pageSize": pageSize, "total": total,
+			"totalPages": int(math.Ceil(float64(total) / float64(pageSize))),
 		},
-	}
-
-	c.JSON(http.StatusOK, response)
+	})
 }
 
 func (h *GenericResourceHandler[T, V]) Describe(c *gin.Context) {
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
-	gk := h.getGroupKind()
-	describer, ok := describe.DescriberFor(gk, cs.K8sClient.Configuration)
+	describer, ok := describe.DescriberFor(h.getGroupKind(), cs.K8sClient.Configuration)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "no describer found for this resource"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no describer found"})
 		return
 	}
-	namespace := c.Param("namespace")
-	name := c.Param("name")
-	out, err := describer.Describe(namespace, name, describe.DescriberSettings{
-		ShowEvents: true,
-	})
+	out, err := describer.Describe(c.Param("namespace"), c.Param("name"), describe.DescriberSettings{ShowEvents: true})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

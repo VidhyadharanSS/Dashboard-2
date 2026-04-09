@@ -32,8 +32,8 @@ var discoveryLabels = []client.MatchingLabels{
 	},
 }
 
-func discoveryPrometheusURL(kc *kube.K8sClient) string {
-	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+func discoveryPrometheusURL(ctx context.Context, kc *kube.K8sClient) string {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	for _, matchLabels := range discoveryLabels {
 		var svcList corev1.ServiceList

@@ -283,16 +283,20 @@ export const useResources = <T extends ResourceType>(
     refreshInterval?: number
     disable?: boolean
     reduce?: boolean
+    priority?: 'high' | 'low' // Add this
   }
 ) => {
+  // Use a stable query key logic
+  const queryKey = [
+    resource,
+    namespace,
+    options?.limit,
+    options?.labelSelector,
+    options?.fieldSelector,
+  ];
+
   return useQuery({
-    queryKey: [
-      resource,
-      namespace,
-      options?.limit,
-      options?.labelSelector,
-      options?.fieldSelector,
-    ],
+    queryKey,
     queryFn: () => {
       return fetchResources<ResourcesTypeMap[T]>(resource, namespace, {
         limit: options?.limit,
@@ -306,7 +310,8 @@ export const useResources = <T extends ResourceType>(
     select: (data: ResourcesTypeMap[T]): ResourcesItems<T> => data.items,
     placeholderData: (prevData) => prevData,
     refetchInterval: (options?.refreshInterval && options.refreshInterval < 15000 && options.refreshInterval !== 0) ? 15000 : (options?.refreshInterval || 0),
-    staleTime: options?.staleTime || (resource === 'crds' ? 10000 : 2000),
+    // Optimization: High priority gets fresh data, Low priority uses stale cache longer
+    staleTime: options?.priority === 'low' ? 30000 : (options?.staleTime || 2000),
   })
 }
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 
 import {
   Breadcrumb,
@@ -17,6 +17,7 @@ interface BreadcrumbSegment {
 
 export function DynamicBreadcrumb() {
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { t } = useTranslation()
 
   const generateBreadcrumbs = (): BreadcrumbSegment[] => {
@@ -95,7 +96,10 @@ export function DynamicBreadcrumb() {
             <BreadcrumbItem>
               {crumb.href ? (
                 <BreadcrumbLink asChild>
-                  <Link to={crumb.href}>{crumb.label}</Link>
+                  {/* Link preserves existing search parameters (like ?namespace=...) */}
+                  <Link to={{ pathname: crumb.href, search: searchParams.toString() }}>
+                    {crumb.label}
+                  </Link>
                 </BreadcrumbLink>
               ) : (
                 <BreadcrumbPage>{crumb.label}</BreadcrumbPage>

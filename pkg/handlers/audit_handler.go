@@ -13,13 +13,13 @@ import (
 	"github.com/zxh326/kite/pkg/model"
 	"github.com/zxh326/kite/pkg/rbac"
 	"gorm.io/gorm"
+	"k8s.io/klog/v2"
 )
 
 // maxPageSize is the upper limit for paginated list endpoints (not the CSV export).
 const maxPageSize = 500
 
 // parseAuditQueryParams extracts and validates common query parameters for audit endpoints.
-// maxSize controls the upper limit; pass 0 to use the default maxPageSize.
 func parseAuditQueryParams(c *gin.Context) (page, size int, operatorID uint64,
 	search, operation, clusterName, resourceType, resourceName, namespace, startDate, endDate string, ok bool) {
 
@@ -40,7 +40,6 @@ func parseAuditQueryParams(c *gin.Context) (page, size int, operatorID uint64,
 		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 && parsed <= maxPageSize {
 			size = parsed
 		} else if parsed, err := strconv.Atoi(s); err == nil && parsed > maxPageSize {
-			// Silently clamp rather than error — the frontend may send large values
 			size = maxPageSize
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid size parameter (1-%d)", maxPageSize)})
@@ -85,7 +84,6 @@ func buildAuditQuery(db *gorm.DB, operatorID uint64, search, operation, clusterN
 		query = query.Where("resource_type LIKE ?", "%"+resourceType+"%")
 	}
 	if resourceName != "" {
-		// Support partial name matching for resource name filter
 		query = query.Where("resource_name LIKE ?", "%"+resourceName+"%")
 	}
 	if namespace != "" {
@@ -96,7 +94,6 @@ func buildAuditQuery(db *gorm.DB, operatorID uint64, search, operation, clusterN
 		query = query.Where("resource_name LIKE ? OR namespace LIKE ? OR resource_type LIKE ? OR error_message LIKE ?", like, like, like, like)
 	}
 	if operation != "" {
-		// Support comma-separated operations: e.g. "create,update"
 		ops := strings.Split(operation, ",")
 		cleanOps := make([]string, 0, len(ops))
 		for _, op := range ops {
@@ -124,10 +121,9 @@ func buildAuditQuery(db *gorm.DB, operatorID uint64, search, operation, clusterN
 	return query
 }
 
-// lightColumns is the list of columns to select when YAML blobs are not needed.
 const lightColumns = "id, created_at, updated_at, cluster_name, resource_type, resource_name, namespace, operation_type, success, error_message, operator_id"
 
-// ListAuditLogs returns audit logs for admin users (all clusters / all resources).
+// ListAuditLogs returns audit logs for admin users.
 func ListAuditLogs(c *gin.Context) {
 	page, size, operatorID, search, operation, clusterName,
 		resourceType, resourceName, namespace, startDate, endDate, ok := parseAuditQueryParams(c)
@@ -136,12 +132,12 @@ func ListAuditLogs(c *gin.Context) {
 	}
 
 	includeDiff := strings.TrimSpace(c.Query("includeDiff")) == "true"
-
 	query := buildAuditQuery(model.DB, operatorID, search, operation, clusterName, resourceType, resourceName, namespace, startDate, endDate)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit: Failed to count logs: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve audit log count"})
 		return
 	}
 
@@ -151,7 +147,8 @@ func ListAuditLogs(c *gin.Context) {
 		q = q.Select(lightColumns)
 	}
 	if err := q.Find(&history).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit: Failed to fetch logs: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch audit records"})
 		return
 	}
 
@@ -163,8 +160,7 @@ func ListAuditLogs(c *gin.Context) {
 	})
 }
 
-// ListAuditLogsForUser returns audit logs filtered by the current user's RBAC permissions.
-// This is the non-admin endpoint accessible from the header drawer.
+// ListAuditLogsForUser returns audit logs filtered by current user's RBAC.
 func ListAuditLogsForUser(c *gin.Context) {
 	page, size, _, search, operation, _,
 		resourceType, resourceName, namespace, startDate, endDate, ok := parseAuditQueryParams(c)
@@ -175,22 +171,22 @@ func ListAuditLogsForUser(c *gin.Context) {
 	user := c.MustGet("user").(model.User)
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
 
-	// cs.Name is passed as clusterName — buildAuditQuery already adds the WHERE clause
 	query := buildAuditQuery(model.DB, 0, search, operation, cs.Name, resourceType, resourceName, namespace, startDate, endDate)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit: User log count failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count audit logs"})
 		return
 	}
 
 	history := []model.ResourceHistory{}
 	if err := query.Select(lightColumns).Preload("Operator").Order("created_at DESC").Offset((page - 1) * size).Limit(size).Find(&history).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit: User log fetch failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch audit logs"})
 		return
 	}
 
-	// Post-filter by RBAC: only show entries for resources the user can at least "get"
 	isAdmin := rbac.UserHasRole(user, "admin")
 	if !isAdmin {
 		filtered := make([]model.ResourceHistory, 0, len(history))
@@ -214,8 +210,7 @@ func ListAuditLogsForUser(c *gin.Context) {
 	})
 }
 
-// GetAuditStats returns aggregate counts of audit operations for the current cluster.
-// Optimized: compute totals from the aggregates instead of extra COUNT queries.
+// GetAuditStats returns aggregate counts of audit operations.
 func GetAuditStats(c *gin.Context) {
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
 
@@ -230,7 +225,8 @@ func GetAuditStats(c *gin.Context) {
 		Where("cluster_name = ?", cs.Name).
 		Group("operation_type").
 		Find(&stats).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit Stats: All-time failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch aggregate stats"})
 		return
 	}
 
@@ -241,11 +237,11 @@ func GetAuditStats(c *gin.Context) {
 		Where("cluster_name = ? AND created_at >= ?", cs.Name, since).
 		Group("operation_type").
 		Find(&recent).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit Stats: Last 24h failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch recent stats"})
 		return
 	}
 
-	// Compute totals from aggregates — avoid extra COUNT queries
 	var totalAll int64
 	for _, s := range stats {
 		totalAll += s.Count
@@ -263,8 +259,7 @@ func GetAuditStats(c *gin.Context) {
 	})
 }
 
-// GetAuditLogDetailAdmin returns a single audit entry including YAML diffs.
-// Admin-only — no cluster context or RBAC filtering required.
+// GetAuditLogDetailAdmin returns a single audit entry with diffs.
 func GetAuditLogDetailAdmin(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -276,18 +271,18 @@ func GetAuditLogDetailAdmin(c *gin.Context) {
 	var entry model.ResourceHistory
 	if err := model.DB.Preload("Operator").Where("id = ?", id).First(&entry).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Audit entry not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit: Admin detail fetch failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error retrieving audit detail"})
 		return
 	}
 
 	c.JSON(http.StatusOK, entry)
 }
 
-// GetAuditLogDetail returns a single audit entry including YAML diffs.
-// Available to any authenticated user (RBAC-filtered).
+// GetAuditLogDetail returns a single audit entry with diffs (RBAC-filtered).
 func GetAuditLogDetail(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -302,14 +297,14 @@ func GetAuditLogDetail(c *gin.Context) {
 	var entry model.ResourceHistory
 	if err := model.DB.Preload("Operator").Where("id = ? AND cluster_name = ?", id, cs.Name).First(&entry).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Audit entry not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit: Detail fetch failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	// RBAC check
 	isAdmin := rbac.UserHasRole(user, "admin")
 	if !isAdmin {
 		ns := entry.Namespace
@@ -317,7 +312,7 @@ func GetAuditLogDetail(c *gin.Context) {
 			ns = "_all"
 		}
 		if !rbac.CanAccess(user, entry.ResourceType, "get", cs.Name, ns) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied for this audit record"})
 			return
 		}
 	}
@@ -325,8 +320,7 @@ func GetAuditLogDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, entry)
 }
 
-// GetAuditTimeline returns a histogram of audit operations bucketed by day/hour.
-// Used for the activity timeline chart in the drawer.
+// GetAuditTimeline returns a histogram of audit operations.
 func GetAuditTimeline(c *gin.Context) {
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
 
@@ -345,18 +339,17 @@ func GetAuditTimeline(c *gin.Context) {
 	}
 
 	var raw []rawBucket
-	// Group by day and operation type
 	if err := model.DB.Model(&model.ResourceHistory{}).
 		Select("DATE(created_at) as day, operation_type, count(*) as count").
 		Where("cluster_name = ? AND created_at >= ?", cs.Name, since).
 		Group("day, operation_type").
 		Order("day ASC").
 		Find(&raw).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit Timeline: DB query failed for cluster %s: %v", cs.Name, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate activity timeline"})
 		return
 	}
 
-	// Build full day range even for days with no activity
 	bucketMap := make(map[string]map[string]int64)
 	for d := 0; d <= days; d++ {
 		day := since.AddDate(0, 0, d).Format("2006-01-02")
@@ -403,16 +396,12 @@ func GetAuditTimeline(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// ExportAuditLogs streams all matching audit logs as a CSV file for admin users.
-// It intentionally bypasses the page/size pagination — it reads all matching rows
-// in batches of 1 000 and writes them directly to the response using encoding/csv
-// so memory usage stays flat regardless of total row count.
+// ExportAuditLogs streams all matching audit logs as a CSV file.
 func ExportAuditLogs(c *gin.Context) {
-	// For export we only need the filter params — ignore page/size entirely.
 	var (
-		operatorID                                                   uint64
-		search, operation, clusterName                               string
-		resourceType, resourceName, namespace, startDate, endDate    string
+		operatorID                                                uint64
+		search, operation, clusterName                            string
+		resourceType, resourceName, namespace, startDate, endDate string
 	)
 
 	if op := strings.TrimSpace(c.Query("operatorId")); op != "" {
@@ -449,7 +438,7 @@ func ExportAuditLogs(c *gin.Context) {
 		if err := baseQuery.Select(lightColumns).Preload("Operator").
 			Order("created_at DESC").Offset(offset).Limit(batchSize).
 			Find(&batch).Error; err != nil {
-			// Headers already sent — nothing we can do except stop writing
+			klog.Errorf("Audit Export: Failed at offset %d: %v", offset, err)
 			return
 		}
 		if len(batch) == 0 {
@@ -484,8 +473,7 @@ func ExportAuditLogs(c *gin.Context) {
 	}
 }
 
-// GetAuditResourceActivity returns audit log entries for a specific resource
-// (by type + namespace + name) so resource detail pages can show a change history.
+// GetAuditResourceActivity returns history for a specific resource.
 func GetAuditResourceActivity(c *gin.Context) {
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
 	user := c.MustGet("user").(model.User)
@@ -499,7 +487,6 @@ func GetAuditResourceActivity(c *gin.Context) {
 		return
 	}
 
-	// RBAC: the caller must be able to "get" the resource
 	isAdmin := rbac.UserHasRole(user, "admin")
 	nsCheck := ns
 	if nsCheck == "" {
@@ -525,16 +512,15 @@ func GetAuditResourceActivity(c *gin.Context) {
 	var entries []model.ResourceHistory
 	if err := query.Select(lightColumns).Preload("Operator").
 		Order("created_at DESC").Limit(limit).Find(&entries).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit Activity: Fetch failed for %s/%s: %v", resType, name, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch resource history"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": entries})
 }
 
-// PurgeOldAuditLogs deletes audit log entries older than the specified retention
-// period. This prevents unbounded DB growth. Admin-only endpoint.
-// Query param: retentionDays (default 90, min 7)
+// PurgeOldAuditLogs deletes audit logs older than retention period.
 func PurgeOldAuditLogs(c *gin.Context) {
 	daysStr := c.DefaultQuery("retentionDays", "90")
 	days, err := strconv.Atoi(daysStr)
@@ -545,10 +531,10 @@ func PurgeOldAuditLogs(c *gin.Context) {
 
 	cutoff := time.Now().AddDate(0, 0, -days)
 
-	// Count before deleting so we can report how many rows were removed.
 	var count int64
 	if err := model.DB.Model(&model.ResourceHistory{}).Where("created_at < ?", cutoff).Count(&count).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count old entries: " + err.Error()})
+		klog.Errorf("Audit Purge: Count failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assess entries for purge"})
 		return
 	}
 
@@ -562,21 +548,26 @@ func PurgeOldAuditLogs(c *gin.Context) {
 		return
 	}
 
-	// Delete in batches of 1000 to avoid locking the table for too long
 	totalDeleted := int64(0)
 	for {
 		tx := model.DB.Where("created_at < ?", cutoff).Limit(1000).Delete(&model.ResourceHistory{})
 		if tx.Error != nil {
+			klog.Errorf("Audit Purge: Batch delete failed after %d rows: %v", totalDeleted, tx.Error)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error":   "failed during batch delete: " + tx.Error.Error(),
+				"error":   fmt.Sprintf("Database error during purge: %v", tx.Error),
 				"deleted": totalDeleted,
 			})
 			return
 		}
-		totalDeleted += tx.RowsAffected
-		if tx.RowsAffected < 1000 {
+		
+		affected := tx.RowsAffected
+		totalDeleted += affected
+		
+		if affected < 1000 {
 			break
 		}
+		// Small sleep to allow other DB operations to breathe
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -587,12 +578,12 @@ func PurgeOldAuditLogs(c *gin.Context) {
 	})
 }
 
-// GetAuditRetentionInfo returns metadata about audit log storage: total entries,
-// oldest entry date, entries by age bracket, and estimated DB size.
+// GetAuditRetentionInfo returns metadata about audit log storage.
 func GetAuditRetentionInfo(c *gin.Context) {
 	var totalEntries int64
 	if err := model.DB.Model(&model.ResourceHistory{}).Count(&totalEntries).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit Retention: Count failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count database entries"})
 		return
 	}
 
@@ -624,7 +615,6 @@ func GetAuditRetentionInfo(c *gin.Context) {
 		result = append(result, ageBracket{Label: b.label, Count: cnt})
 	}
 
-	// Oldest entry
 	var oldest model.ResourceHistory
 	oldestDate := ""
 	if err := model.DB.Model(&model.ResourceHistory{}).Order("created_at ASC").First(&oldest).Error; err == nil {
@@ -638,8 +628,7 @@ func GetAuditRetentionInfo(c *gin.Context) {
 	})
 }
 
-// GetAuditSummary returns a compact per-operator summary of recent activity
-// for the current cluster. Useful for the admin overview widget.
+// GetAuditSummary returns operator activity summary.
 func GetAuditSummary(c *gin.Context) {
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
 
@@ -652,11 +641,11 @@ func GetAuditSummary(c *gin.Context) {
 	since := time.Now().AddDate(0, 0, -days)
 
 	type operatorActivity struct {
-		OperatorID    uint   `json:"operatorId"`
-		OperatorName  string `json:"operatorName"`
-		TotalChanges  int64  `json:"totalChanges"`
-		Successes     int64  `json:"successes"`
-		Failures      int64  `json:"failures"`
+		OperatorID     uint   `json:"operatorId"`
+		OperatorName   string `json:"operatorName"`
+		TotalChanges   int64  `json:"totalChanges"`
+		Successes      int64  `json:"successes"`
+		Failures       int64  `json:"failures"`
 		LastActivityAt string `json:"lastActivityAt"`
 	}
 
@@ -684,18 +673,19 @@ func GetAuditSummary(c *gin.Context) {
 		ORDER BY total_changes DESC
 		LIMIT 20
 	`, cs.Name, since).Scan(&rows).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		klog.Errorf("Audit Summary: RAW query failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate activity summary"})
 		return
 	}
 
 	result := make([]operatorActivity, 0, len(rows))
 	for _, r := range rows {
 		result = append(result, operatorActivity{
-			OperatorID:    r.OperatorID,
-			OperatorName:  r.Username,
-			TotalChanges:  r.TotalChanges,
-			Successes:     r.Successes,
-			Failures:      r.Failures,
+			OperatorID:     r.OperatorID,
+			OperatorName:   r.Username,
+			TotalChanges:   r.TotalChanges,
+			Successes:      r.Successes,
+			Failures:       r.Failures,
 			LastActivityAt: r.LastActivity,
 		})
 	}

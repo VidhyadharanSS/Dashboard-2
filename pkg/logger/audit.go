@@ -25,7 +25,7 @@ func Audit(user, action, resource, namespace, cluster, message string, duration 
 	}
 
 	durStr := ""
-	if len(duration) > 0 {
+	if len(duration) > 0 && duration[0] > 0 {
 		durStr = duration[0].String()
 	}
 
@@ -35,7 +35,7 @@ func Audit(user, action, resource, namespace, cluster, message string, duration 
 		Resource:  resource,
 		Namespace: namespace,
 		Cluster:   cluster,
-		Timestamp: time.Now().In(time.Local).Format("2006-01-02 15:04:05"),
+		Timestamp: time.Now().Format("2006-01-02 15:04:05"),
 		Duration:  durStr,
 		Message:   message,
 	}
@@ -44,12 +44,12 @@ func Audit(user, action, resource, namespace, cluster, message string, duration 
 		b, _ := json.Marshal(entry)
 		fmt.Fprintln(AuditLogger, string(b))
 	} else {
-		// User ssvd performed GET on /api/v1/admin/roles/ at 2026-02-10 23:08:47
 		durText := ""
 		if entry.Duration != "" {
-			durText = fmt.Sprintf("in %s ", entry.Duration)
+			durText = fmt.Sprintf("[%s] ", entry.Duration)
 		}
-		fmt.Fprintf(AuditLogger, "User %s performed %s on %s in %s/%s at %s %s: %s\n",
-			entry.User, entry.Action, entry.Resource, entry.Cluster, entry.Namespace, entry.Timestamp, durText, entry.Message)
+		// Standardized audit format: [Timestamp] User: name | Action: verb | Resource: type | Msg: content [duration]
+		fmt.Fprintf(AuditLogger, "[%s] User: %-10s | Action: %-8s | Resource: %-15s | Cluster: %-10s | NS: %-10s | Msg: %s %s\n",
+			entry.Timestamp, entry.User, entry.Action, entry.Resource, entry.Cluster, entry.Namespace, entry.Message, durText)
 	}
 }

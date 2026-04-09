@@ -528,7 +528,7 @@ export function ResourceTopology({
         )
     }
 
-const topologyContent = (fullscreen = false) => (
+    const topologyContent = (fullscreen = false) => (
         <>
             {/* Controls */}
             <div className="absolute top-3 left-3 z-50 flex flex-col gap-1.5">
@@ -662,16 +662,16 @@ const topologyContent = (fullscreen = false) => (
                                     const isSearchMatch = highlightedNodes.size > 0 && highlightedNodes.has(node.id)
                                     const isSearchDimmed = highlightedNodes.size > 0 && !highlightedNodes.has(node.id)
                                     return (
-                                    <TopologyNode
-                                        key={node.id}
-                                        id={node.id}
-                                        node={node}
-                                        isRoot={node.id === rootId}
-                                        isHighlighted={hoveredNode ? connectedNodes.has(node.id) : (highlightedNodes.size === 0 || isSearchMatch)}
-                                        isDimmed={(hoveredNode !== null && !connectedNodes.has(node.id)) || isSearchDimmed}
-                                        isSearchMatch={isSearchMatch}
-                                        onHover={setHoveredNode}
-                                    />
+                                        <TopologyNode
+                                            key={node.id}
+                                            id={node.id}
+                                            node={node}
+                                            isRoot={node.id === rootId}
+                                            isHighlighted={hoveredNode ? connectedNodes.has(node.id) : (highlightedNodes.size === 0 || isSearchMatch)}
+                                            isDimmed={(hoveredNode !== null && !connectedNodes.has(node.id)) || isSearchDimmed}
+                                            isSearchMatch={isSearchMatch}
+                                            onHover={setHoveredNode}
+                                        />
                                     )
                                 })}
                             </div>
@@ -706,7 +706,8 @@ const topologyContent = (fullscreen = false) => (
                 </DialogContent>
             </Dialog>
         </>
-    )}
+    )
+}
 
 function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, isSearchMatch, onHover }: {
     id: string

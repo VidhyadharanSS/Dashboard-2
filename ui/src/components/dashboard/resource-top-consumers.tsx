@@ -94,6 +94,7 @@ export function ResourceTopConsumers() {
     const { data: pods, isLoading } = useResources('pods', undefined, {
         refreshInterval: 30000,
         disable: !canListPods,
+        priority: 'low',
     })
 
     const { data: overview } = useOverview()
@@ -199,11 +200,10 @@ export function ResourceTopConsumers() {
                                     className="w-full group flex items-center gap-3 p-2 rounded-md hover:bg-muted/60 transition-colors text-left border border-transparent hover:border-border/50"
                                 >
                                     {/* Rank */}
-                                    <div className={`flex items-center justify-center h-6 w-6 rounded-md text-[10px] font-bold shrink-0 ${
-                                        isHot
+                                    <div className={`flex items-center justify-center h-6 w-6 rounded-md text-[10px] font-bold shrink-0 ${isHot
                                             ? 'bg-rose-500/10 text-rose-500'
                                             : 'bg-muted text-muted-foreground'
-                                    }`}>
+                                        }`}>
                                         {isHot ? <IconFlame className="h-3.5 w-3.5" /> : `#${idx + 1}`}
                                     </div>
 

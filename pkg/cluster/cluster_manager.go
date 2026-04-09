@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
+    "context"
 	"github.com/zxh326/kite/pkg/kube"
 	"github.com/zxh326/kite/pkg/model"
 	"github.com/zxh326/kite/pkg/prometheus"
@@ -71,7 +71,7 @@ func newClientSet(name string, k8sConfig *rest.Config, prometheusURL string) (*C
 		return nil, err
 	}
 	if prometheusURL == "" {
-		prometheusURL = discoveryPrometheusURL(cs.K8sClient)
+		prometheusURL = discoveryPrometheusURL(context.Background(), cs.K8sClient)
 		if prometheusURL != "" {
 			cs.DiscoveredPrometheusURL = prometheusURL
 			klog.Infof("Discovered Prometheus URL for cluster %s: %s", name, cs.DiscoveredPrometheusURL)

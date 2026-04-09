@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { usePinnedNamespaces } from './use-pinned-namespaces'
+import { useCluster } from '@/contexts/cluster-context'
 
 const SESSION_KEY = 'kite:active-namespace'
 
@@ -29,6 +30,7 @@ export type NamespaceContextValue = {
 }
 
 export function useNamespaceContext(): NamespaceContextValue {
+    const { currentCluster } = useCluster()
     const [activeNamespace, setActiveNamespaceState] = useState<string>(() => {
         try {
             return sessionStorage.getItem(SESSION_KEY) || '_all'
@@ -37,7 +39,7 @@ export function useNamespaceContext(): NamespaceContextValue {
         }
     })
 
-    const { pinned, toggle, isPinned } = usePinnedNamespaces()
+    const { pinned, toggle: togglePin, isPinned } = usePinnedNamespaces(currentCluster)
 
     const setActiveNamespace = useCallback((ns: string) => {
         try {
@@ -61,5 +63,12 @@ export function useNamespaceContext(): NamespaceContextValue {
         return () => window.removeEventListener('storage', onStorage)
     }, [])
 
-    return { activeNamespace, setActiveNamespace, pinned, togglePin: toggle, isPinned, clearContext }
+    return {
+        activeNamespace,
+        setActiveNamespace,
+        pinned,
+        togglePin,
+        isPinned,
+        clearContext
+    }
 }

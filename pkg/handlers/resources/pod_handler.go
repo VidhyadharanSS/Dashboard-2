@@ -136,13 +136,31 @@ func (h *PodHandler) ListMetrics(c *gin.Context) (map[string]metricsv1.PodMetric
 func (h *PodHandler) List(c *gin.Context) {
 	reduce := c.Query("reduce") == "true"
 	
-	objlist, err := h.list(c)
-	if err != nil {
-		return
+	var objlist *corev1.PodList
+	var metricsMap map[string]metricsv1.PodMetrics
+	var err1, err2 error
+
+	// Parallel Fetch
+	done := make(chan bool, 2)
+	go func() {
+		objlist, err1 = h.list(c)
+		done <- true
+	}()
+	go func() {
+		metricsMap, err2 = h.ListMetrics(c)
+		done <- true
+	}()
+	<-done
+	<-done
+
+	// Handle errors
+	if err1 != nil {
+		return // h.list already sent error response
 	}
-	metricsMap, err := h.ListMetrics(c)
-	if err != nil {
-		klog.Warningf("Failed to list pod metrics: %v", err)
+    
+    // Log the metrics error if it occurred, but proceed with empty metrics
+	if err2 != nil {
+		klog.Warningf("Failed to fetch pod metrics in parallel: %v", err2)
 	}
 
 	result := &PodListWithMetrics{
@@ -152,12 +170,14 @@ func (h *PodHandler) List(c *gin.Context) {
 	}
 
 	for i := range objlist.Items {
+		podPtr := &objlist.Items[i]
 		item := &PodWithMetrics{
-			Pod: &objlist.Items[i],
+			Pod: podPtr,
 		}
-		item.Metrics = GetPodMetrics(metricsMap, &objlist.Items[i])
+		// Metrics will be nil if err2 occurred, which is handled gracefully by GetPodMetrics
+		item.Metrics = GetPodMetrics(metricsMap, podPtr)
+		
 		if reduce {
-			// remove unnecessary fields to reduce response size
 			item.ObjectMeta = metav1.ObjectMeta{
 				Name:              item.Name,
 				Namespace:         item.Namespace,
@@ -165,12 +185,9 @@ func (h *PodHandler) List(c *gin.Context) {
 				DeletionTimestamp: item.DeletionTimestamp,
 			}
 			item.Spec = corev1.PodSpec{
-				NodeName: objlist.Items[i].Spec.NodeName,
-				InitContainers: lo.Map(objlist.Items[i].Spec.InitContainers, func(c corev1.Container, _ int) corev1.Container {
-					return corev1.Container{Name: c.Name, Image: c.Image, RestartPolicy: c.RestartPolicy}
-				}),
-				Containers: lo.Map(objlist.Items[i].Spec.Containers, func(c corev1.Container, _ int) corev1.Container {
-					return corev1.Container{Name: c.Name, Image: c.Image, RestartPolicy: c.RestartPolicy}
+				NodeName: podPtr.Spec.NodeName,
+				Containers: lo.Map(podPtr.Spec.Containers, func(c corev1.Container, _ int) corev1.Container {
+					return corev1.Container{Name: c.Name, Image: c.Image}
 				}),
 			}
 		}

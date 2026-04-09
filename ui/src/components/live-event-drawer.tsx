@@ -20,6 +20,7 @@ import { usePinnedNamespaces } from '@/hooks/use-pinned-namespaces'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useCluster } from '@/contexts/cluster-context'
 import {
     Sheet,
     SheetContent,
@@ -51,7 +52,8 @@ function getResourceUrl(kind: string, ns: string | undefined, name: string) {
 export function LiveEventDrawer() {
     const navigate = useNavigate()
     const { canAccess } = usePermissions()
-    const { pinned } = usePinnedNamespaces()
+    const { currentCluster } = useCluster()
+    const { pinned } = usePinnedNamespaces(currentCluster)
 
     const [isOpen, setIsOpen] = useState(false)
 

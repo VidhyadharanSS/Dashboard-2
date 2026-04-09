@@ -42,9 +42,15 @@ func NewBatchLogHandler(conn *websocket.Conn, client *K8sClient, opts *corev1.Po
 
 	// Set up the pong handler for native RFC 6455 pings.
 	// When the browser responds to our Ping frame, extend the read deadline.
-	conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+	//
+	// NOTE: In a multi-proxy chain (nginx → ZGS → browser), RFC 6455
+	// Ping/Pong frames are hop-by-hop — proxies consume and respond to them
+	// without forwarding end-to-end.  The PongHandler may therefore NEVER
+	// fire on this server.  The heartbeat() goroutine extends the deadline on
+	// every successful ReadMessage to compensate.
+	conn.SetReadDeadline(time.Now().Add(180 * time.Second))
 	conn.SetPongHandler(func(appData string) error {
-		conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
 		return nil
 	})
 
@@ -141,7 +147,9 @@ func (l *BatchLogHandler) startPodLogStream(podStream *PodLogStream) {
 //  2. Application-level data-frame pings {"type":"ping"} — these are visible
 //     to the frontend's onmessage handler and serve as a secondary keepalive.
 func (l *BatchLogHandler) heartbeat(ctx context.Context) {
-	keepaliveTicker := time.NewTicker(20 * time.Second)
+	// 15s interval — chosen to stay well below the shortest proxy idle
+	// timeout in the chain (ZGS ~30-60s, ingress-nginx default 60s).
+	keepaliveTicker := time.NewTicker(15 * time.Second)
 	defer keepaliveTicker.Stop()
 
 	// Channel for WebSocket reads (unblocks select on receive)
@@ -177,6 +185,8 @@ func (l *BatchLogHandler) heartbeat(ctx context.Context) {
 		case <-keepaliveTicker.C:
 			// 1. Send an RFC 6455 Ping control frame.
 			// WriteControl is safe to call concurrently with WriteJSON.
+			// In a multi-proxy chain this keeps the nginx↔Go hop alive but
+			// is NOT forwarded end-to-end through ZGS.
 			deadline := time.Now().Add(10 * time.Second)
 			if err := l.conn.WriteControl(websocket.PingMessage, []byte("keepalive"), deadline); err != nil {
 				klog.V(2).Infof("RFC 6455 ping failed, cancelling: %v", err)
@@ -185,6 +195,9 @@ func (l *BatchLogHandler) heartbeat(ctx context.Context) {
 			}
 
 			// 2. Send an application-level data-frame ping.
+			// This is the CRITICAL keepalive for multi-proxy environments:
+			// it flows end-to-end as a regular text frame and resets
+			// proxy_read_timeout at every hop.
 			l.writeMu.Lock()
 			err := l.sendMessage("ping", "")
 			l.writeMu.Unlock()
@@ -202,6 +215,14 @@ func (l *BatchLogHandler) heartbeat(ctx context.Context) {
 				l.cancel()
 				return
 			}
+
+			// ── Extend read deadline on EVERY successful read ──
+			// In a multi-proxy chain, RFC 6455 Pongs are consumed hop-by-hop
+			// and may never reach this server.  App-level messages (pings from
+			// frontend) DO flow end-to-end, so we use them to extend the
+			// read deadline.
+			l.conn.SetReadDeadline(time.Now().Add(180 * time.Second))
+
 			// Handle text messages (application-level pings from frontend)
 			if msg.msgType == websocket.TextMessage {
 				if strings.Contains(string(msg.data), "ping") {
@@ -314,3 +335,4 @@ func SendErrorMessage(conn *websocket.Conn, errMsg string) error {
 	}
 	return conn.WriteJSON(msg)
 }
+

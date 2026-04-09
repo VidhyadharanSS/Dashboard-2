@@ -370,17 +370,21 @@ export function Terminal({
         }
       }
 
-      // Keepalive: send a ping data-frame every 20s.  The backend also sends
-      // {"type":"ping"} every 20s, so even if the user is idle there is
-      // always a data-frame flowing in each direction within the 60s default
-      // proxy_read_timeout of ingress-nginx.
+      // Keepalive: send a ping data-frame every 15s.  The backend also sends
+      // {"type":"ping"} every 15s, so even if the user is idle there is
+      // always a data-frame flowing in each direction within the shortest
+      // proxy idle timeout in the chain (ZGS ~30-60s, ingress-nginx 60s).
+      //
+      // These are app-level JSON messages (regular data frames) that flow
+      // end-to-end through all proxies, unlike RFC 6455 Ping control frames
+      // which are consumed hop-by-hop.
       if (pingTimerRef.current) clearInterval(pingTimerRef.current)
       pingTimerRef.current = setInterval(() => {
         if (websocket.readyState === WebSocket.OPEN) {
           const pingMessage = JSON.stringify({ type: 'ping' })
           websocket.send(pingMessage)
         }
-      }, 20000)
+      }, 15000)
 
       terminal.writeln(`\x1b[32mConnected to ${type} terminal!\x1b[0m\r\n`)
     }

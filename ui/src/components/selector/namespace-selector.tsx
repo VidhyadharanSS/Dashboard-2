@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Namespace } from 'kubernetes-types/core/v1'
 import { IconPin, IconPinFilled } from '@tabler/icons-react'
-
+import { useCluster } from '@/contexts/cluster-context';
 import { useResources } from '@/lib/api'
 import { Combobox, ComboboxOption } from '@/components/ui/combobox'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -22,7 +22,8 @@ export function NamespaceSelector({
 }) {
   const { data, isLoading } = useResources('namespaces')
   const { canAccessNamespace } = usePermissions()
-  const { pinned, toggle, isPinned } = usePinnedNamespaces()
+  const { currentCluster } = useCluster() // You may need to import useCluster
+  const { pinned, toggle, isPinned } = usePinnedNamespaces(currentCluster)
 
   const sortedNamespaces = useMemo(() => {
     const namespaces = (data || [{ metadata: { name: 'default' } }]) as Namespace[]

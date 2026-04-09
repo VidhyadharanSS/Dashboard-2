@@ -43,12 +43,19 @@ type TerminalSession struct {
 }
 
 func NewTerminalSession(client *K8sClient, conn *websocket.Conn, namespace, podName, container string) *TerminalSession {
-	// Set up native pong handler — the browser automatically sends Pong in
-	// response to our RFC 6455 Ping frames.  We update the read deadline so
-	// that ReadJSON doesn't time out.
-	conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+	// Set a generous read deadline.  It is extended on EVERY successful read
+	// (see Read()) and on RFC 6455 Pong frames (see PongHandler below).
+	//
+	// Why we extend on every read, not just Pong:
+	// In a multi-proxy chain (e.g. nginx-ingress → ZGS → browser), RFC 6455
+	// Ping/Pong control frames are hop-by-hop — intermediate proxies consume
+	// and respond to Pings themselves without forwarding them end-to-end.
+	// The PongHandler may therefore NEVER fire on the Go side.  But app-level
+	// JSON messages (stdin, ping, pong, resize) DO flow end-to-end as regular
+	// data frames.  We must extend the deadline when those arrive too.
+	conn.SetReadDeadline(time.Now().Add(180 * time.Second))
 	conn.SetPongHandler(func(appData string) error {
-		conn.SetReadDeadline(time.Now().Add(120 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
 		return nil
 	})
 
@@ -167,8 +174,17 @@ func (session *TerminalSession) Read(p []byte) (int, error) {
 			return copy(p, EndOfTransmission), err
 		}
 
+		// ── Extend read deadline on EVERY successful read ──
+		// In a multi-proxy chain (nginx → ZGS → browser), RFC 6455 Pong
+		// frames are consumed hop-by-hop and may never reach this server.
+		// App-level JSON messages (stdin, ping, pong, resize) flow end-to-end
+		// as regular data frames — so we use them to prove the connection is
+		// alive and extend the read deadline accordingly.
+		session.conn.SetReadDeadline(time.Now().Add(180 * time.Second))
+
 		switch msg.Type {
 		case "stdin":
+			session.lastHeartbeat = time.Now()
 			data := []byte(msg.Data)
 			n := copy(p, data)
 			// If the message data is larger than buffer p, save the rest
@@ -178,6 +194,7 @@ func (session *TerminalSession) Read(p []byte) (int, error) {
 			return n, nil
 
 		case "resize":
+			session.lastHeartbeat = time.Now()
 			if msg.Rows > 0 && msg.Cols > 0 {
 				select {
 				case session.sizeChan <- &remotecommand.TerminalSize{
@@ -261,7 +278,12 @@ func (session *TerminalSession) SendErrorMessage(errMsg string) {
 // checking lastHeartbeat.
 func (session *TerminalSession) checkHeartbeat(ctx context.Context) {
 	session.lastHeartbeat = time.Now()
-	ticker := time.NewTicker(20 * time.Second)
+
+	// Ping interval: 15s — chosen to be well below the shortest proxy idle
+	// timeout in the chain.  ZGS (Zoho Gateway Service) likely uses a 30-60s
+	// idle timeout; ingress-nginx defaults to 60s.  15s gives us 2-4 missed
+	// pings before the lowest proxy would time out.
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -271,6 +293,8 @@ func (session *TerminalSession) checkHeartbeat(ctx context.Context) {
 		case <-ticker.C:
 			// 1. Send an RFC 6455 Ping control frame.
 			// WriteControl is safe to call concurrently with WriteJSON.
+			// In a multi-proxy chain, these pings keep the nginx↔Go link alive
+			// but are NOT forwarded end-to-end through ZGS to the browser.
 			deadline := time.Now().Add(10 * time.Second)
 			if err := session.conn.WriteControl(websocket.PingMessage, []byte("heartbeat"), deadline); err != nil {
 				klog.V(2).Infof("RFC 6455 ping failed for %s/%s: %v", session.namespace, session.podName, err)
@@ -278,11 +302,19 @@ func (session *TerminalSession) checkHeartbeat(ctx context.Context) {
 			}
 
 			// 2. Send an application-level data-frame ping.
+			// This is the CRITICAL keepalive for proxied environments:
+			//   - It flows end-to-end (browser ↔ ZGS ↔ nginx ↔ Go) as a regular
+			//     text data frame, unlike RFC 6455 Pings which are hop-by-hop.
+			//   - It resets proxy_read_timeout at EVERY hop in the chain.
+			//   - The frontend responds with {"type":"pong"} which resets the
+			//     proxy_send_timeout at every hop on the return path.
 			session.SendMessage("ping", "")
 
 			// 3. Check client liveness — the frontend should have sent us a ping
 			// or pong (handled in Read() which updates lastHeartbeat).
-			if time.Since(session.lastHeartbeat) > 120*time.Second {
+			// Use 180s (3 minutes) to tolerate temporary network hiccups and
+			// proxy buffering delays in the ZGS → nginx → Go chain.
+			if time.Since(session.lastHeartbeat) > 180*time.Second {
 				klog.Warningf("Terminal heartbeat timeout for %s/%s (last heartbeat %v ago)",
 					session.namespace, session.podName, time.Since(session.lastHeartbeat))
 				if err := session.conn.Close(); err != nil {

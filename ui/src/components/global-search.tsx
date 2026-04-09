@@ -34,20 +34,13 @@ import { useFavorites } from '@/hooks/use-favorites'
 import { usePermissions } from '@/hooks/use-permissions'
 import { Badge } from '@/components/ui/badge'
 import {
-  Command,
+  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { ResourceType } from '@/types/api'
 import { useAppearance } from '@/components/appearance-provider'
 import { QuickYamlDialog } from './quick-yaml-dialog'
@@ -64,26 +57,26 @@ const RESOURCE_CONFIG: Record<
     badgeColor?: string
   }
 > = {
-  pods:                    { label: 'nav.pods',                    displayLabel: 'Pod',          icon: IconBox,             group: 'Workloads',  color: 'text-green-500',  badgeColor: 'bg-green-500/10 text-green-600 border-green-500/30 dark:text-green-400' },
-  deployments:             { label: 'nav.deployments',             displayLabel: 'Deployment',   icon: IconRocket,          group: 'Workloads',  color: 'text-blue-500',   badgeColor: 'bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400' },
-  daemonsets:              { label: 'nav.daemonsets',              displayLabel: 'DaemonSet',    icon: IconTopologyBus,     group: 'Workloads',  color: 'text-blue-400',   badgeColor: 'bg-blue-400/10 text-blue-500 border-blue-400/30 dark:text-blue-300' },
-  statefulsets:            { label: 'nav.statefulsets',            displayLabel: 'StatefulSet',  icon: IconServer2,         group: 'Workloads',  color: 'text-blue-400',   badgeColor: 'bg-blue-400/10 text-blue-500 border-blue-400/30 dark:text-blue-300' },
-  jobs:                    { label: 'nav.jobs',                    displayLabel: 'Job',          icon: IconPlayerPlay,      group: 'Workloads',  color: 'text-amber-500',  badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400' },
-  cronjobs:                { label: 'nav.cronJobs',                displayLabel: 'CronJob',      icon: IconPlayerPlay,      group: 'Workloads',  color: 'text-amber-400',  badgeColor: 'bg-amber-400/10 text-amber-500 border-amber-400/30 dark:text-amber-300' },
-  services:                { label: 'nav.services',                displayLabel: 'Service',      icon: IconNetwork,         group: 'Networking', color: 'text-purple-500', badgeColor: 'bg-purple-500/10 text-purple-600 border-purple-500/30 dark:text-purple-400' },
-  ingresses:               { label: 'nav.ingresses',               displayLabel: 'Ingress',      icon: IconRouter,          group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
-  gateways:                { label: 'nav.gateways',                displayLabel: 'Gateway',      icon: IconLoadBalancer,    group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
-  httproutes:              { label: 'nav.httproutes',              displayLabel: 'HTTPRoute',    icon: IconRoute,           group: 'Networking', color: 'text-purple-300', badgeColor: 'bg-purple-300/10 text-purple-400 border-purple-300/30 dark:text-purple-200' },
-  configmaps:              { label: 'nav.configMaps',              displayLabel: 'ConfigMap',    icon: IconMap,             group: 'Config',     color: 'text-orange-500', badgeColor: 'bg-orange-500/10 text-orange-600 border-orange-500/30 dark:text-orange-400' },
-  secrets:                 { label: 'nav.secrets',                 displayLabel: 'Secret',       icon: IconLock,            group: 'Config',     color: 'text-red-400',    badgeColor: 'bg-red-400/10 text-red-500 border-red-400/30 dark:text-red-300' },
-  namespaces:              { label: 'nav.namespaces',              displayLabel: 'Namespace',    icon: IconBoxMultiple,     group: 'Cluster',    color: 'text-cyan-500',   badgeColor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30 dark:text-cyan-400' },
-  nodes:                   { label: 'nav.nodes',                   displayLabel: 'Node',         icon: IconServer2,         group: 'Cluster',    color: 'text-cyan-400',   badgeColor: 'bg-cyan-400/10 text-cyan-500 border-cyan-400/30 dark:text-cyan-300' },
-  horizontalpodautoscalers:{ label: 'nav.horizontalpodautoscalers',displayLabel: 'HPA',          icon: IconArrowsHorizontal,group: 'Scaling',   color: 'text-teal-500',   badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-500/30 dark:text-teal-400' },
-  persistentvolumeclaims:  { label: 'nav.pvcs',                    displayLabel: 'PVC',          icon: IconServer,          group: 'Storage',    color: 'text-slate-500',  badgeColor: 'bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-400' },
-  persistentvolumes:       { label: 'nav.pvs',                     displayLabel: 'PV',           icon: IconServer,          group: 'Storage',    color: 'text-slate-400',  badgeColor: 'bg-slate-400/10 text-slate-500 border-slate-400/30 dark:text-slate-300' },
-  storageclasses:          { label: 'nav.storageClasses',          displayLabel: 'StorageClass', icon: IconServer,          group: 'Storage',    color: 'text-slate-400',  badgeColor: 'bg-slate-400/10 text-slate-500 border-slate-400/30 dark:text-slate-300' },
-  serviceaccounts:         { label: 'nav.serviceAccounts',         displayLabel: 'ServiceAcct',  icon: IconSettings,        group: 'Config',     color: 'text-orange-400', badgeColor: 'bg-orange-400/10 text-orange-500 border-orange-400/30 dark:text-orange-300' },
-  crs:                     { label: 'nav.crs',                     displayLabel: 'CustomRes',    icon: IconSettings,        group: 'Other',      color: 'text-slate-500',  badgeColor: 'bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-400' },
+  pods: { label: 'nav.pods', displayLabel: 'Pod', icon: IconBox, group: 'Workloads', color: 'text-green-500', badgeColor: 'bg-green-500/10 text-green-600 border-green-500/30 dark:text-green-400' },
+  deployments: { label: 'nav.deployments', displayLabel: 'Deployment', icon: IconRocket, group: 'Workloads', color: 'text-blue-500', badgeColor: 'bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400' },
+  daemonsets: { label: 'nav.daemonsets', displayLabel: 'DaemonSet', icon: IconTopologyBus, group: 'Workloads', color: 'text-blue-400', badgeColor: 'bg-blue-400/10 text-blue-500 border-blue-400/30 dark:text-blue-300' },
+  statefulsets: { label: 'nav.statefulsets', displayLabel: 'StatefulSet', icon: IconServer2, group: 'Workloads', color: 'text-blue-400', badgeColor: 'bg-blue-400/10 text-blue-500 border-blue-400/30 dark:text-blue-300' },
+  jobs: { label: 'nav.jobs', displayLabel: 'Job', icon: IconPlayerPlay, group: 'Workloads', color: 'text-amber-500', badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400' },
+  cronjobs: { label: 'nav.cronJobs', displayLabel: 'CronJob', icon: IconPlayerPlay, group: 'Workloads', color: 'text-amber-400', badgeColor: 'bg-amber-400/10 text-amber-500 border-amber-400/30 dark:text-amber-300' },
+  services: { label: 'nav.services', displayLabel: 'Service', icon: IconNetwork, group: 'Networking', color: 'text-purple-500', badgeColor: 'bg-purple-500/10 text-purple-600 border-purple-500/30 dark:text-purple-400' },
+  ingresses: { label: 'nav.ingresses', displayLabel: 'Ingress', icon: IconRouter, group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
+  gateways: { label: 'nav.gateways', displayLabel: 'Gateway', icon: IconLoadBalancer, group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
+  httproutes: { label: 'nav.httproutes', displayLabel: 'HTTPRoute', icon: IconRoute, group: 'Networking', color: 'text-purple-300', badgeColor: 'bg-purple-300/10 text-purple-400 border-purple-300/30 dark:text-purple-200' },
+  configmaps: { label: 'nav.configMaps', displayLabel: 'ConfigMap', icon: IconMap, group: 'Config', color: 'text-orange-500', badgeColor: 'bg-orange-500/10 text-orange-600 border-orange-500/30 dark:text-orange-400' },
+  secrets: { label: 'nav.secrets', displayLabel: 'Secret', icon: IconLock, group: 'Config', color: 'text-red-400', badgeColor: 'bg-red-400/10 text-red-500 border-red-400/30 dark:text-red-300' },
+  namespaces: { label: 'nav.namespaces', displayLabel: 'Namespace', icon: IconBoxMultiple, group: 'Cluster', color: 'text-cyan-500', badgeColor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30 dark:text-cyan-400' },
+  nodes: { label: 'nav.nodes', displayLabel: 'Node', icon: IconServer2, group: 'Cluster', color: 'text-cyan-400', badgeColor: 'bg-cyan-400/10 text-cyan-500 border-cyan-400/30 dark:text-cyan-300' },
+  horizontalpodautoscalers: { label: 'nav.horizontalpodautoscalers', displayLabel: 'HPA', icon: IconArrowsHorizontal, group: 'Scaling', color: 'text-teal-500', badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-500/30 dark:text-teal-400' },
+  persistentvolumeclaims: { label: 'nav.pvcs', displayLabel: 'PVC', icon: IconServer, group: 'Storage', color: 'text-slate-500', badgeColor: 'bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-400' },
+  persistentvolumes: { label: 'nav.pvs', displayLabel: 'PV', icon: IconServer, group: 'Storage', color: 'text-slate-400', badgeColor: 'bg-slate-400/10 text-slate-500 border-slate-400/30 dark:text-slate-300' },
+  storageclasses: { label: 'nav.storageClasses', displayLabel: 'StorageClass', icon: IconServer, group: 'Storage', color: 'text-slate-400', badgeColor: 'bg-slate-400/10 text-slate-500 border-slate-400/30 dark:text-slate-300' },
+  serviceaccounts: { label: 'nav.serviceAccounts', displayLabel: 'ServiceAcct', icon: IconSettings, group: 'Config', color: 'text-orange-400', badgeColor: 'bg-orange-400/10 text-orange-500 border-orange-400/30 dark:text-orange-300' },
+  crs: { label: 'nav.crs', displayLabel: 'CustomRes', icon: IconSettings, group: 'Other', color: 'text-slate-500', badgeColor: 'bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-400' },
 }
 
 /** Returns a human-readable, properly capitalised label for a resource type */
@@ -306,27 +299,23 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   }, [config, getIconComponent, t, user, canAccess, getResourceFromUrl])
 
   const sidebarResults = useMemo(() => {
-    const trimmedQuery = query.trim().toLowerCase()
-    if (!trimmedQuery) {
-      return []
-    }
+    const trimmedQuery = query.trim().toLowerCase();
+    if (trimmedQuery.length < 2) return [];
 
     return sidebarItems
       .map(item => {
-        let score = 0
-        const titleLower = item.title.toLowerCase()
-        if (titleLower === trimmedQuery) score += 1000
-        else if (titleLower.startsWith(trimmedQuery)) score += 500
-        else if (titleLower.includes(trimmedQuery)) score += 200
-        else if (item.searchText.includes(trimmedQuery)) score += 100
+        let score = 0;
+        const titleLower = item.title.toLowerCase();
+        if (titleLower === trimmedQuery) score += 1000;
+        else if (titleLower.startsWith(trimmedQuery)) score += 500;
+        else if (titleLower.includes(trimmedQuery)) score += 200;
+        else if (item.searchText.includes(trimmedQuery)) score += 100;
 
-        if (item.isPinned) score += 50
-
-        return { ...item, score }
+        return { ...item, score };
       })
       .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
-  }, [query, sidebarItems])
+      .sort((a, b) => b.score - a.score);
+  }, [query, sidebarItems]);
 
   // Use favorites hook
   const {
@@ -449,14 +438,14 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     // If user typed a kubectl command, show a special action at the top
     const kubectlAction: ActionSearchItem[] = isKubectlQuery
       ? [{
-          id: 'kubectl-advanced-search',
-          label: `Run in Advanced Search: ${query.trim()}`,
-          icon: IconSearch,
-          searchText: '',
-          onSelect: () => {
-            handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
-          },
-        }]
+        id: 'kubectl-advanced-search',
+        label: `Run in Advanced Search: ${query.trim()}`,
+        icon: IconSearch,
+        searchText: '',
+        onSelect: () => {
+          handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
+        },
+      }]
       : []
 
     const filtered = actionItems
@@ -506,6 +495,37 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       setIsLoading(false)
     }
   }, [])
+
+  // Helper for action selection — also used by the Enter key handler below
+  const actionOptionOnSelect = useCallback((action: ActionSearchItem) => {
+    action.onSelect()
+    onOpenChange(false)
+    setQuery('')
+  }, [onOpenChange])
+
+  // Keyboard shortcut: Press Enter to trigger the top-most result
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && open) {
+        const firstAction = actionResults[0]
+
+        if (firstAction) {
+          e.preventDefault()
+          actionOptionOnSelect(firstAction)
+        } else if (results && results.length > 0) {
+          e.preventDefault()
+          const firstResult = results[0]
+          const path = firstResult.namespace
+            ? `/${firstResult.resourceType}/${firstResult.namespace}/${firstResult.name}`
+            : `/${firstResult.resourceType}/${firstResult.name}`
+          handleSelect(path)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, actionResults, results, actionOptionOnSelect, handleSelect])
 
   // Debounce search calls
   useEffect(() => {
@@ -567,292 +587,285 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   }, [results])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0 max-w-[90vw] w-full xl:max-w-7xl h-[75vh] flex flex-col">
-        <DialogHeader className="sr-only">
-          <DialogTitle>{t('globalSearch.title')}</DialogTitle>
-          <DialogDescription>{t('globalSearch.description')}</DialogDescription>
-        </DialogHeader>
-        <Command shouldFilter={false}>
-          <div className="flex items-center gap-2 border-b px-3">
-            <CommandInput
-              placeholder={t('globalSearch.placeholder')}
-              value={query}
-              onValueChange={setQuery}
-              className="border-0 focus:ring-0 flex-1"
-            />
-            {availableNamespaces.length > 0 && (
-              <div className="flex items-center gap-1 border-l pl-3 py-1">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground whitespace-nowrap">Filter:</span>
-                <select
-                  value={namespaceFilter}
-                  onChange={(e) => setNamespaceFilter(e.target.value)}
-                  className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer font-medium"
-                >
-                  <option value="">All Namespaces</option>
-                  {availableNamespaces.map(ns => (
-                    <option key={ns} value={ns}>{ns}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 border-l pl-3">
-              <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                <span className="text-xs">↵</span>
-              </kbd>
-            </div>
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      className="max-w-[90vw] w-full xl:max-w-7xl h-[75vh]"
+      commandProps={{ shouldFilter: false }}
+    >
+      <div className="flex items-center gap-2 border-b px-3">
+        <CommandInput
+          placeholder={t('globalSearch.placeholder')}
+          value={query}
+          onValueChange={setQuery}
+          className="border-0 focus:ring-0 flex-1"
+        />
+        {availableNamespaces.length > 0 && (
+          <div className="flex items-center gap-1 border-l pl-3 py-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground whitespace-nowrap">Filter:</span>
+            <select
+              value={namespaceFilter}
+              onChange={(e) => setNamespaceFilter(e.target.value)}
+              className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer font-medium"
+            >
+              <option value="">All Namespaces</option>
+              {availableNamespaces.map(ns => (
+                <option key={ns} value={ns}>{ns}</option>
+              ))}
+            </select>
           </div>
-          {/* Advanced search hint banner */}
-          {query.length >= 1 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/30 text-[10px] text-muted-foreground">
-              <span>💡</span>
-              <span>
-                Need more power? Try{' '}
-                <button
-                  className="font-semibold text-primary hover:underline"
-                  onClick={() => {
-                    handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
-                  }}
-                >
-                  Advanced Search
-                </button>
-                {' '}— supports <code className="bg-muted px-1 rounded text-[9px] font-mono">kubectl get pods -n default</code>,
-                {' '}<code className="bg-muted px-1 rounded text-[9px] font-mono">jsonpath</code>,
-                {' '}expressions & RBAC-scoped queries
-              </span>
+        )}
+        <div className="flex items-center gap-1.5 border-l pl-3">
+          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+            <span className="text-xs">↵</span>
+          </kbd>
+        </div>
+      </div>
+      {/* Advanced search hint banner */}
+      {query.length >= 1 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/30 text-[10px] text-muted-foreground">
+          <span>💡</span>
+          <span>
+            Need more power? Try{' '}
+            <button
+              className="font-semibold text-primary hover:underline"
+              onClick={() => {
+                handleSelect(`/expression-search?q=${encodeURIComponent(query.trim())}`)
+              }}
+            >
+              Advanced Search
+            </button>
+            {' '}— supports <code className="bg-muted px-1 rounded text-[9px] font-mono">kubectl get pods -n default</code>,
+            {' '}<code className="bg-muted px-1 rounded text-[9px] font-mono">jsonpath</code>,
+            {' '}expressions & RBAC-scoped queries
+          </span>
+        </div>
+      )}
+      <CommandList className="flex-1 overflow-y-auto">
+        <CommandEmpty>
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-6">
+              <IconLoader className="h-4 w-4 animate-spin" />
+              <span>{t('globalSearch.searching')}</span>
             </div>
+          ) : query.length < 2 ? (
+            t('globalSearch.emptyHint')
+          ) : (
+            t('globalSearch.noResults')
           )}
-          <CommandList>
-            <CommandEmpty>
-              {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6">
-                  <IconLoader className="h-4 w-4 animate-spin" />
-                  <span>{t('globalSearch.searching')}</span>
-                </div>
-              ) : query.length < 2 ? (
-                t('globalSearch.emptyHint')
-              ) : (
-                t('globalSearch.noResults')
-              )}
-            </CommandEmpty>
+        </CommandEmpty>
 
-            {sidebarResults.length > 0 && (
-              <CommandGroup heading={t('globalSearch.navigation')}>
-                {sidebarResults.map((item) => {
-                  const Icon = item.Icon
-                  return (
-                    <CommandItem
-                      key={`nav-${item.id}`}
-                      value={`${item.title} ${item.groupLabel || ''} ${item.url}`}
-                      onSelect={() => handleSelect(item.url)}
-                      className="flex items-center gap-3 py-3"
-                    >
-                      <Icon className="h-4 w-4 text-sidebar-primary" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            <Highlight text={item.title} query={query} />
-                          </span>
-                          {item.groupLabel ? (
-                            <Badge className="text-xs" variant="outline">
-                              {item.groupLabel}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {item.url}
-                        </div>
-                      </div>
-                      {item.isPinned ? (
-                        <Badge className="text-xs" variant="secondary">
-                          {t('sidebar.pinned', 'Pinned')}
+        {sidebarResults.length > 0 && (
+          <CommandGroup heading={t('globalSearch.navigation')}>
+            {sidebarResults.map((item) => {
+              const Icon = item.Icon
+              return (
+                <CommandItem
+                  key={`nav-${item.id}`}
+                  value={`${item.title} ${item.groupLabel || ''} ${item.url}`}
+                  onSelect={() => handleSelect(item.url)}
+                  className="flex items-center gap-3 py-3"
+                >
+                  <Icon className="h-4 w-4 text-sidebar-primary" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        <Highlight text={item.title} query={query} />
+                      </span>
+                      {item.groupLabel ? (
+                        <Badge className="text-xs" variant="outline">
+                          {item.groupLabel}
                         </Badge>
                       ) : null}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {item.url}
+                    </div>
+                  </div>
+                  {item.isPinned ? (
+                    <Badge className="text-xs" variant="secondary">
+                      {t('sidebar.pinned', 'Pinned')}
+                    </Badge>
+                  ) : null}
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+        )}
+
+        {actionResults.length > 0 && (
+          <CommandGroup heading={t('globalSearch.actions')}>
+            {actionResults.map((actionOption) => (
+              <CommandItem
+                key={actionOption.id}
+                value={`${actionOption.label} theme toggle mode`}
+                onSelect={() => actionOptionOnSelect(actionOption)}
+                className="flex items-center gap-3 py-3"
+              >
+                <actionOption.icon className="h-4 w-4 text-sidebar-primary" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {actionOption.label}
+                    </span>
+                    {actionOption.id === 'toggle-theme' && (
+                      <Badge className="text-xs" variant="outline">
+                        {actualTheme === 'dark'
+                          ? 'Switch to Light'
+                          : 'Switch to Dark'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {results && results.length > 0 && (() => {
+          const filtered = results.filter(result => canAccess(result.resourceType as any, 'get', result.namespace))
+          const isFavoriteView = query.length < 2
+
+          if (isFavoriteView) {
+            // Favorites view — flat list
+            return (
+              <CommandGroup heading={t('globalSearch.favorites')}>
+                {filtered.map((result) => {
+                  const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, displayLabel: result.resourceType, icon: IconBox, color: '', badgeColor: '' }
+                  const { displayLabel, badgeColor } = getResourceTypeLabel(result.resourceType)
+                  const Icon = cfg.icon
+                  const isFav = isFavorite(result.id)
+                  const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
+                  return (
+                    <CommandItem key={result.id} value={`fav-${result.id}`} onSelect={() => handleSelect(path)} className="flex items-center gap-3 py-2.5">
+                      <div className={`p-1.5 rounded-md bg-muted/50 ${cfg.color || 'text-sidebar-primary'}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate">{result.name}</span>
+                        {result.namespace && <div className="text-xs text-muted-foreground"><span className="opacity-60">ns/</span>{result.namespace}</div>}
+                      </div>
+                      {/* Resource type badge — always visible */}
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
+                      >
+                        {displayLabel}
+                      </Badge>
+                      <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }} className="p-1 hover:bg-accent rounded transition-colors">
+                        {isFav ? <IconStarFilled className="h-3 w-3 text-yellow-500" /> : <IconStar className="h-3 w-3 text-muted-foreground opacity-50" />}
+                      </button>
                     </CommandItem>
                   )
                 })}
               </CommandGroup>
-            )}
+            )
+          }
 
-            {actionResults.length > 0 && (
-              <CommandGroup heading={t('globalSearch.actions')}>
-                {actionResults.map((actionOption) => (
-                  <CommandItem
-                    key={actionOption.id}
-                    value={`${actionOption.label} theme toggle mode`}
-                    onSelect={() => {
-                      actionOption.onSelect()
-                      onOpenChange(false)
-                      setQuery('')
-                    }}
-                    className="flex items-center gap-3 py-3"
-                  >
-                    <actionOption.icon className="h-4 w-4 text-sidebar-primary" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {actionOption.label}
-                        </span>
-                        {actionOption.id === 'toggle-theme' && (
-                          <Badge className="text-xs" variant="outline">
-                            {actualTheme === 'dark'
-                              ? 'Switch to Light'
-                              : 'Switch to Dark'}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+          // Categorized workload groups
+          const grouped: Record<string, typeof filtered> = {}
+          filtered.forEach(result => {
+            const group = RESOURCE_CONFIG[result.resourceType]?.group || 'Other'
+            if (!grouped[group]) grouped[group] = []
+            grouped[group].push(result)
+          })
 
-            {results && results.length > 0 && (() => {
-              const filtered = results.filter(result => canAccess(result.resourceType as any, 'get', result.namespace))
-              const isFavoriteView = query.length < 2
+          const orderedGroupKeys = [
+            ...WORKLOAD_GROUP_ORDER.filter(g => grouped[g]),
+            ...Object.keys(grouped).filter(g => !WORKLOAD_GROUP_ORDER.includes(g)),
+          ]
 
-              if (isFavoriteView) {
-                // Favorites view — flat list
-                return (
-                  <CommandGroup heading={t('globalSearch.favorites')}>
-                    {filtered.map((result) => {
-                      const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, displayLabel: result.resourceType, icon: IconBox, color: '', badgeColor: '' }
-                      const { displayLabel, badgeColor } = getResourceTypeLabel(result.resourceType)
-                      const Icon = cfg.icon
-                      const isFav = isFavorite(result.id)
-                      const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
-                      return (
-                        <CommandItem key={result.id} value={`fav-${result.id}`} onSelect={() => handleSelect(path)} className="flex items-center gap-3 py-2.5">
-                          <div className={`p-1.5 rounded-md bg-muted/50 ${cfg.color || 'text-sidebar-primary'}`}>
-                            <Icon className="h-3.5 w-3.5" />
+          return (
+            <>
+              {orderedGroupKeys.map(group => (
+                <CommandGroup key={group} heading={
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider">{group}</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">({grouped[group].length})</span>
+                  </span>
+                }>
+                  {grouped[group].map((result) => {
+                    const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, displayLabel: result.resourceType, icon: IconBox, color: '', badgeColor: '' }
+                    const { displayLabel, badgeColor } = getResourceTypeLabel(result.resourceType)
+                    const Icon = cfg.icon
+                    const isFav = isFavorite(result.id)
+                    const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
+                    const canExec = result.resourceType === 'pods' && canAccess('pods', 'exec', result.namespace)
+                    const canLogs = result.resourceType === 'pods' && canAccess('pods', 'get', result.namespace)
+                    return (
+                      <CommandItem
+                        key={result.id}
+                        value={`${result.name} ${result.namespace || ''} ${result.resourceType}`}
+                        onSelect={() => handleSelect(path)}
+                        className="flex items-center gap-3 py-2.5 group/item"
+                      >
+                        <div className={`p-1.5 rounded-md bg-muted/50 ${cfg.color || 'text-sidebar-primary'}`}>
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-medium text-sm truncate">
+                              <Highlight text={result.name} query={query} />
+                            </span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium text-sm truncate">{result.name}</span>
-                            {result.namespace && <div className="text-xs text-muted-foreground"><span className="opacity-60">ns/</span>{result.namespace}</div>}
-                          </div>
-                          {/* Resource type badge — always visible */}
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
-                          >
-                            {displayLabel}
-                          </Badge>
-                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }} className="p-1 hover:bg-accent rounded transition-colors">
-                            {isFav ? <IconStarFilled className="h-3 w-3 text-yellow-500" /> : <IconStar className="h-3 w-3 text-muted-foreground opacity-50" />}
-                          </button>
-                        </CommandItem>
-                      )
-                    })}
-                  </CommandGroup>
-                )
-              }
-
-              // Categorized workload groups
-              const grouped: Record<string, typeof filtered> = {}
-              filtered.forEach(result => {
-                const group = RESOURCE_CONFIG[result.resourceType]?.group || 'Other'
-                if (!grouped[group]) grouped[group] = []
-                grouped[group].push(result)
-              })
-
-              const orderedGroupKeys = [
-                ...WORKLOAD_GROUP_ORDER.filter(g => grouped[g]),
-                ...Object.keys(grouped).filter(g => !WORKLOAD_GROUP_ORDER.includes(g)),
-              ]
-
-              return (
-                <>
-                  {orderedGroupKeys.map(group => (
-                    <CommandGroup key={group} heading={
-                      <span className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider">{group}</span>
-                        <span className="text-[10px] text-muted-foreground font-normal">({grouped[group].length})</span>
-                      </span>
-                    }>
-                      {grouped[group].map((result) => {
-                        const cfg = RESOURCE_CONFIG[result.resourceType] || { label: result.resourceType, displayLabel: result.resourceType, icon: IconBox, color: '', badgeColor: '' }
-                        const { displayLabel, badgeColor } = getResourceTypeLabel(result.resourceType)
-                        const Icon = cfg.icon
-                        const isFav = isFavorite(result.id)
-                        const path = result.namespace ? `/${result.resourceType}/${result.namespace}/${result.name}` : `/${result.resourceType}/${result.name}`
-                        const canExec = result.resourceType === 'pods' && canAccess('pods', 'exec', result.namespace)
-                        const canLogs = result.resourceType === 'pods' && canAccess('pods', 'get', result.namespace)
-                        return (
-                          <CommandItem
-                            key={result.id}
-                            value={`${result.name} ${result.namespace || ''} ${result.resourceType}`}
-                            onSelect={() => handleSelect(path)}
-                            className="flex items-center gap-3 py-2.5 group/item"
-                          >
-                            <div className={`p-1.5 rounded-md bg-muted/50 ${cfg.color || 'text-sidebar-primary'}`}>
-                              <Icon className="h-3.5 w-3.5" />
+                          {result.namespace && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              <span className="opacity-60">ns/</span>
+                              <Highlight text={result.namespace} query={query} />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="font-medium text-sm truncate">
-                                  <Highlight text={result.name} query={query} />
-                                </span>
-                              </div>
-                              {result.namespace && (
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  <span className="opacity-60">ns/</span>
-                                  <Highlight text={result.namespace} query={query} />
-                                </div>
-                              )}
-                            </div>
+                          )}
+                        </div>
 
-                            {/* ── Resource type badge — always visible, colour-coded per type ── */}
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
-                            >
-                              {displayLabel}
-                            </Badge>
+                        {/* ── Resource type badge — always visible, colour-coded per type ── */}
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
+                        >
+                          {displayLabel}
+                        </Badge>
 
-                            {/* ── Action buttons (shell / logs / yaml) — appear on hover ── */}
-                            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                              {canExec && (
-                                <button
-                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePodAction(result, 'terminal') }}
-                                  className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
-                                >Shell</button>
-                              )}
-                              {canLogs && (
-                                <button
-                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePodAction(result, 'logs') }}
-                                  className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
-                                >Logs</button>
-                              )}
-                              <QuickYamlDialog
-                                resourceType={result.resourceType as ResourceType}
-                                name={result.name}
-                                namespace={result.namespace}
-                                triggerVariant="ghost"
-                                triggerSize="icon"
-                                className="h-6 w-6 p-0"
-                              />
-                            </div>
-
-                            {/* ── Favourite star ── */}
+                        {/* ── Action buttons (shell / logs / yaml) — appear on hover ── */}
+                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                          {canExec && (
                             <button
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }}
-                              className="p-1 hover:bg-accent rounded transition-colors z-10 relative shrink-0"
-                            >
-                              {isFav
-                                ? <IconStarFilled className="h-3 w-3 text-yellow-500" />
-                                : <IconStar className="h-3 w-3 text-muted-foreground opacity-0 group-hover/item:opacity-50" />}
-                            </button>
-                          </CommandItem>
-                        )
-                      })}
-                    </CommandGroup>
-                  ))}
-                </>
-              )
-            })()}
-          </CommandList>
-        </Command>
-      </DialogContent>
-    </Dialog>
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePodAction(result, 'terminal') }}
+                              className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
+                            >Shell</button>
+                          )}
+                          {canLogs && (
+                            <button
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePodAction(result, 'logs') }}
+                              className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors"
+                            >Logs</button>
+                          )}
+                          <QuickYamlDialog
+                            resourceType={result.resourceType as ResourceType}
+                            name={result.name}
+                            namespace={result.namespace}
+                            triggerVariant="ghost"
+                            triggerSize="icon"
+                            className="h-6 w-6 p-0"
+                          />
+                        </div>
+
+                        {/* ── Favourite star ── */}
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(result, e) }}
+                          className="p-1 hover:bg-accent rounded transition-colors z-10 relative shrink-0"
+                        >
+                          {isFav
+                            ? <IconStarFilled className="h-3 w-3 text-yellow-500" />
+                            : <IconStar className="h-3 w-3 text-muted-foreground opacity-0 group-hover/item:opacity-50" />}
+                        </button>
+                      </CommandItem>
+                    )
+                  })}
+                </CommandGroup>
+              ))}
+            </>
+          )
+        })()}
+      </CommandList>
+    </CommandDialog>
   )
 }

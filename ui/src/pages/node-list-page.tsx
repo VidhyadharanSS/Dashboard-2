@@ -15,7 +15,13 @@ import { ResourceTable } from '@/components/resource-table'
 import { Button } from '@/components/ui/button'
 import { ClusterHeatmap } from '@/components/cluster-heatmap'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
+import { NodeLabelSelector } from '@/components/selector/node-label-selector'
 
+/**
+ * Enhanced status detection. Returns a pipe-delimited string of all relevant states.
+ * Example: "Ready|DiskPressure" or "NotReady,SchedulingDisabled|MemoryPressure"
+ */
 function getNodeStatus(node: NodeWithMetrics): string {
   const conditions = node.status?.conditions || []
   const isUnschedulable = node.spec?.unschedulable || false
@@ -24,48 +30,39 @@ function getNodeStatus(node: NodeWithMetrics): string {
   const readyCondition = conditions.find((c) => c.type === 'Ready')
   const isReady = readyCondition?.status === 'True'
 
+  const statuses: string[] = []
+
+  // Base state
   if (isUnschedulable) {
-    if (isReady) {
-      return 'Ready,SchedulingDisabled'
-    } else {
-      return 'NotReady,SchedulingDisabled'
+    statuses.push(isReady ? 'Ready,SchedulingDisabled' : 'NotReady,SchedulingDisabled')
+  } else if (isReady) {
+    statuses.push('Ready')
+  } else {
+    statuses.push('NotReady')
+  }
+
+  // Check for pressure and network issues as secondary flags
+  const healthIssues = [
+    { type: 'NetworkUnavailable', label: 'NetworkUnavailable' },
+    { type: 'MemoryPressure', label: 'MemoryPressure' },
+    { type: 'DiskPressure', label: 'DiskPressure' },
+    { type: 'PIDPressure', label: 'PIDPressure' },
+  ]
+
+  healthIssues.forEach((issue) => {
+    const condition = conditions.find((c) => c.type === issue.type)
+    if (condition?.status === 'True') {
+      statuses.push(issue.label)
     }
-  }
+  })
 
-  if (isReady) {
-    return 'Ready'
-  }
-
-  const networkUnavailable = conditions.find(
-    (c) => c.type === 'NetworkUnavailable'
-  )
-  if (networkUnavailable?.status === 'True') {
-    return 'NetworkUnavailable'
-  }
-
-  const memoryPressure = conditions.find((c) => c.type === 'MemoryPressure')
-  if (memoryPressure?.status === 'True') {
-    return 'MemoryPressure'
-  }
-
-  const diskPressure = conditions.find((c) => c.type === 'DiskPressure')
-  if (diskPressure?.status === 'True') {
-    return 'DiskPressure'
-  }
-
-  const pidPressure = conditions.find((c) => c.type === 'PIDPressure')
-  if (pidPressure?.status === 'True') {
-    return 'PIDPressure'
-  }
-
-  return 'NotReady'
+  return statuses.join('|')
 }
 
 function getNodeRoles(node: NodeWithMetrics): string[] {
   const labels = node.metadata?.labels || {}
   const roles: string[] = []
 
-  // Check for common node role labels
   if (
     labels['node-role.kubernetes.io/master'] !== undefined ||
     labels['node-role.kubernetes.io/control-plane'] !== undefined
@@ -93,33 +90,23 @@ function getNodeRoles(node: NodeWithMetrics): string[] {
     }
   })
 
-  return roles // Do not assume a default role if none are found
+  return roles
 }
 
-// Prefer Internal IP, then External IP, then fallback to hostname
 function getNodeIP(node: NodeWithMetrics): string {
   const addresses = node.status?.addresses || []
 
   const internalIP = addresses.find((addr) => addr.type === 'InternalIP')
-  if (internalIP) {
-    return internalIP.address
-  }
+  if (internalIP) return internalIP.address
 
   const externalIP = addresses.find((addr) => addr.type === 'ExternalIP')
-  if (externalIP) {
-    return externalIP.address
-  }
+  if (externalIP) return externalIP.address
 
   const hostname = addresses.find((addr) => addr.type === 'Hostname')
-  if (hostname) {
-    return hostname.address
-  }
+  if (hostname) return hostname.address
 
   return 'N/A'
 }
-
-import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
-import { NodeLabelSelector } from '@/components/selector/node-label-selector'
 
 export function NodeListPage() {
   const { t } = useTranslation()
@@ -127,10 +114,8 @@ export function NodeListPage() {
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'ready' | 'notready' | 'unschedulable'>('all')
 
-  // Define column helper outside of any hooks
   const columnHelper = createColumnHelper<NodeWithMetrics>()
 
-  // Define columns for the node table
   const columns = useMemo(
     () => [
       columnHelper.accessor('metadata.name', {
@@ -147,12 +132,32 @@ export function NodeListPage() {
         id: 'status',
         header: t('common.status'),
         cell: ({ getValue }) => {
-          const status = getValue()
+          const statusStr = getValue()
+          const parts = statusStr.split('|')
+          const mainStatus = parts[0]
+          const issues = parts.slice(1)
+
           return (
-            <Badge variant="outline" className="text-muted-foreground px-1.5 text-[10px] font-bold uppercase tracking-tight">
-              <NodeStatusIcon status={status} />
-              {status}
-            </Badge>
+            <div className="flex flex-wrap gap-1 items-center">
+              <Badge variant="outline" className="text-muted-foreground px-1.5 text-[10px] font-bold uppercase tracking-tight gap-1">
+                <NodeStatusIcon status={mainStatus} className="size-3" />
+                {mainStatus.replace('Ready,', '').replace('NotReady,', '')}
+              </Badge>
+              {issues.map((issue) => (
+                <TooltipProvider key={issue}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="destructive" className="px-1 text-[9px] h-4 leading-none uppercase animate-pulse cursor-help">
+                        {issue.replace('Pressure', '').replace('Unavailable', '!!')}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs font-semibold">{issue}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+            </div>
           )
         },
       }),
@@ -327,7 +332,6 @@ export function NodeListPage() {
     [columnHelper, t]
   )
 
-  // Custom filter for node search
   const nodeSearchFilter = useCallback(
     (node: NodeWithMetrics, query: string) => {
       const lowerQuery = query.toLowerCase()
@@ -336,19 +340,16 @@ export function NodeListPage() {
       const status = getNodeStatus(node)
 
       let statusMatch = true
-      if (statusFilter === 'ready') statusMatch = status === 'Ready'
-      else if (statusFilter === 'notready') statusMatch = status === 'NotReady' || status.includes('Pressure') || status.includes('Unavailable')
+      if (statusFilter === 'ready') statusMatch = status.includes('Ready')
+      else if (statusFilter === 'notready') statusMatch = status.includes('NotReady') || status.includes('Pressure') || status.includes('Unavailable')
       else if (statusFilter === 'unschedulable') statusMatch = status.includes('Disabled')
 
       if (!statusMatch) return false
-
       if (!query) return true
 
       return (
         node.metadata!.name!.toLowerCase().includes(lowerQuery) ||
-        (node.status?.nodeInfo?.kubeletVersion?.toLowerCase() || '').includes(
-          lowerQuery
-        ) ||
+        (node.status?.nodeInfo?.kubeletVersion?.toLowerCase() || '').includes(lowerQuery) ||
         status.toLowerCase().includes(lowerQuery) ||
         roles.some((role) => role.toLowerCase().includes(lowerQuery)) ||
         ip.toLowerCase().includes(lowerQuery)

@@ -35,11 +35,12 @@ type WebSocketKeepalive struct {
 }
 
 // NewWebSocketKeepalive creates a new keepalive manager for a WebSocket connection.
-// Default ping interval: 20s (safe for the common 60s proxy read-timeout).
+// Default ping interval: 15s — safe for multi-proxy chains where the shortest
+// idle timeout may be 30s (ZGS) or 60s (ingress-nginx default).
 func NewWebSocketKeepalive(conn *websocket.Conn) *WebSocketKeepalive {
 	return &WebSocketKeepalive{
 		conn:        conn,
-		interval:    20 * time.Second,
+		interval:    15 * time.Second,
 		stopChan:    make(chan struct{}),
 		stoppedChan: make(chan struct{}),
 	}
@@ -107,3 +108,4 @@ func (k *WebSocketKeepalive) SetInterval(interval time.Duration) {
 	defer k.mu.Unlock()
 	k.interval = interval
 }
+

@@ -20,12 +20,6 @@ import (
 const tailSizeBytes = 16384 // 16 KiB
 
 // StreamLogFile streams a log file to the client using Server-Sent Events (SSE).
-//
-// The initial response contains the last ~200 lines of the file (tail), then
-// new lines are pushed as they appear every 250ms.  A heartbeat comment is sent
-// every 15 seconds so that:
-//   - HTTP proxies (nginx, corporate HTTPS proxy) don't close the idle connection.
-//   - The browser EventSource API knows the connection is still alive.
 func StreamLogFile(c *gin.Context) {
 	filename := c.Param("filename")
 	if filename != "application.log" && filename != "access.log" {
@@ -36,17 +30,20 @@ func StreamLogFile(c *gin.Context) {
 	logPath := filepath.Join(common.LogDir, filename)
 	file, err := os.Open(logPath)
 	if err != nil {
-		// Return 404 rather than 500 so the frontend can show a useful message
 		if os.IsNotExist(err) {
-			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("log file %q not found — it will appear once the application writes its first log entry", filename)})
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": fmt.Sprintf("log file %q not found — it will appear once the application writes its first log entry", filename),
+			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to open log file: %v", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("failed to open log file: %v", err),
+		})
 		return
 	}
 	defer file.Close()
 
-	// ── Tail: seek back tailSizeBytes from the end so we send recent history ──
+	// Tail logic
 	didSeek := false
 	if info, statErr := file.Stat(); statErr == nil && info.Size() > tailSizeBytes {
 		if _, seekErr := file.Seek(-tailSizeBytes, io.SeekEnd); seekErr == nil {
@@ -54,16 +51,15 @@ func StreamLogFile(c *gin.Context) {
 		}
 	}
 
-	// SSE headers — must be set before first Write
+	// SSE headers
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache, no-transform")
 	c.Header("Connection", "keep-alive")
-	c.Header("X-Accel-Buffering", "no") // Disable nginx proxy buffering
+	c.Header("X-Accel-Buffering", "no")
 	c.Header("Transfer-Encoding", "chunked")
 
 	clientGone := c.Request.Context().Done()
 
-	// Poll for new lines every 250ms; heartbeat every 15s
 	pollTicker := time.NewTicker(250 * time.Millisecond)
 	heartbeatTicker := time.NewTicker(15 * time.Second)
 	defer pollTicker.Stop()
@@ -71,7 +67,6 @@ func StreamLogFile(c *gin.Context) {
 
 	reader := bufio.NewReaderSize(file, 64*1024)
 
-	// If we seeked, discard the partial first line (which may be cut mid-way)
 	if didSeek {
 		_, _ = reader.ReadString('\n')
 	}
@@ -82,33 +77,35 @@ func StreamLogFile(c *gin.Context) {
 			return
 
 		case <-heartbeatTicker.C:
-			// SSE comment — ignored by EventSource API but keeps the TCP connection alive
-			// through proxies that otherwise time out idle connections.
 			fmt.Fprintf(c.Writer, ": heartbeat\n\n")
 			c.Writer.Flush()
 
 		case <-pollTicker.C:
-			// Drain all new lines that have been written since last poll
 			flushed := false
+
 			for {
-				line, readErr := reader.ReadString('\n')
-				if line != "" {
-					// Strip trailing newline from the line before embedding in SSE data field
-					trimmed := strings.TrimRight(line, "\r\n")
+				line, readErr := reader.ReadSlice('\n')
+
+				if len(line) > 0 {
+					trimmed := strings.TrimRight(string(line), "\r\n")
 					if trimmed != "" {
 						fmt.Fprintf(c.Writer, "data: %s\n\n", trimmed)
 						flushed = true
 					}
 				}
+
 				if readErr != nil {
+					if readErr == bufio.ErrBufferFull {
+						continue
+					}
 					if readErr == io.EOF {
-						// No more data right now — wait for next poll tick
 						break
 					}
 					klog.Errorf("Error reading log file %s: %v", filename, readErr)
 					return
 				}
 			}
+
 			if flushed {
 				c.Writer.Flush()
 			}

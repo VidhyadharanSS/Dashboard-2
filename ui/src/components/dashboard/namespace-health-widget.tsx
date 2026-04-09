@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { getPodStatus } from '@/lib/k8s'
 import { useMemo } from 'react'
 import { useNamespaceContext } from '@/hooks/use-namespace-context'
-
+import { useCluster } from '@/contexts/cluster-context'
 
 interface NsHealth {
     ns: string
@@ -22,7 +22,8 @@ interface NsHealth {
 export function NamespaceHealthWidget() {
     const navigate = useNavigate()
     const { canAccess } = usePermissions()
-    const { pinned, toggle, isPinned } = usePinnedNamespaces()
+    const { currentCluster } = useCluster()
+    const { pinned, toggle, isPinned } = usePinnedNamespaces(currentCluster)
     const { setActiveNamespace } = useNamespaceContext()
     const canList = canAccess('pods', 'list')
 

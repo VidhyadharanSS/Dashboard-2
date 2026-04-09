@@ -95,7 +95,7 @@ func (h *NodeTerminalHandler) HandleNodeTerminalWebSocket(c *gin.Context) {
 		logger.Audit(user.Key(), "node-terminal-start", "nodes", "", cs.Name, fmt.Sprintf("Session started on node %s from IP %s", nodeName, clientIP))
 
 		// ─── Verify node exists ───
-		node, err := cs.K8sClient.ClientSet.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		node, err := cs.K8sClient.ClientSet.CoreV1().Nodes().Get(c.Request.Context(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			log.Printf("Failed to get node %s: %v", nodeName, err)
 			h.sendErrorMessage(conn, fmt.Sprintf("Failed to get node %s: %v", nodeName, err))
@@ -317,7 +317,7 @@ func (h *NodeTerminalHandler) waitForPodReady(ctx context.Context, cs *cluster.C
 		case <-ticker.C:
 			var err error
 			pod, err = cs.K8sClient.ClientSet.CoreV1().Pods("kube-system").Get(
-				context.TODO(), podName, metav1.GetOptions{},
+				ctx, podName, metav1.GetOptions{},
 			)
 			if err != nil {
 				continue
@@ -343,7 +343,7 @@ func (h *NodeTerminalHandler) waitForPodReady(ctx context.Context, cs *cluster.C
 func (h *NodeTerminalHandler) cleanupNodeAgentPod(cs *cluster.ClientSet, podName string) error {
 	gracePeriod := int64(0)
 	return cs.K8sClient.ClientSet.CoreV1().Pods("kube-system").Delete(
-		context.TODO(),
+		context.Background(),
 		podName,
 		metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod},
 	)

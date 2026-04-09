@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-
+    "sync"
 	"github.com/zxh326/kite/pkg/common"
 	"github.com/zxh326/kite/pkg/model"
 	"k8s.io/klog/v2"
@@ -90,22 +90,39 @@ func findRole(name string) *common.Role {
 	return nil
 }
 
+var (
+	regexCache = make(map[string]*regexp.Regexp)
+	cacheMu    sync.RWMutex
+)
+
 func match(list []string, val string) bool {
 	for _, v := range list {
+		if v == "*" || v == val {
+			return true
+		}
 		if len(v) > 1 && strings.HasPrefix(v, "!") {
 			if v[1:] == val {
 				return false
 			}
 		}
-		if v == "*" || v == val {
-			return true
+
+		// Check cache first
+		cacheMu.RLock()
+		re, ok := regexCache[v]
+		cacheMu.RUnlock()
+
+		if !ok {
+			var err error
+			re, err = regexp.Compile(v)
+			if err != nil {
+				klog.Error(err)
+				continue
+			}
+			cacheMu.Lock()
+			regexCache[v] = re
+			cacheMu.Unlock()
 		}
 
-		re, err := regexp.Compile(v)
-		if err != nil {
-			klog.Error(err)
-			continue
-		}
 		if re.MatchString(val) {
 			return true
 		}
