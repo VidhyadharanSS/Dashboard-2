@@ -253,12 +253,37 @@
     "allNamespaces": "All Namespaces",
     "verb": {
       "get": "Get",
+      "list": "List",
+      "watch": "Watch",
       "create": "Create",
       "update": "Update",
+      "patch": "Patch",
+      "apply": "Apply",
       "delete": "Delete",
       "log": "View Logs",
       "exec": "Execute"
     }
+  },
+  "createResource": {
+    "title": "Apply Resources",
+    "selectTemplate": "Select a template",
+    "emptyTemplate": "Empty Template",
+    "success": "Resource created successfully",
+    "multiSuccess": "{{count}} resource(s) applied successfully",
+    "multiPartial": "{{succeeded}} succeeded, {{failed}} failed",
+    "allFailed": "All {{count}} resource(s) failed to apply",
+    "preview": "Preview",
+    "previewDescription": "Parse and identify all resource objects before applying",
+    "dryRun": "Dry Run",
+    "dryRunDescription": "Validate against the cluster without making changes",
+    "objectsDetected": "~{{count}} objects detected",
+    "validationPassed": "{{count}} valid",
+    "validationFailed": "{{count}} invalid",
+    "backToEditor": "Back to Editor",
+    "editAgain": "Edit Again",
+    "applyForReal": "Apply for Real",
+    "done": "Done",
+    "retry": "Retry"
   },
   "settings": {
     "title": "Settings",
@@ -267,7 +292,11 @@
       "clusters": "Cluster",
       "oauth": "OAuth",
       "rbac": "RBAC",
-      "users": "User"
+      "users": "User",
+      "apikeys": "API Keys",
+      "templates": "Templates",
+      "sessions": "Sessions",
+      "audit": "Audit"
     }
   },
   "settingsHint": {
@@ -604,11 +633,12 @@
     "waitingLogs": "Waiting for logs...",
     "recentDeployments": "Recent Deployments",
     "deploymentRollback": "Deployment Rollback",
-    "failingPods": "Failing Pods",
+    "failingPods": "Unhealthy Pods",
     "namespaceHealth": "Namespace Health",
     "podRestartLeaderboard": "Pod Restart Leaderboard",
     "workloadDistribution": "Workload Distribution",
     "topConsumers": "Top Consumers",
+    "quickActions": "Quick Actions",
     "noRestartsDetected": "No pod restarts detected",
     "allPodsStable": "All pods are running stable",
     "noMetricsAvailable": "No metrics data available",
@@ -616,7 +646,12 @@
     "healthy": "Healthy",
     "progressing": "Progressing",
     "failing": "Failing",
-    "clusterAllocatable": "Cluster Allocatable"
+    "clusterAllocatable": "Cluster Allocatable",
+    "rollbackToRevision": "Rollback to revision {{revision}}",
+    "rollbackToPrevious": "Rollback to Previous",
+    "noRevisions": "No previous revisions available",
+    "revisions": "Revisions",
+    "currentVersion": "Current Version"
   },
   "deleteConfirmation": {
     "title": "Delete {{type}}",

@@ -8,6 +8,8 @@ import {
   IconReload,
   IconScale,
   IconTrash,
+  IconHistory,
+  IconRotate2,
 } from '@tabler/icons-react'
 import * as yaml from 'js-yaml'
 import { Deployment } from 'kubernetes-types/apps/v1'
@@ -18,10 +20,13 @@ import { toast } from 'sonner'
 import {
   patchResource,
   restartDeployment,
+  rollbackDeployment,
   updateResource,
   useResource,
   useResourcesWatch,
+  useDeploymentRevisions,
 } from '@/lib/api'
+import type { RevisionInfo } from '@/lib/api'
 import { getDeploymentStatus, toSimpleContainer } from '@/lib/k8s'
 import { formatDate, translateError } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -70,6 +75,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [refreshInterval, setRefreshInterval] = useState<number>(0)
   const [isRolloutMonitorOpen, setIsRolloutMonitorOpen] = useState(false)
+  const [isRollingBack, setIsRollingBack] = useState(false)
   const { t } = useTranslation()
 
   // Fetch deployment data
@@ -168,6 +174,30 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
       toast.error(translateError(error, t))
     }
   }, [t, deployment, name, namespace, scaleReplicas])
+
+  // Fetch deployment revisions for rollback
+  const { data: revisionsData, refetch: refetchRevisions } = useDeploymentRevisions(
+    namespace,
+    name,
+    { enabled: !!deployment }
+  )
+
+  const handleRollback = useCallback(async (revision?: number) => {
+    setIsRollingBack(true)
+    try {
+      const result = await rollbackDeployment(namespace, name, revision)
+      toast.success(`Rollback initiated to revision ${result.revision}`)
+      setRefreshInterval(15000)
+      setIsRolloutMonitorOpen(true)
+      refetchDeployment()
+      refetchRevisions()
+    } catch (error) {
+      console.error('Failed to rollback deployment:', error)
+      toast.error(translateError(error, t))
+    } finally {
+      setIsRollingBack(false)
+    }
+  }, [namespace, name, t, refetchDeployment, refetchRevisions])
 
   const handleSaveYaml = async (content: Deployment) => {
     setIsSavingYaml(true)
@@ -359,6 +389,60 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                 <Button onClick={handleScale} className="w-full">
                   <IconScale className="w-4 h-4 mr-2" />
                   Scale
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isRollingBack}>
+                <IconRotate2 className="w-4 h-4" />
+                {isRollingBack ? 'Rolling back...' : 'Rollback'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <IconHistory className="w-4 h-4" />
+                    Rollback Deployment
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Rollback to the previous revision. This will update the pod template
+                    to match a previous ReplicaSet configuration.
+                  </p>
+                </div>
+                {revisionsData && revisionsData.revisions.length > 1 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {revisionsData.revisions
+                      .filter((r: RevisionInfo) => !r.isCurrent)
+                      .slice(0, 5)
+                      .map((rev: RevisionInfo) => (
+                        <Button
+                          key={rev.revision}
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-between text-xs"
+                          onClick={() => handleRollback(parseInt(rev.revision))}
+                          disabled={isRollingBack}
+                        >
+                          <span>Rev {rev.revision}</span>
+                          <span className="text-muted-foreground font-mono truncate max-w-[120px]">
+                            {rev.image?.split(':').pop() || 'unknown'}
+                          </span>
+                        </Button>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No previous revisions available</p>
+                )}
+                <Button
+                  onClick={() => handleRollback()}
+                  className="w-full"
+                  disabled={isRollingBack || !revisionsData || revisionsData.revisions.length < 2}
+                >
+                  <IconRotate2 className="w-4 h-4 mr-2" />
+                  Rollback to Previous
                 </Button>
               </div>
             </PopoverContent>
@@ -776,6 +860,87 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                 namespace={namespace}
                 currentResource={deployment}
               />
+            ),
+          },
+          {
+            value: 'revisions',
+            label: (
+              <>
+                Revisions{' '}
+                {revisionsData?.revisions && (
+                  <Badge variant="secondary">{revisionsData.revisions.length}</Badge>
+                )}
+              </>
+            ),
+            content: (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconHistory className="w-5 h-5" />
+                    Deployment Revisions
+                    {revisionsData?.currentRevision && (
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        Current: Rev {revisionsData.currentRevision}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!revisionsData || revisionsData.revisions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No revisions found. Revisions are created when the deployment template changes.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {revisionsData.revisions.map((rev: RevisionInfo) => (
+                        <div
+                          key={rev.revision}
+                          className={`flex items-center gap-3 p-3 border rounded-lg transition-colors ${
+                            rev.isCurrent
+                              ? 'border-primary/40 bg-primary/5'
+                              : 'border-border hover:bg-muted/50'
+                          }`}
+                        >
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            rev.isCurrent
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {rev.revision}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{rev.replicaName}</span>
+                              {rev.isCurrent && (
+                                <Badge variant="default" className="text-[10px] h-4">CURRENT</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              <span className="font-mono">{rev.image || 'unknown image'}</span>
+                              <span className="mx-2">·</span>
+                              <span>{rev.replicas} replicas</span>
+                              <span className="mx-2">·</span>
+                              <span>{formatDate(rev.createdAt)}</span>
+                            </div>
+                          </div>
+                          {!rev.isCurrent && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() => handleRollback(parseInt(rev.revision))}
+                              disabled={isRollingBack}
+                            >
+                              <IconRotate2 className="w-3.5 h-3.5 mr-1" />
+                              Rollback
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ),
           },
           ...(deployment.spec?.template?.spec?.volumes

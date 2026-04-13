@@ -161,6 +161,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 
 		// Effective permissions introspection (admin)
 		adminAPI.GET("/effective-permissions/:username", rbac.GetEffectivePermissions)
+		adminAPI.GET("/rbac-metadata", rbac.ListAvailableVerbs)
 
 		adminAPI.GET("/system/logs/:filename", handlers.StreamLogFile)
 		adminAPI.GET("/sessions", handlers.ListAllSessions)
@@ -199,6 +200,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 	api.Use(authHandler.RequireAuth(), middleware.ClusterMiddleware(cm))
 	{
 		api.GET("/overview", handlers.GetOverview)
+		api.GET("/pod-health", handlers.GetPodHealthSummary)
 
 		promHandler := handlers.NewPromHandler()
 		api.GET("/prometheus/resource-usage-history", promHandler.GetResourceUsageHistory)
@@ -222,6 +224,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 
 		resourceApplyHandler := handlers.NewResourceApplyHandler()
 		api.POST("/resources/apply", resourceApplyHandler.ApplyResource)
+		api.POST("/resources/validate", resourceApplyHandler.ValidateYAML)
 
 		api.GET("/audit-logs", handlers.ListAuditLogsForUser)
 		api.GET("/audit-logs/stats", handlers.GetAuditStats)

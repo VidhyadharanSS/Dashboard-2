@@ -97,7 +97,31 @@ var (
 	AccessLogger      io.Writer
 	AuditLogger       io.Writer
 	ApplicationLogger io.Writer
+	SecurityLogger    io.Writer
 )
+
+// App writes a structured application-level log entry.
+// Severity should be one of: INFO, WARN, ERROR.
+func App(severity, component, message string) {
+	if ApplicationLogger == nil {
+		return
+	}
+	ts := time.Now().Format("2006-01-02 15:04:05")
+	fmt.Fprintf(ApplicationLogger, "[%s] %-5s [%s] %s\n", ts, severity, component, message)
+}
+
+// Security writes a security-sensitive log entry (auth failures, RBAC denials, suspicious activity).
+func Security(user, event, detail string) {
+	logger := SecurityLogger
+	if logger == nil {
+		logger = AuditLogger // fallback to audit logger
+	}
+	if logger == nil {
+		return
+	}
+	ts := time.Now().Format("2006-01-02 15:04:05")
+	fmt.Fprintf(logger, "[%s] SECURITY | User: %-15s | Event: %-20s | %s\n", ts, user, event, detail)
+}
 
 func Init(logDir string, maxSizeMB int) error {
 	// Set log timezone to IST
@@ -124,10 +148,22 @@ func Init(logDir string, maxSizeMB int) error {
 		return err
 	}
 
+	SecurityLogger, err = NewRotator(filepath.Join(logDir, "security.log"), maxSizeMB)
+	if err != nil {
+		// Non-fatal: fall back to audit log
+		klog.Warningf("Failed to initialize security log, falling back to audit log: %v", err)
+		SecurityLogger = nil
+	}
+
 	// MultiWriter to also output to stdout for container logs visibility
 	AccessLogger = io.MultiWriter(AccessLogger, os.Stdout)
 	AuditLogger = io.MultiWriter(AuditLogger, os.Stdout)
 	ApplicationLogger = io.MultiWriter(ApplicationLogger, os.Stdout)
+	if SecurityLogger != nil {
+		SecurityLogger = io.MultiWriter(SecurityLogger, os.Stdout)
+	}
+
+	App("INFO", "logger", fmt.Sprintf("Logging system initialized — logDir=%s maxSizeMB=%d timezone=%s", logDir, maxSizeMB, time.Local.String()))
 
 	return nil
 }

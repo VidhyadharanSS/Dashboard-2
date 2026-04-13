@@ -8,9 +8,21 @@ const (
 	VerbCreate Verb = "create"
 	VerbUpdate Verb = "update"
 	VerbDelete Verb = "delete"
+	VerbPatch  Verb = "patch"
+	VerbApply  Verb = "apply"
 	VerbLog    Verb = "log"
 	VerbExec   Verb = "exec"
+	VerbWatch  Verb = "watch"
 )
+
+// AllVerbs returns the list of known verbs for UI rendering and validation.
+func AllVerbs() []string {
+	return []string{
+		string(VerbGet), string(VerbList), string(VerbCreate),
+		string(VerbUpdate), string(VerbDelete), string(VerbPatch),
+		string(VerbApply), string(VerbLog), string(VerbExec), string(VerbWatch),
+	}
+}
 
 type Role struct {
 	Name        string   `yaml:"name" json:"name"`

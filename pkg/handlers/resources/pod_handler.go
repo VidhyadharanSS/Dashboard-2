@@ -198,6 +198,7 @@ func (h *PodHandler) List(c *gin.Context) {
 }
 
 func (h *PodHandler) Resize(c *gin.Context) {
+	startTime := time.Now()
 	cs := c.MustGet("cluster").(*cluster.ClientSet)
 	if !isPodResizeSupported(cs.Version) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "pod resize requires kubernetes >= 1.35.0"})
@@ -251,10 +252,10 @@ func (h *PodHandler) Resize(c *gin.Context) {
 	if err != nil {
 		errMsg = err.Error()
 	}
-	h.recordHistory(c, "resize", oldPod, updatedPod, success, errMsg)
+	h.recordHistory(c, "resize", oldPod, updatedPod, success, errMsg, startTime)
 	if success {
 		user := c.MustGet("user").(model.User)
-		logger.Audit(user.Key(), "Resize", "pods", namespace, cs.Name, fmt.Sprintf("Resized pod %s", name))
+		logger.Audit(user.Key(), "Resize", "pods", namespace, cs.Name, fmt.Sprintf("Resized pod %s", name), time.Since(startTime))
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

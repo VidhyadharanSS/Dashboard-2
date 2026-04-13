@@ -240,6 +240,17 @@ export function RBACDialog({
                 items={form.resources || ['*']}
                 onChange={(items) => setArrayField('resources', items)}
                 placeholder="* or pods,deployments"
+                suggestions={[
+                  '*',
+                  'pods', 'deployments', 'statefulsets', 'daemonsets', 'replicasets',
+                  'services', 'configmaps', 'secrets', 'ingresses',
+                  'jobs', 'cronjobs', 'nodes', 'namespaces',
+                  'persistentvolumes', 'persistentvolumeclaims',
+                  'events', 'serviceaccounts',
+                  'roles', 'rolebindings', 'clusterroles', 'clusterrolebindings',
+                  'storageclasses', 'horizontalpodautoscalers',
+                  'gateways', 'httproutes', 'crds', 'prometheus',
+                ]}
               />
 
               <ListEditor
@@ -248,12 +259,11 @@ export function RBACDialog({
                 onChange={(items) => setArrayField('verbs', items)}
                 placeholder="* or get,list,create"
                 suggestions={[
-                  'get',
-                  'update',
-                  'create',
+                  '*',
+                  'get', 'list', 'watch',
+                  'create', 'update', 'patch', 'apply',
                   'delete',
-                  'log',
-                  'exec',
+                  'log', 'exec',
                 ]}
               />
             </div>

@@ -165,6 +165,95 @@ export const restartDeployment = (namespace: string, name: string) =>
 export const restartStatefulSet = (namespace: string, name: string) =>
   restartResource('statefulsets', namespace, name)
 
+// Deployment Rollback & Revisions
+export interface RevisionInfo {
+  revision: string
+  createdAt: string
+  replicas: number
+  image: string
+  labels?: Record<string, string>
+  isCurrent: boolean
+  replicaName: string
+}
+
+export interface RevisionsResponse {
+  revisions: RevisionInfo[]
+  currentRevision: string
+}
+
+export const fetchDeploymentRevisions = async (
+  namespace: string,
+  name: string
+): Promise<RevisionsResponse> => {
+  const endpoint = `/deployments/${namespace}/${name}/revisions`
+  return fetchAPI<RevisionsResponse>(endpoint)
+}
+
+export const useDeploymentRevisions = (
+  namespace: string,
+  name: string,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: ['deployment-revisions', namespace, name],
+    queryFn: () => fetchDeploymentRevisions(namespace, name),
+    enabled: (options?.enabled ?? true) && !!namespace && !!name,
+    staleTime: 10000,
+  })
+}
+
+export const rollbackDeployment = async (
+  namespace: string,
+  name: string,
+  revision?: number
+): Promise<{ message: string; deployment: string; revision: string }> => {
+  const endpoint = `/deployments/${namespace}/${name}/rollback`
+  return apiClient.post(endpoint, revision ? { revision } : {})
+}
+
+// Pod Health Summary
+export interface PodHealthResponse {
+  totalPods: number
+  runningPods: number
+  failingPods: number
+  pendingPods: number
+  succeededPods: number
+  namespaceHealth: {
+    namespace: string
+    total: number
+    running: number
+    pending: number
+    failing: number
+    succeeded: number
+    unknown: number
+    healthPct: number
+  }[]
+  topRestarts: {
+    name: string
+    namespace: string
+    restartCount: number
+    status: string
+    containerCount: number
+    readyCount: number
+  }[]
+  healthScore: number
+}
+
+export const fetchPodHealth = (): Promise<PodHealthResponse> => {
+  return fetchAPI<PodHealthResponse>('/pod-health')
+}
+
+export const usePodHealth = (options?: { enabled?: boolean; refreshInterval?: number }) => {
+  return useQuery({
+    queryKey: ['pod-health'],
+    queryFn: fetchPodHealth,
+    enabled: options?.enabled ?? true,
+    staleTime: 15000,
+    refetchInterval: options?.refreshInterval ?? 30000,
+    retry: 0,
+  })
+}
+
 // Node operation APIs
 export const updateResource = async <T extends ResourceType>(
   resource: T,
@@ -229,24 +318,60 @@ export const deleteResource = async <T extends ResourceType>(
   await apiClient.delete(endpoint)
 }
 
-// Apply resource from YAML
+// Apply resource from YAML — supports multi-document YAML (--- separated)
 export interface ApplyResourceRequest {
   yaml: string
+  dryRun?: boolean
+}
+
+export interface ApplyResultItem {
+  index: number
+  kind: string
+  apiVersion: string
+  name: string
+  namespace: string
+  status: string // "created", "updated", "created (dry-run)", "updated (dry-run)", "failed", "skipped"
+  error?: string
+  action?: string // "create" or "update"
 }
 
 export interface ApplyResourceResponse {
   message: string
-  kind: string
-  name: string
-  namespace?: string
+  results: ApplyResultItem[]
+  totalObjects: number
+  succeeded: number
+  failed: number
+  dryRun: boolean
 }
 
 export const applyResource = async (
-  yaml: string
+  yaml: string,
+  dryRun: boolean = false
 ): Promise<ApplyResourceResponse> => {
   return await apiClient.post<ApplyResourceResponse>('/resources/apply', {
     yaml,
+    dryRun,
   })
+}
+
+// Validate YAML — parse without applying, returns identified objects
+export interface ValidateObjectInfo {
+  index: number
+  kind: string
+  apiVersion: string
+  name: string
+  namespace: string
+  valid: boolean
+  error?: string
+}
+
+export interface ValidateYAMLResponse {
+  objects: ValidateObjectInfo[]
+  count: number
+}
+
+export const validateYAML = async (yaml: string): Promise<ValidateYAMLResponse> => {
+  return await apiClient.post<ValidateYAMLResponse>('/resources/validate', { yaml })
 }
 
 export const useResourcesEvents = <T extends ResourceType>(
@@ -1589,6 +1714,24 @@ export const unassignRole = async (
   return await apiClient.delete(
     `/admin/roles/${id}/assign?${params.toString()}`
   )
+}
+
+// RBAC Metadata — available verbs and resource types for role editor dropdowns
+export interface RBACMetadata {
+  verbs: string[]
+  resources: string[]
+}
+
+export const fetchRBACMetadata = (): Promise<RBACMetadata> => {
+  return fetchAPI<RBACMetadata>('/admin/rbac-metadata')
+}
+
+export const useRBACMetadata = () => {
+  return useQuery({
+    queryKey: ['rbac-metadata'],
+    queryFn: fetchRBACMetadata,
+    staleTime: 600000, // Cache for 10 minutes — rarely changes
+  })
 }
 
 export const fetchUserList = async (

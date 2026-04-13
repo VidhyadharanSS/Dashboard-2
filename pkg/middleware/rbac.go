@@ -1,14 +1,17 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zxh326/kite/pkg/cluster"
 	"github.com/zxh326/kite/pkg/common"
+	"github.com/zxh326/kite/pkg/logger"
 	"github.com/zxh326/kite/pkg/model"
 	"github.com/zxh326/kite/pkg/rbac"
+	"k8s.io/klog/v2"
 )
 
 func RBACMiddleware() gin.HandlerFunc {
@@ -32,11 +35,45 @@ func RBACMiddleware() gin.HandlerFunc {
 
 		canAccess := rbac.CanAccess(user, resource, verbs, cs.Name, ns)
 		if canAccess {
+			// Inject resolved RBAC context for downstream handlers
+			c.Set("rbac_resource", resource)
+			c.Set("rbac_verb", verbs)
+			c.Set("rbac_namespace", ns)
 			c.Next()
 		} else {
-			c.AbortWithStatusJSON(http.StatusForbidden,
-				gin.H{"error": rbac.NoAccess(user.Key(), verbs, resource, ns, cs.Name)})
+			denialMsg := rbac.NoAccess(user.Key(), verbs, resource, ns, cs.Name)
+
+			// Audit-log denied write operations (create/update/delete) for security monitoring
+			if isWriteVerb(verbs) {
+				logger.Audit(
+					user.Key(), "DENIED", resource, ns, cs.Name,
+					fmt.Sprintf("Blocked %s on %s — insufficient permissions", verbs, resource),
+				)
+				logger.Security(user.Key(), "RBAC_DENIED",
+					fmt.Sprintf("verb=%s resource=%s ns=%s cluster=%s ip=%s",
+						verbs, resource, ns, cs.Name, c.ClientIP()))
+				klog.V(1).Infof("RBAC DENIED: user=%s verb=%s resource=%s ns=%s cluster=%s",
+					user.Key(), verbs, resource, ns, cs.Name)
+			}
+
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error":     denialMsg,
+				"resource":  resource,
+				"verb":      verbs,
+				"namespace": ns,
+				"cluster":   cs.Name,
+			})
 		}
+	}
+}
+
+// isWriteVerb returns true for mutation operations that should be audit-logged on denial.
+func isWriteVerb(verb string) bool {
+	switch verb {
+	case string(common.VerbCreate), string(common.VerbUpdate), string(common.VerbDelete):
+		return true
+	default:
+		return false
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zxh326/kite/pkg/common"
 	"github.com/zxh326/kite/pkg/model"
 )
 
@@ -489,7 +490,26 @@ func GetEffectivePermissions(c *gin.Context) {
 	})
 }
 
-// ─── Feature 3: Accessible Namespaces ────────────────────────────────────────────
+// ─── Feature 3: List Available Verbs & Resources ─────────────────────────────────
+
+// ListAvailableVerbs returns all known RBAC verbs and common resource types.
+// Used by the frontend RBAC role editor to populate dropdowns.
+func ListAvailableVerbs(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"verbs": common.AllVerbs(),
+		"resources": []string{
+			"pods", "deployments", "statefulsets", "daemonsets", "replicasets",
+			"services", "configmaps", "secrets", "ingresses", "jobs", "cronjobs",
+			"nodes", "namespaces", "persistentvolumes", "persistentvolumeclaims",
+			"events", "serviceaccounts", "roles", "rolebindings",
+			"clusterroles", "clusterrolebindings", "storageclasses",
+			"horizontalpodautoscalers", "gateways", "httproutes", "crds",
+			"prometheus",
+		},
+	})
+}
+
+// ─── Feature 4: Accessible Namespaces ────────────────────────────────────────────
 
 // ListAccessibleNamespaces returns the list of namespace patterns the current
 // user has access to according to their RBAC roles. The frontend can use this
