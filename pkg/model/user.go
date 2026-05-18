@@ -34,15 +34,15 @@ type User struct {
 }
 
 type UserSession struct {
-	ID        uint      `json:"id" gorm:"primarykey"`
-	UserID    uint      `json:"userId" gorm:"index"`
-	Token     string    `json:"-" gorm:"uniqueIndex"`
-	IP        string    `json:"ip" gorm:"type:varchar(50)"`
-	UserAgent string    `json:"userAgent" gorm:"type:text"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID         uint      `json:"id" gorm:"primarykey"`
+	UserID     uint      `json:"userId" gorm:"index"`
+	User       User      `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	Token      string    `json:"-" gorm:"uniqueIndex"`
+	IP         string    `json:"ip" gorm:"type:varchar(50)"`
+	UserAgent  string    `json:"userAgent" gorm:"type:text"`
+	CreatedAt  time.Time `json:"createdAt"`
 	LastUsedAt time.Time `json:"lastUsedAt" gorm:"index"`
 	ExpiresAt  time.Time `json:"expiresAt" gorm:"index"`
-	User      User      `json:"-" gorm:"foreignKey:UserID"`
 }
 
 func (u *User) Key() string {
@@ -177,7 +177,9 @@ func ListUsers(limit int, offset int, search string, sortBy string, sortOrder st
 	query := DB.Model(&User{}).Where("users.provider != ?", common.APIKeyProvider)
 	if role != "" {
 		query = query.Joins(
-			"JOIN role_assignments ra ON ra.subject = users.username AND ra.subject_type = ?",
+			// Match by username OR email: assignments may store either depending on
+			// how the subject was entered (username vs email-based OAuth identity).
+			"JOIN role_assignments ra ON (ra.subject = users.username OR ra.subject = users.email) AND ra.subject_type = ?",
 			SubjectTypeUser,
 		).Joins("JOIN roles r ON r.id = ra.role_id").Where("r.name = ?", role)
 	}

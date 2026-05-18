@@ -89,11 +89,13 @@ export function RBACManagement() {
         id: 'clusters',
         header: 'Clusters',
         cell: ({ row: { original: r } }) => (
-          <div className="text-sm text-muted-foreground">
+          <div className="max-h-20 overflow-y-auto overflow-x-hidden space-y-0.5 min-w-[140px] max-w-[220px] scrollbar-thin">
             {r.clusters.length > 0 ? (
-              r.clusters.join(', ')
+              r.clusters.map((c) => (
+                <div key={c} className="text-xs text-muted-foreground truncate" title={c}>{c}</div>
+              ))
             ) : (
-              <span className="text-xs text-muted-foreground">-</span>
+              <span className="text-xs text-muted-foreground">*</span>
             )}
           </div>
         ),
@@ -102,11 +104,13 @@ export function RBACManagement() {
         id: 'namespaces',
         header: 'Namespaces',
         cell: ({ row: { original: r } }) => (
-          <div className="text-sm text-muted-foreground">
+          <div className="max-h-20 overflow-y-auto overflow-x-hidden space-y-0.5 min-w-[140px] max-w-[240px] scrollbar-thin">
             {r.namespaces.length > 0 ? (
-              r.namespaces.join(', ')
+              r.namespaces.map((ns) => (
+                <div key={ns} className="text-xs text-muted-foreground truncate" title={ns}>{ns}</div>
+              ))
             ) : (
-              <span className="text-xs text-muted-foreground">-</span>
+              <span className="text-xs text-muted-foreground">*</span>
             )}
           </div>
         ),
@@ -116,10 +120,10 @@ export function RBACManagement() {
         id: 'Resources',
         header: 'Resources',
         cell: ({ row: { original: r } }) => (
-          <div className="flex flex-wrap gap-1 max-w-[200px] items-center">
+          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto min-w-[120px] max-w-[260px] items-start scrollbar-thin">
             {r.resources.length > 0 ? (
               r.resources.map(res => (
-                <Badge key={res} variant="outline" className="text-[10px] px-1.5 py-0.5 leading-none h-4">{res}</Badge>
+                <Badge key={res} variant="outline" className="text-[10px] px-1.5 py-0.5 leading-none h-4 shrink-0">{res}</Badge>
               ))
             ) : (
               <span className="text-xs text-muted-foreground">-</span>
@@ -131,10 +135,10 @@ export function RBACManagement() {
         id: 'verbs',
         header: 'Verbs',
         cell: ({ row: { original: r } }) => (
-          <div className="flex flex-wrap gap-1 max-w-[150px] items-center">
+          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto min-w-[100px] max-w-[200px] items-start scrollbar-thin">
             {r.verbs.length > 0 ? (
               r.verbs.map(v => (
-                <Badge key={v} variant="secondary" className="text-[10px] px-1.5 py-0.5 leading-none h-4">{v}</Badge>
+                <Badge key={v} variant="secondary" className="text-[10px] px-1.5 py-0.5 leading-none h-4 shrink-0">{v}</Badge>
               ))
             ) : (
               <span className="text-xs text-muted-foreground">-</span>
