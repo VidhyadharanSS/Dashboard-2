@@ -91,7 +91,7 @@ func discoverConfigs(namespace string, podSpec *corev1.PodTemplateSpec) []common
 	}
 
 	configMapSet := make(map[string]struct{})
-	secretSet := make(map[string]struct{})
+	// secretSet removed — secret names must not be exposed via related resources (security hardening)
 	pvcSet := make(map[string]struct{})
 
 	for _, container := range podSpec.Spec.Containers {
@@ -99,17 +99,13 @@ func discoverConfigs(namespace string, podSpec *corev1.PodTemplateSpec) []common
 			if envVar.ValueFrom != nil && envVar.ValueFrom.ConfigMapKeyRef != nil {
 				configMapSet[envVar.ValueFrom.ConfigMapKeyRef.Name] = struct{}{}
 			}
-			if envVar.ValueFrom != nil && envVar.ValueFrom.SecretKeyRef != nil {
-				secretSet[envVar.ValueFrom.SecretKeyRef.Name] = struct{}{}
-			}
+			// SecretKeyRef omitted — secret names must not be exposed (security hardening)
 		}
 		for _, envFrom := range container.EnvFrom {
 			if envFrom.ConfigMapRef != nil {
 				configMapSet[envFrom.ConfigMapRef.Name] = struct{}{}
 			}
-			if envFrom.SecretRef != nil {
-				secretSet[envFrom.SecretRef.Name] = struct{}{}
-			}
+			// SecretRef omitted — secret names must not be exposed (security hardening)
 		}
 	}
 	for _, container := range podSpec.Spec.InitContainers {
@@ -117,16 +113,10 @@ func discoverConfigs(namespace string, podSpec *corev1.PodTemplateSpec) []common
 			if envVar.ValueFrom != nil && envVar.ValueFrom.ConfigMapKeyRef != nil {
 				configMapSet[envVar.ValueFrom.ConfigMapKeyRef.Name] = struct{}{}
 			}
-			if envVar.ValueFrom != nil && envVar.ValueFrom.SecretKeyRef != nil {
-				secretSet[envVar.ValueFrom.SecretKeyRef.Name] = struct{}{}
-			}
 		}
 		for _, envFrom := range container.EnvFrom {
 			if envFrom.ConfigMapRef != nil {
 				configMapSet[envFrom.ConfigMapRef.Name] = struct{}{}
-			}
-			if envFrom.SecretRef != nil {
-				secretSet[envFrom.SecretRef.Name] = struct{}{}
 			}
 		}
 	}
@@ -135,9 +125,7 @@ func discoverConfigs(namespace string, podSpec *corev1.PodTemplateSpec) []common
 		if volume.ConfigMap != nil {
 			configMapSet[volume.ConfigMap.Name] = struct{}{}
 		}
-		if volume.Secret != nil {
-			secretSet[volume.Secret.SecretName] = struct{}{}
-		}
+		// Secret volumes omitted — secret names must not be exposed (security hardening)
 		if volume.PersistentVolumeClaim != nil {
 			pvcSet[volume.PersistentVolumeClaim.ClaimName] = struct{}{}
 		}
@@ -151,13 +139,7 @@ func discoverConfigs(namespace string, podSpec *corev1.PodTemplateSpec) []common
 			Namespace: namespace,
 		})
 	}
-	for name := range secretSet {
-		related = append(related, common.RelatedResource{
-			Type:      "secrets",
-			Name:      name,
-			Namespace: namespace,
-		})
-	}
+	// secrets block removed — secret names must not be exposed (security hardening)
 	for name := range pvcSet {
 		related = append(related, common.RelatedResource{
 			Type:      "persistentvolumeclaims",
@@ -182,27 +164,21 @@ func checkInUsedConfigs(spec *corev1.PodTemplateSpec, name string, resourceType 
 				if resourceType == "configmaps" && envVar.ValueFrom.ConfigMapKeyRef != nil && envVar.ValueFrom.ConfigMapKeyRef.Name == name {
 					return true
 				}
-				if resourceType == "secrets" && envVar.ValueFrom.SecretKeyRef != nil && envVar.ValueFrom.SecretKeyRef.Name == name {
-					return true
-				}
+				// secrets check removed (security hardening)
 			}
 		}
 		for _, envFrom := range container.EnvFrom {
 			if resourceType == "configmaps" && envFrom.ConfigMapRef != nil && envFrom.ConfigMapRef.Name == name {
 				return true
 			}
-			if resourceType == "secrets" && envFrom.SecretRef != nil && envFrom.SecretRef.Name == name {
-				return true
-			}
+			// secrets envFrom check removed (security hardening)
 		}
 	}
 	for _, volume := range spec.Spec.Volumes {
 		if resourceType == "configmaps" && volume.ConfigMap != nil && volume.ConfigMap.Name == name {
 			return true
 		}
-		if resourceType == "secrets" && volume.Secret != nil && volume.Secret.SecretName == name {
-			return true
-		}
+		// secrets volume check removed (security hardening)
 		if resourceType == "persistentvolumeclaims" && volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == name {
 			return true
 		}
