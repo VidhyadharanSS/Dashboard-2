@@ -8,7 +8,7 @@ import {
   IconLayoutDashboard,
   IconLoadBalancer,
   IconLoader,
-  IconLock,
+  // IconLock removed \u2014 secrets widget removed (security hardening)
   IconMap,
   IconMoon,
   IconNetwork,
@@ -68,7 +68,7 @@ const RESOURCE_CONFIG: Record<
   gateways: { label: 'nav.gateways', displayLabel: 'Gateway', icon: IconLoadBalancer, group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
   httproutes: { label: 'nav.httproutes', displayLabel: 'HTTPRoute', icon: IconRoute, group: 'Networking', color: 'text-purple-300', badgeColor: 'bg-purple-300/10 text-purple-400 border-purple-300/30 dark:text-purple-200' },
   configmaps: { label: 'nav.configMaps', displayLabel: 'ConfigMap', icon: IconMap, group: 'Config', color: 'text-orange-500', badgeColor: 'bg-orange-500/10 text-orange-600 border-orange-500/30 dark:text-orange-400' },
-  secrets: { label: 'nav.secrets', displayLabel: 'Secret', icon: IconLock, group: 'Config', color: 'text-red-400', badgeColor: 'bg-red-400/10 text-red-500 border-red-400/30 dark:text-red-300' },
+  // secrets removed — secret data must not be accessible via the dashboard (security hardening)
   namespaces: { label: 'nav.namespaces', displayLabel: 'Namespace', icon: IconBoxMultiple, group: 'Cluster', color: 'text-cyan-500', badgeColor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30 dark:text-cyan-400' },
   nodes: { label: 'nav.nodes', displayLabel: 'Node', icon: IconServer2, group: 'Cluster', color: 'text-cyan-400', badgeColor: 'bg-cyan-400/10 text-cyan-500 border-cyan-400/30 dark:text-cyan-300' },
   horizontalpodautoscalers: { label: 'nav.horizontalpodautoscalers', displayLabel: 'HPA', icon: IconArrowsHorizontal, group: 'Scaling', color: 'text-teal-500', badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-500/30 dark:text-teal-400' },

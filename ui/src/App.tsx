@@ -6,6 +6,7 @@ import { Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 import { AppSidebar } from './components/app-sidebar'
+import { ErrorBoundary } from './components/error-boundary'
 import { GlobalSearch } from './components/global-search'
 import {
   GlobalSearchProvider,
@@ -107,7 +108,7 @@ function AppContent() {
   }, [navigate])
 
   if (isIframe) {
-    return <Outlet />
+    return <ErrorBoundary><Outlet /></ErrorBoundary>
   }
 
   return (
@@ -125,7 +126,9 @@ function AppContent() {
           <div className="@container/main animate-in fade-in duration-300">
             <div className="flex flex-col gap-4 py-4 md:gap-6">
               <div className="px-4 lg:px-6">
-                <Outlet />
+                <ErrorBoundary>
+                  <Outlet />
+                </ErrorBoundary>
               </div>
             </div>
           </div>

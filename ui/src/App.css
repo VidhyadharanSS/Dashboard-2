@@ -1,10 +1,14 @@
 @layer utilities {
   .scrollbar-hide {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
+
   .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    display: none;
+    /* Chrome, Safari and Opera */
   }
 
   /* Thin scrollbar variant */
@@ -12,14 +16,17 @@
     scrollbar-width: thin;
     scrollbar-color: oklch(0.5 0 0 / 0.15) transparent;
   }
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: oklch(0.5 0 0 / 0.15);
     border-radius: 3px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: oklch(0.5 0 0 / 0.3);
   }
@@ -28,6 +35,7 @@
   .hover-underline {
     position: relative;
   }
+
   .hover-underline::after {
     content: '';
     position: absolute;
@@ -38,7 +46,291 @@
     background: currentColor;
     transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
+
   .hover-underline:hover::after {
     width: 100%;
+  }
+
+  /* Truncate multiline text */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Aspect ratio helpers for dashboard cards */
+  .aspect-card {
+    aspect-ratio: 16 / 9;
+  }
+
+  .aspect-square-card {
+    aspect-ratio: 4 / 3;
+  }
+
+  /* Subtle inset border for filter sections */
+  .filter-inset {
+    box-shadow: inset 0 0 0 1px oklch(0.5 0 0 / 0.06);
+    border-radius: 0.75rem;
+  }
+
+  .dark .filter-inset {
+    box-shadow: inset 0 0 0 1px oklch(0.7 0 0 / 0.08);
+  }
+
+  /* Interactive surface — combines hover lift + border glow */
+  .interactive-surface {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .interactive-surface:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.06), 0 2px 4px oklch(0 0 0 / 0.03);
+    border-color: oklch(0.6 0.1 250 / 0.2);
+  }
+
+  .dark .interactive-surface:hover {
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.2), 0 2px 4px oklch(0 0 0 / 0.1);
+    border-color: oklch(0.6 0.1 250 / 0.15);
+  }
+
+  /* ─── Shimmer effect for star/favorite animation ───────────────────────── */
+  @keyframes shimmerSlide {
+    from {
+      transform: translateX(-100%);
+    }
+
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmerSlide 0.6s ease-out;
+  }
+
+  /* ─── Enhanced Dialog / Modal transitions ──────────────────────────────── */
+  [data-state="open"][role="dialog"] {
+    animation: dialogEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes dialogEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* ─── Better Action Button Spacing in Tables ───────────────────────────── */
+  table td:last-child .flex.items-center {
+    gap: 0.25rem;
+  }
+
+  table td:last-child button[class*="ghost"] {
+    opacity: 0.6;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+  }
+
+  table tbody tr:hover td:last-child button[class*="ghost"] {
+    opacity: 1;
+  }
+
+  /* ─── Card Inner Sections — subtle visual separation ───────────────────── */
+  .card-section {
+    border-radius: 0.625rem;
+    background: oklch(0.5 0 0 / 0.02);
+    border: 1px solid oklch(0.5 0 0 / 0.04);
+    padding: 0.75rem;
+    transition: background-color 0.15s ease;
+  }
+
+  .dark .card-section {
+    background: oklch(1 0 0 / 0.02);
+    border-color: oklch(1 0 0 / 0.04);
+  }
+
+  /* ─── Badge refinement — tighter, crisper badges ───────────────────────── */
+  [data-slot="badge"] {
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ─── Better empty state styling ───────────────────────────────────────── */
+  .empty-state-icon {
+    background: oklch(0.5 0 0 / 0.04);
+    border-radius: 9999px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: background-color 0.2s ease;
+  }
+
+  .empty-state-icon:hover {
+    background: oklch(0.5 0 0 / 0.06);
+  }
+
+  /* ─── Improved popover / dropdown shadows ──────────────────────────────── */
+  [data-side][role="listbox"],
+  [data-side][role="menu"],
+  [data-radix-popper-content-wrapper]>div {
+    box-shadow:
+      0 4px 16px oklch(0 0 0 / 0.08),
+      0 1px 4px oklch(0 0 0 / 0.04),
+      0 0 0 1px oklch(0 0 0 / 0.03);
+  }
+
+  .dark [data-side][role="listbox"],
+  .dark [data-side][role="menu"],
+  .dark [data-radix-popper-content-wrapper]>div {
+    box-shadow:
+      0 4px 16px oklch(0 0 0 / 0.25),
+      0 1px 4px oklch(0 0 0 / 0.15),
+      0 0 0 1px oklch(1 0 0 / 0.06);
+  }
+
+  /* ─── Subtle hover scale for clickable badges ─────────────────────────── */
+  a>[data-slot="badge"],
+  button>[data-slot="badge"],
+  [role="button"]>[data-slot="badge"] {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  a>[data-slot="badge"]:hover,
+  button>[data-slot="badge"]:hover,
+  [role="button"]>[data-slot="badge"]:hover {
+    transform: translateY(-0.5px);
+  }
+
+  /* ─── Enhanced toast (sonner) styling ──────────────────────────────────── */
+  [data-sonner-toast] {
+    border-radius: 0.625rem !important;
+    box-shadow:
+      0 4px 12px oklch(0 0 0 / 0.08),
+      0 1px 3px oklch(0 0 0 / 0.04) !important;
+  }
+
+  .dark [data-sonner-toast] {
+    box-shadow:
+      0 4px 12px oklch(0 0 0 / 0.3),
+      0 1px 3px oklch(0 0 0 / 0.15) !important;
+  }
+
+  /* ─── Smooth page transitions ──────────────────────────────────────────── */
+  .animate-page-enter {
+    animation: pageEnter 0.25s ease-out;
+  }
+
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ─── Stagger animation for grid items ────────────────────────────────── */
+  .animate-stagger-item {
+    animation: staggerFadeIn 0.3s ease-out both;
+    animation-delay: calc(var(--stagger-index, 0) * 50ms);
+  }
+
+  @keyframes staggerFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ─── Improved focus ring for all focusable elements ───────────────────── */
+  .focus-glow:focus-within {
+    box-shadow: 0 0 0 2px oklch(from var(--primary) l c h / 0.15);
+    border-radius: 0.5rem;
+  }
+
+  /* ─── Search input expand animation ────────────────────────────────────── */
+  .search-expand {
+    transition: width 0.25s ease, background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  /* ─── RBAC permission cell pulse ───────────────────────────────────────── */
+  .permission-allowed {
+    animation: permissionPulse 0.3s ease-out;
+  }
+
+  @keyframes permissionPulse {
+    0% {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+
+    60% {
+      transform: scale(1.1);
+    }
+
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* ─── Confirmation dialog subtle entrance ──────────────────────────────── */
+  [data-state="open"][role="dialog"] {
+    animation: dialogSlideIn 0.2s ease-out;
+  }
+
+  @keyframes dialogSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* ─── Better table row transitions ─────────────────────────────────────── */
+  tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  /* ─── Card subtle lift on hover ────────────────────────────────────────── */
+  .card-elevated {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .card-elevated:hover {
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.06), 0 1px 3px oklch(0 0 0 / 0.03);
+    transform: translateY(-1px);
+  }
+
+  .dark .card-elevated:hover {
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.2), 0 1px 3px oklch(0 0 0 / 0.1);
+  }
+
+  /* ─── Improved scrollbar for dark mode ─────────────────────────────────── */
+  .dark .scrollbar-thin {
+    scrollbar-color: oklch(0.6 0 0 / 0.2) transparent;
   }
 }

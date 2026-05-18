@@ -136,6 +136,10 @@ const DiskIOUsageChart = React.memo((prop: DiskIOUsageChartProps) => {
     )
   }
 
+  // Latest values
+  const latestRead = chartData.length > 0 ? (chartData[chartData.length - 1].diskRead || 0) : 0
+  const latestWrite = chartData.length > 0 ? (chartData[chartData.length - 1].diskWrite || 0) : 0
+
   // Show empty state
   if (
     !diskRead ||
@@ -157,11 +161,20 @@ const DiskIOUsageChart = React.memo((prop: DiskIOUsageChartProps) => {
   }
 
   return (
-    <Card className="@container/card">
-      <CardHeader>
-        <CardTitle>Disk I/O Usage</CardTitle>
+    <Card className="@container/card hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <div className="size-2 rounded-full bg-purple-500" />
+            Disk I/O Usage
+          </CardTitle>
+          <div className="flex items-center gap-3 text-xs tabular-nums">
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">R {formatBytes(latestRead)}</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">W {formatBytes(latestWrite)}</span>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="px-2 sm:px-6">
+      <CardContent className="px-2 sm:px-6 pt-0">
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"

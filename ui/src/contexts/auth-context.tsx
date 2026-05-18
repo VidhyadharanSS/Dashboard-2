@@ -95,7 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (provider: string = 'github') => {
     try {
       const response = await fetch(
-        withSubPath(`/api/auth/login?provider=${provider}`),
+        withSubPath(`/api/auth/login?provider=${encodeURIComponent(provider)}`),
         {
           credentials: 'include',
         }
@@ -103,6 +103,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (response.ok) {
         const data = await response.json()
+        // Remember the provider we are about to redirect to so that the
+        // login page can transparently retry with the same provider if the
+        // OAuth callback comes back with a recoverable session error
+        // (missing/mismatched state cookie). The value is short-lived
+        // (sessionStorage) and contains no sensitive data.
+        try {
+          window.sessionStorage.setItem('kite_oauth_last_provider', provider)
+        } catch {
+          /* sessionStorage may be unavailable (private mode); ignore */
+        }
         window.location.href = data.auth_url
       } else {
         throw new Error('Failed to initiate login')
@@ -217,3 +227,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+

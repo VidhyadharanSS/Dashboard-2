@@ -16,10 +16,10 @@ import {
     IconZoomOut,
     IconRefresh,
     IconMaximize,
-    IconMinimize,
     IconSearch,
     IconX,
     IconPhoto,
+    IconChartArrows,
 } from '@tabler/icons-react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -75,6 +75,8 @@ const RESOURCE_ICONS: Record<string, React.ReactNode> = {
     nodes: <IconServer2 size={18} />,
     namespace: <IconServer2 size={18} />,
     namespaces: <IconServer2 size={18} />,
+    horizontalpodautoscaler: <IconChartArrows size={18} />,
+    horizontalpodautoscalers: <IconChartArrows size={18} />,
 }
 
 // Color mapping per resource type for visual differentiation
@@ -91,6 +93,7 @@ const RESOURCE_COLORS: Record<string, { bg: string; border: string; text: string
     persistentvolumes: { bg: 'bg-amber-500/10', border: 'border-amber-400/50', text: 'text-amber-600 dark:text-amber-400', badge: 'bg-amber-500/20 text-amber-700' },
     nodes: { bg: 'bg-slate-500/10', border: 'border-slate-400/50', text: 'text-slate-600 dark:text-slate-400', badge: 'bg-slate-500/20 text-slate-700 dark:text-slate-300' },
     namespaces: { bg: 'bg-violet-500/10', border: 'border-violet-400/50', text: 'text-violet-600 dark:text-violet-400', badge: 'bg-violet-500/20 text-violet-700 dark:text-violet-300' },
+    horizontalpodautoscalers: { bg: 'bg-cyan-500/10 dark:bg-cyan-500/20', border: 'border-cyan-400/50', text: 'text-cyan-600 dark:text-cyan-400', badge: 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300' },
 }
 
 const DEFAULT_COLOR = { bg: 'bg-muted/60', border: 'border-border', text: 'text-muted-foreground', badge: 'bg-muted text-muted-foreground' }
@@ -100,6 +103,7 @@ const LAYER_ORDER = [
     ['nodes', 'node'],
     ['ingresses', 'ingress'],
     ['services', 'service'],
+    ['horizontalpodautoscalers', 'horizontalpodautoscaler'],
     ['deployments', 'deployment', 'statefulsets', 'statefulset', 'daemonsets', 'daemonset'],
     ['pods', 'pod'],
     ['configmaps', 'configmap', 'secrets', 'secret', 'persistentvolumeclaims', 'pvc', 'persistentvolumes', 'pv', 'storageclasses'],
@@ -587,7 +591,7 @@ export function ResourceTopology({
 
             {/* Info badges */}
             <div className="absolute top-3 right-3 z-50 flex flex-col items-end gap-1.5">
-                <Badge variant="secondary" className="text-xs shadow-md">
+                <Badge variant="secondary" className="text-xs shadow-md font-mono">
                     {totalNodes} resource{totalNodes !== 1 ? 's' : ''} · {related?.links?.length || 0} link{(related?.links?.length || 0) !== 1 ? 's' : ''}
                 </Badge>
                 <div className="flex items-center gap-1">
@@ -684,7 +688,10 @@ export function ResourceTopology({
 
     return (
         <>
-            <Card className="overflow-hidden bg-dot-pattern bg-slate-50/50 dark:bg-slate-950/50 border relative">
+            <Card className="overflow-hidden border relative" style={{
+                backgroundImage: 'radial-gradient(circle, hsl(var(--border) / 0.3) 1px, transparent 1px)',
+                backgroundSize: '20px 20px',
+            }}>
                 {topologyCanvas(false)}
             </Card>
 
@@ -700,7 +707,10 @@ export function ResourceTopology({
                             </Badge>
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="flex-1 overflow-hidden bg-dot-pattern bg-slate-50/50 dark:bg-slate-950/50 relative">
+                    <div className="flex-1 overflow-hidden relative" style={{
+                        backgroundImage: 'radial-gradient(circle, hsl(var(--border) / 0.3) 1px, transparent 1px)',
+                        backgroundSize: '20px 20px',
+                    }}>
                         {topologyCanvas(true)}
                     </div>
                 </DialogContent>
@@ -761,7 +771,7 @@ function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, isSearchMatch
                         onMouseEnter={() => onHover?.(id)}
                         onMouseLeave={() => onHover?.(null)}
                         className={`
-                            relative flex flex-col items-center p-3 pt-4 rounded-xl border-2 transition-all duration-200 group z-20 min-w-[110px] max-w-[130px] select-none
+                            relative flex flex-col items-center p-3 pt-4 rounded-xl border-2 transition-all duration-200 group z-20 min-w-[120px] max-w-[150px] select-none
                             ${hasPermission ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
                             ${isRoot
                                 ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25 scale-110 ring-4 ring-primary/20'
@@ -778,7 +788,7 @@ function TopologyNode({ id, node, isRoot, isHighlighted, isDimmed, isSearchMatch
                         </div>
 
                         {/* Name */}
-                        <div className={`text-xs font-semibold truncate max-w-[100px] text-center leading-tight ${isRoot ? 'text-primary-foreground' : 'text-foreground'}`}>
+                        <div className={`text-[11px] font-semibold truncate max-w-[120px] text-center leading-tight ${isRoot ? 'text-primary-foreground' : 'text-foreground'}`} title={node.name}>
                             {node.name}
                         </div>
 

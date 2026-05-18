@@ -3,7 +3,6 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@xterm/xterm/css/xterm.css'
 import {
@@ -12,12 +11,11 @@ import {
   IconClearAll,
   IconCopy,
   IconDownload,
-  IconMaximize,
-  IconMinimize,
   IconRefresh,
   IconSearch,
   IconSettings,
   IconTerminal,
+  IconX,
 } from '@tabler/icons-react'
 
 import { ContainerSelector } from '@/components/selector/container-selector'
@@ -45,28 +43,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { translateError } from '@/lib/utils'
 import { TerminalTheme, TERMINAL_THEMES } from '@/types/themes'
 import { Pod } from 'kubernetes-types/core/v1'
 
 import { ConnectionIndicator } from './connection-indicator'
 
-// --- Local Helper Functions ---
-
-// Use the shared subpath-aware URL builder so the WebSocket goes through the
-// correct host and base path — critical when served behind an Ingress.
 import { getWebSocketUrl } from '@/lib/subpath'
 
 const toSimpleContainer = (initContainers: any[] = [], containers: any[] = []) => {
-  // Main containers first so the first main container is auto-selected,
-  // followed by init containers at the end.
   return [
     ...containers.map((c: any) => ({ ...c, isInit: false })),
     ...initContainers.map((c: any) => ({ ...c, isInit: true })),
   ]
 }
-
-// --- End Helpers ---
 
 interface TerminalProps {
   namespace?: string
@@ -76,9 +65,7 @@ interface TerminalProps {
   containers?: any[]
   initContainers?: any[]
   type?: 'pod' | 'node'
-  /** If true, shows a confirmation dialog before connecting (for node terminals) */
   requireConfirmation?: boolean
-  /** Permission gate message if user doesn't have access */
   permissionDeniedMessage?: string
 }
 
@@ -122,8 +109,10 @@ export function Terminal({
     }
   )
 
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchMatchCount, setSearchMatchCount] = useState(0)
+  const [searchCurrentIndex, setSearchCurrentIndex] = useState(0)
 
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<XTerm | null>(null)
@@ -131,581 +120,505 @@ export function Terminal({
   const searchAddonRef = useRef<SearchAddon | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
 
-  // Buffering for paste support
-  const writeQueue = useRef<string[]>([])
-  const isWriting = useRef(false)
   const pingTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const { t } = useTranslation()
+  // Refs to read settings inside effects without re-triggering WebSocket reconnect
+  const terminalThemeRef = useRef(terminalTheme)
+  terminalThemeRef.current = terminalTheme
+  const fontSizeRef = useRef(fontSize)
+  fontSizeRef.current = fontSize
+  const cursorStyleRef = useRef(cursorStyle)
+  cursorStyleRef.current = cursorStyle
+
+
+  const countSearchMatches = useCallback((term: string) => {
+    if (!term || !xtermRef.current) {
+      setSearchMatchCount(0)
+      setSearchCurrentIndex(0)
+      return
+    }
+    const buffer = xtermRef.current.buffer.active
+    let count = 0
+    const lowerTerm = term.toLowerCase()
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i)
+      if (line) {
+        const text = line.translateToString().toLowerCase()
+        let idx = 0
+        while ((idx = text.indexOf(lowerTerm, idx)) !== -1) {
+          count++
+          idx += lowerTerm.length
+        }
+      }
+    }
+    setSearchMatchCount(count)
+  }, [])
 
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term)
     if (searchAddonRef.current) {
       if (term) {
-        searchAddonRef.current.findNext(term)
+        searchAddonRef.current.findNext(term, { decorations: { activeMatchColorOverviewRuler: '#facc15', matchOverviewRuler: '#facc1560' } })
+        countSearchMatches(term)
+        setSearchCurrentIndex(1)
       } else {
         searchAddonRef.current.clearDecorations()
+        setSearchMatchCount(0)
+        setSearchCurrentIndex(0)
       }
     }
-  }, [])
+  }, [countSearchMatches])
 
   const findNext = useCallback(() => {
     if (searchAddonRef.current && searchTerm) {
-      searchAddonRef.current.findNext(searchTerm)
+      searchAddonRef.current.findNext(searchTerm, { decorations: { activeMatchColorOverviewRuler: '#facc15', matchOverviewRuler: '#facc1560' } })
+      setSearchCurrentIndex(prev => (prev < searchMatchCount ? prev + 1 : 1))
     }
-  }, [searchTerm])
+  }, [searchTerm, searchMatchCount])
 
   const findPrevious = useCallback(() => {
     if (searchAddonRef.current && searchTerm) {
-      searchAddonRef.current.findPrevious(searchTerm)
+      searchAddonRef.current.findPrevious(searchTerm, { decorations: { activeMatchColorOverviewRuler: '#facc15', matchOverviewRuler: '#facc1560' } })
+      setSearchCurrentIndex(prev => (prev > 1 ? prev - 1 : searchMatchCount))
     }
-  }, [searchTerm])
+  }, [searchTerm, searchMatchCount])
 
-  // Initialize pod/container state on props change
+  // Auto-select first pod
   useEffect(() => {
-    setSelectedPod(podName || pods?.[0]?.metadata?.name || '')
-  }, [podName, pods])
-
-  useEffect(() => {
-    if (containers.length === 0) {
-      setSelectedContainer('')
-      return
+    if (!selectedPod && pods && pods.length > 0) {
+      setSelectedPod(pods[0]?.metadata?.name || '')
     }
+  }, [pods, selectedPod])
 
-    setSelectedContainer((current) => {
-      if (!current || !containers.find((c: any) => c.name === current)) {
-        return containers[0].name
-      }
-      return current
-    })
-  }, [containers])
+  // Auto-select first container
+  useEffect(() => {
+    if (containers.length > 0 && !selectedContainer) {
+      setSelectedContainer(containers[0]?.name || '')
+    }
+  }, [containers, selectedContainer])
 
-  // Handle theme change and persist to localStorage
-  const handleThemeChange = useCallback((theme: TerminalTheme) => {
-    setTerminalTheme(theme)
+  const handlePodChange = useCallback((pod: string | undefined) => {
+    setSelectedPod(pod || '')
+    setSelectedContainer('')
+  }, [])
+
+  const handleContainerChange = useCallback((container: string | undefined) => {
+    setSelectedContainer(container || '')
+  }, [])
+
+  const handleThemeChange = useCallback((theme: string) => {
+    setTerminalTheme(theme as TerminalTheme)
     localStorage.setItem('terminal-theme', theme)
     if (xtermRef.current) {
-      const currentTheme = TERMINAL_THEMES[theme]
-      xtermRef.current.options.theme = {
-        background: currentTheme.background,
-        foreground: currentTheme.foreground,
-        cursor: currentTheme.cursor,
-        selectionBackground: currentTheme.selection,
-        black: currentTheme.black,
-        red: currentTheme.red,
-        green: currentTheme.green,
-        yellow: currentTheme.yellow,
-        blue: currentTheme.blue,
-        magenta: currentTheme.magenta,
-        cyan: currentTheme.cyan,
-        white: currentTheme.white,
-        brightBlack: currentTheme.brightBlack,
-        brightRed: currentTheme.brightRed,
-        brightGreen: currentTheme.brightGreen,
-        brightYellow: currentTheme.brightYellow,
-        brightBlue: currentTheme.brightBlue,
-        brightMagenta: currentTheme.brightMagenta,
-        brightCyan: currentTheme.brightCyan,
-        brightWhite: currentTheme.brightWhite,
-      }
-      xtermRef.current.refresh(0, xtermRef.current.rows - 1)
+      xtermRef.current.options.theme = TERMINAL_THEMES[theme as TerminalTheme]
     }
   }, [])
 
-  // Handle font size change and persist to localStorage
   const handleFontSizeChange = useCallback((size: number) => {
     setFontSize(size)
     localStorage.setItem('log-viewer-font-size', size.toString())
-    if (xtermRef.current && fitAddonRef.current) {
+    if (xtermRef.current) {
       xtermRef.current.options.fontSize = size
-      setTimeout(() => {
-        if (fitAddonRef.current) {
-          fitAddonRef.current.fit()
-        }
-      }, 100)
+      fitAddonRef.current?.fit()
     }
   }, [])
 
-  const handleCursorStyleChange = useCallback(
-    (style: 'block' | 'underline' | 'bar') => {
-      setCursorStyle(style)
-      localStorage.setItem('terminal-cursor-style', style)
-      if (xtermRef.current) {
-        xtermRef.current.options.cursorStyle = style
-      }
-    },
-    []
-  )
-
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen((v) => !v)
-    setTimeout(() => {
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit()
-      }
-    }, 200)
+  const handleCursorStyleChange = useCallback((style: string) => {
+    const s = style as 'block' | 'underline' | 'bar'
+    setCursorStyle(s)
+    localStorage.setItem('terminal-cursor-style', s)
+    if (xtermRef.current) {
+      xtermRef.current.options.cursorStyle = s
+    }
   }, [])
 
-  const handleContainerChange = useCallback((containerName?: string) => {
-    if (containerName) setSelectedContainer(containerName)
+  const clearTerminal = useCallback(() => {
+    if (xtermRef.current) {
+      xtermRef.current.clear()
+    }
   }, [])
 
-  const handlePodChange = useCallback((podName?: string) => {
-    setSelectedPod(podName || '')
-  }, [])
-
-  // Track connection duration
-  useEffect(() => {
-    if (isConnected) {
-      setConnectionDuration(0)
-      connectionTimerRef.current = setInterval(() => {
-        setConnectionDuration(prev => prev + 1)
-      }, 1000)
-    } else {
-      if (connectionTimerRef.current) {
-        clearInterval(connectionTimerRef.current)
-        connectionTimerRef.current = null
+  const copyToClipboard = useCallback(async () => {
+    if (!xtermRef.current) return
+    const selection = xtermRef.current.getSelection()
+    // If there's a selection, copy that; otherwise copy the entire buffer
+    let text = selection
+    if (!text) {
+      const buffer = xtermRef.current.buffer.active
+      const lines: string[] = []
+      for (let i = 0; i < buffer.length; i++) {
+        const line = buffer.getLine(i)
+        if (line) lines.push(line.translateToString())
       }
+      text = lines.join('\n').trimEnd()
     }
-    return () => {
-      if (connectionTimerRef.current) clearInterval(connectionTimerRef.current)
+    if (!text) {
+      toast.info('Nothing to copy')
+      return
     }
-  }, [isConnected])
-
-  // Unified terminal and websocket lifecycle
-  useEffect(() => {
-    if (!confirmed) return
-    if (type === 'pod') {
-      if (!pods || pods.length === 0) if (!selectedPod) return
-      if (!selectedContainer) return
-    }
-    if (type === 'node' && !nodeName) return
-    if (!terminalRef.current) return
-
-    if (xtermRef.current) xtermRef.current.dispose()
-    if (wsRef.current) wsRef.current.close()
-
-    // Clear write queue on new connection
-    writeQueue.current = []
-    isWriting.current = false
-
-    const currentTheme = TERMINAL_THEMES[terminalTheme]
-    const terminal = new XTerm({
-      fontFamily: '"Maple Mono", Monaco, Menlo, "Ubuntu Mono", monospace',
-      fontSize,
-      theme: {
-        background: currentTheme.background,
-        foreground: currentTheme.foreground,
-        cursor: currentTheme.cursor,
-        selectionBackground: currentTheme.selection,
-        black: currentTheme.black,
-        red: currentTheme.red,
-        green: currentTheme.green,
-        yellow: currentTheme.yellow,
-        blue: currentTheme.blue,
-        magenta: currentTheme.magenta,
-        cyan: currentTheme.cyan,
-        white: currentTheme.white,
-        brightBlack: currentTheme.brightBlack,
-        brightRed: currentTheme.brightRed,
-        brightGreen: currentTheme.brightGreen,
-        brightYellow: currentTheme.brightYellow,
-        brightBlue: currentTheme.brightBlue,
-        brightMagenta: currentTheme.brightMagenta,
-        brightCyan: currentTheme.brightCyan,
-        brightWhite: currentTheme.brightWhite,
-      },
-      cursorBlink: true,
-      allowTransparency: true,
-      cursorStyle,
-      scrollback: 10000,
-    })
-    const fitAddon = new FitAddon()
-    const searchAddon = new SearchAddon()
-    const webLinksAddon = new WebLinksAddon()
-    terminal.loadAddon(fitAddon)
-    terminal.loadAddon(searchAddon)
-    terminal.loadAddon(webLinksAddon)
-    terminal.open(terminalRef.current)
-    fitAddon.fit()
-    xtermRef.current = terminal
-    fitAddonRef.current = fitAddon
-    searchAddonRef.current = searchAddon
-
-    if (terminal.element) {
-      terminal.element.style.overscrollBehavior = 'none'
-      terminal.element.style.touchAction = 'none'
-      terminal.element.addEventListener(
-        'wheel',
-        (e) => {
-          e.stopPropagation()
-          e.preventDefault()
-        },
-        { passive: false }
-      )
-    }
-
-    const handleResize = () => fitAddon.fit()
-    window.addEventListener('resize', handleResize)
-
-    // WebSocket connection
-    setIsConnected(false)
-    const currentCluster = localStorage.getItem('current-cluster')
-    const wsPath =
-      type === 'pod'
-        ? `/api/v1/terminal/${namespace}/${selectedPod}/ws?container=${selectedContainer}&x-cluster-name=${currentCluster}`
-        : `/api/v1/node-terminal/${nodeName}/ws?x-cluster-name=${currentCluster}`
-    const wsUrl = getWebSocketUrl(wsPath)
-    const websocket = new WebSocket(wsUrl)
-    wsRef.current = websocket
-
-    websocket.onopen = () => {
-      setIsConnected(true)
-
-      if (fitAddonRef.current) {
-        const { cols, rows } = fitAddonRef.current.proposeDimensions()!
-        if (cols && rows) {
-          const message = JSON.stringify({ type: 'resize', cols, rows })
-          websocket.send(message)
-        }
-      }
-
-      // Keepalive: send a ping data-frame every 15s.  The backend also sends
-      // {"type":"ping"} every 15s, so even if the user is idle there is
-      // always a data-frame flowing in each direction within the shortest
-      // proxy idle timeout in the chain (ZGS ~30-60s, ingress-nginx 60s).
-      //
-      // These are app-level JSON messages (regular data frames) that flow
-      // end-to-end through all proxies, unlike RFC 6455 Ping control frames
-      // which are consumed hop-by-hop.
-      if (pingTimerRef.current) clearInterval(pingTimerRef.current)
-      pingTimerRef.current = setInterval(() => {
-        if (websocket.readyState === WebSocket.OPEN) {
-          const pingMessage = JSON.stringify({ type: 'ping' })
-          websocket.send(pingMessage)
-        }
-      }, 15000)
-
-      terminal.writeln(`\x1b[32mConnected to ${type} terminal!\x1b[0m\r\n`)
-    }
-
-    websocket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data)
-        switch (message.type) {
-          case 'stdout':
-          case 'stderr':
-            terminal.write(message.data)
-            break
-          case 'info':
-            terminal.writeln(`\x1b[34m${message.data}\x1b[0m`)
-            break
-          case 'connected':
-            terminal.writeln(`\x1b[32m${message.data}\x1b[0m`)
-            break
-          case 'error':
-            terminal.writeln(
-              `\x1b[31mError: ${translateError(new Error(message.data), t)}\x1b[0m`
-            )
-            setIsConnected(false)
-            break
-          case 'ping':
-            // Server-side keepalive — reply so the server knows we're alive.
-            // This also generates an upstream data frame that resets the
-            // proxy_read_timeout in ingress-nginx.
-            if (websocket.readyState === WebSocket.OPEN) {
-              websocket.send(JSON.stringify({ type: 'pong' }))
-            }
-            break
-          case 'pong':
-            // Response to our client-side ping — no action needed
-            break
-        }
-      } catch (err) {
-        console.error('Failed to parse WebSocket message:', err)
-      }
-    }
-
-    websocket.onerror = (error) => {
-      console.error('WebSocket error:', error)
-      terminal.writeln('\x1b[31mWebSocket connection error\x1b[0m')
-      setIsConnected(false)
-    }
-
-    websocket.onclose = (event) => {
-      setIsConnected(false)
-      if (pingTimerRef.current) {
-        clearInterval(pingTimerRef.current)
-        pingTimerRef.current = null
-      }
-      if (event.code !== 1000) {
-        terminal.writeln('\x1b[31mConnection closed unexpectedly\x1b[0m')
+    try {
+      // Primary: Clipboard API (requires secure context / user gesture)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text)
       } else {
-        terminal.writeln('\x1b[32mConnection closed\x1b[0m')
+        // Fallback: execCommand for non-secure contexts
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.style.position = 'fixed'
+        textarea.style.left = '-9999px'
+        textarea.style.top = '-9999px'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.focus()
+        textarea.select()
+        const success = document.execCommand('copy')
+        document.body.removeChild(textarea)
+        if (!success) throw new Error('execCommand copy failed')
       }
+      toast.success(selection ? 'Selection copied to clipboard' : 'Buffer copied to clipboard')
+    } catch {
+      toast.error('Failed to copy — try selecting text and using Ctrl+C')
     }
+  }, [])
 
-    // Process the write queue sequentially with a delay
-    const processQueue = () => {
-      if (
-        isWriting.current ||
-        writeQueue.current.length === 0 ||
-        !wsRef.current ||
-        wsRef.current.readyState !== WebSocket.OPEN
-      ) {
-        isWriting.current = false
-        return
-      }
-
-      isWriting.current = true
-      const chunk = writeQueue.current.shift()
-
-      if (chunk) {
-        const message = JSON.stringify({ type: 'stdin', data: chunk })
-        wsRef.current.send(message)
-
-        // Add 10ms delay between chunks to prevent overwhelming the pty/vi
-        setTimeout(() => {
-          isWriting.current = false // Allow next chunk
-          processQueue()
-        }, 10)
-      } else {
-        isWriting.current = false
-      }
+  const downloadBuffer = useCallback(() => {
+    if (!xtermRef.current) return
+    const buffer = xtermRef.current.buffer.active
+    const lines: string[] = []
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i)
+      if (line) lines.push(line.translateToString())
     }
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `terminal-${new Date().toISOString().slice(0, 19)}.log`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Buffer downloaded')
+  }, [])
 
-    terminal.onData((data) => {
-      if (websocket.readyState === WebSocket.OPEN) {
-        // Chunk large inputs (paste) into smaller packets (e.g. 512 bytes)
-        const CHUNK_SIZE = 512
-        if (data.length > CHUNK_SIZE) {
-          for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-            writeQueue.current.push(data.slice(i, i + CHUNK_SIZE))
-          }
-        } else {
-          writeQueue.current.push(data)
-        }
-
-        // Trigger queue processing if not already running
-        if (!isWriting.current) {
-          processQueue()
-        }
-      }
-    })
-
-    const handleTerminalResize = () => {
-      if (fitAddonRef.current && websocket.readyState === WebSocket.OPEN) {
-        fitAddonRef.current.fit()
-        const { cols, rows } = terminal
-        if (cols && rows) {
-          const message = JSON.stringify({ type: 'resize', cols, rows })
-          websocket.send(message)
-        }
-      }
-    }
-
-    let resizeObserver: ResizeObserver | null = null
-    if (fitAddonRef.current && terminal.element) {
-      resizeObserver = new ResizeObserver(handleTerminalResize)
-      resizeObserver.observe(terminal.element)
-    }
-
-    const handleWheelEvent = (e: WheelEvent | TouchEvent) => {
-      e.stopPropagation()
-      e.preventDefault()
-    }
-
-    const currentTerminalRef = terminalRef.current
-    if (currentTerminalRef) {
-      currentTerminalRef.addEventListener('wheel', handleWheelEvent, {
-        passive: false,
-      })
-      currentTerminalRef.addEventListener('touchmove', handleWheelEvent, {
-        passive: false,
-      })
-    }
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      if (resizeObserver) {
-        resizeObserver.disconnect()
-      }
-      if (currentTerminalRef) {
-        currentTerminalRef.removeEventListener('wheel', handleWheelEvent)
-        currentTerminalRef.removeEventListener('touchmove', handleWheelEvent)
-      }
-      terminal.dispose()
-      websocket.close()
-      if (pingTimerRef.current) clearInterval(pingTimerRef.current)
-    }
-  }, [
-    confirmed,
-    selectedPod,
-    selectedContainer,
-    namespace,
-    type,
-    reconnectFlag,
-    terminalTheme,
-    fontSize,
-    cursorStyle,
-  ])
-
-  // Format connection duration
-  const formatDuration = (secs: number) => {
-    const h = Math.floor(secs / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    const s = secs % 60
+  const formatDuration = (seconds: number) => {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    const s = seconds % 60
     if (h > 0) return `${h}h ${m}m`
     if (m > 0) return `${m}m ${s}s`
     return `${s}s`
   }
 
-  // Clear terminal
-  const clearTerminal = useCallback(() => {
-    if (xtermRef.current) {
-      xtermRef.current.clear()
-      toast.info('Terminal buffer cleared')
-    }
-  }, [])
+  /**
+   * Safe fit: uses getBoundingClientRect for reliable measurement.
+   */
+  const safeFit = useCallback(() => {
+    const xterm = xtermRef.current
+    const fitAddon = fitAddonRef.current
+    const container = terminalRef.current
+    if (!xterm || !fitAddon || !container) return
 
-  const copyToClipboard = useCallback(() => {
-    if (xtermRef.current) {
-      xtermRef.current.selectAll()
-      const selection = xtermRef.current.getSelection()
-      if (selection) {
-        navigator.clipboard.writeText(selection)
-        toast.success('Terminal buffer copied to clipboard')
-      } else {
-        toast.error('Terminal buffer is empty')
-      }
-      xtermRef.current.clearSelection()
-    }
-  }, [])
-
-  // Download the entire terminal buffer as a text file
-  const downloadBuffer = useCallback(() => {
-    if (xtermRef.current) {
-      xtermRef.current.selectAll()
-      const selection = xtermRef.current.getSelection()
-      xtermRef.current.clearSelection()
-      if (!selection) {
-        toast.error('Terminal buffer is empty')
+    try {
+      // First try FitAddon normally
+      const proposed = fitAddon.proposeDimensions()
+      if (proposed && proposed.rows > 3 && proposed.cols > 2) {
+        fitAddon.fit()
         return
       }
-      const blob = new Blob([selection], { type: 'text/plain' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const podOrNode = type === 'node' ? (nodeName || 'node') : (selectedPod || 'pod')
-      a.download = `terminal-${podOrNode}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      toast.success('Terminal buffer downloaded')
+
+      // Fallback: manually calculate from getBoundingClientRect
+      const rect = container.getBoundingClientRect()
+      if (rect.width < 10 || rect.height < 10) return
+
+      const core = (xterm as any)._core
+      if (!core?._renderService?.dimensions?.css?.cell) return
+      const cellWidth = core._renderService.dimensions.css.cell.width
+      const cellHeight = core._renderService.dimensions.css.cell.height
+      if (cellWidth < 1 || cellHeight < 1) return
+
+      const cols = Math.max(2, Math.floor(rect.width / cellWidth))
+      const rows = Math.max(1, Math.floor(rect.height / cellHeight))
+      xterm.resize(cols, rows)
+    } catch {
+      // Silently ignore fit errors
     }
-  }, [type, nodeName, selectedPod])
-  // Permission denied gate
+  }, [])
+
+  // Main terminal + WebSocket effect
+  useEffect(() => {
+    if (!terminalRef.current) return
+    if (type === 'node' && !confirmed) return
+    if (type === 'pod' && !selectedPod && !podName) return
+    if (type === 'pod' && !selectedContainer && containers.length === 0) return
+
+    const terminalThemeConfig = TERMINAL_THEMES[terminalThemeRef.current]
+
+    const xterm = new XTerm({
+      cursorBlink: true,
+      cursorStyle: cursorStyleRef.current,
+      fontFamily: "'Maple Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace",
+      fontSize: fontSizeRef.current,
+      lineHeight: 1.3,
+      letterSpacing: 0.5,
+      theme: terminalThemeConfig,
+      allowProposedApi: true,
+      scrollback: 10000,
+      convertEol: true,
+    })
+
+    const fitAddon = new FitAddon()
+    const searchAddon = new SearchAddon()
+    const webLinksAddon = new WebLinksAddon()
+
+    xterm.loadAddon(fitAddon)
+    xterm.loadAddon(searchAddon)
+    xterm.loadAddon(webLinksAddon)
+
+    xtermRef.current = xterm
+    fitAddonRef.current = fitAddon
+    searchAddonRef.current = searchAddon
+
+    xterm.open(terminalRef.current)
+
+    // Apply inline styles for xterm element
+    const xtermEl = terminalRef.current.querySelector('.xterm') as HTMLElement
+    if (xtermEl) {
+      xtermEl.style.position = 'absolute'
+      xtermEl.style.inset = '0'
+      xtermEl.style.width = '100%'
+      xtermEl.style.height = '100%'
+      xtermEl.style.overflow = 'hidden'
+    }
+
+    // Staggered fit attempts
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => safeFit())
+    })
+    const t1 = setTimeout(() => safeFit(), 100)
+    const t2 = setTimeout(() => safeFit(), 300)
+    const t3 = setTimeout(() => safeFit(), 600)
+
+    // ResizeObserver for responsive fit
+    const resizeObserver = new ResizeObserver(() => {
+      safeFit()
+    })
+    resizeObserver.observe(terminalRef.current)
+
+    // Build WebSocket URL
+    const currentCluster = localStorage.getItem('current-cluster')
+    let wsUrl = ''
+    if (type === 'node') {
+      wsUrl = getWebSocketUrl(`/api/v1/node-terminal/${encodeURIComponent(nodeName || '')}/ws?x-cluster-name=${currentCluster || ''}`)
+    } else {
+      const pod = selectedPod || podName || ''
+      const container = selectedContainer || containers[0]?.name || ''
+      const ns = namespace || ''
+      wsUrl = getWebSocketUrl(
+        `/api/v1/terminal/${encodeURIComponent(ns)}/${encodeURIComponent(pod)}/ws?container=${encodeURIComponent(container)}&x-cluster-name=${currentCluster || ''}`
+      )
+    }
+
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      setIsConnected(true)
+      setConnectionDuration(0)
+      connectionTimerRef.current = setInterval(() => {
+        setConnectionDuration((prev) => prev + 1)
+      }, 1000)
+
+      // Send initial resize
+      safeFit()
+      if (xterm.cols && xterm.rows) {
+        try {
+          ws.send(JSON.stringify({ type: 'resize', cols: xterm.cols, rows: xterm.rows }))
+        } catch { /* noop */ }
+      }
+
+      // Start ping keepalive (20s to survive proxy idle timeouts)
+      pingTimerRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          try { ws.send(JSON.stringify({ type: 'ping' })) } catch { /* noop */ }
+        }
+      }, 20000)
+
+      xterm.focus()
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        switch (msg.type) {
+          case 'stdout':
+          case 'stderr':
+            xterm.write(msg.data)
+            break
+          case 'info':
+            xterm.writeln(`\x1b[34m${msg.data}\x1b[0m`)
+            break
+          case 'connected':
+            xterm.writeln(`\x1b[32m${msg.data}\x1b[0m`)
+            break
+          case 'error':
+            xterm.writeln(`\r\n\x1b[1;31mError: ${msg.data || 'Connection error'}\x1b[0m`)
+            setIsConnected(false)
+            break
+          case 'ping':
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'pong' }))
+            }
+            break
+          case 'pong':
+            break
+        }
+      } catch {
+        // If not JSON, write raw
+        xterm.write(event.data)
+      }
+    }
+
+    ws.onclose = (event) => {
+      setIsConnected(false)
+      if (connectionTimerRef.current) clearInterval(connectionTimerRef.current)
+      if (pingTimerRef.current) clearInterval(pingTimerRef.current)
+      if (event.code !== 1000) {
+        xterm.writeln('\r\n\x1b[31mConnection closed unexpectedly\x1b[0m')
+      } else {
+        xterm.writeln('\r\n\x1b[32mConnection closed\x1b[0m')
+      }
+    }
+
+    ws.onerror = () => {
+      xterm.writeln('\r\n\x1b[31mWebSocket connection error\x1b[0m')
+      setIsConnected(false)
+    }
+
+    // Send input to server with chunked paste support
+    const writeQueue: string[] = []
+    let isWriting = false
+
+    const processQueue = () => {
+      if (isWriting || writeQueue.length === 0 || ws.readyState !== WebSocket.OPEN) {
+        isWriting = false
+        return
+      }
+      isWriting = true
+      const chunk = writeQueue.shift()
+      if (chunk) {
+        try {
+          ws.send(JSON.stringify({ type: 'stdin', data: chunk }))
+        } catch { /* noop */ }
+        setTimeout(() => {
+          isWriting = false
+          processQueue()
+        }, 10)
+      } else {
+        isWriting = false
+      }
+    }
+
+    const inputDisposable = xterm.onData((data) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const CHUNK_SIZE = 512
+        if (data.length > CHUNK_SIZE) {
+          for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+            writeQueue.push(data.slice(i, i + CHUNK_SIZE))
+          }
+        } else {
+          writeQueue.push(data)
+        }
+        if (!isWriting) processQueue()
+      }
+    })
+
+    // Send resize events
+    const resizeDisposable = xterm.onResize(({ cols, rows }) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type: 'resize', cols, rows }))
+        } catch { /* noop */ }
+      }
+    })
+
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      if (connectionTimerRef.current) clearInterval(connectionTimerRef.current)
+      if (pingTimerRef.current) clearInterval(pingTimerRef.current)
+      resizeObserver.disconnect()
+      inputDisposable.dispose()
+      resizeDisposable.dispose()
+      ws.close()
+      xterm.dispose()
+      xtermRef.current = null
+      fitAddonRef.current = null
+      searchAddonRef.current = null
+      wsRef.current = null
+    }
+  }, [
+    type,
+    namespace,
+    podName,
+    selectedPod,
+    selectedContainer,
+    nodeName,
+    confirmed,
+    reconnectFlag,
+    safeFit,
+  ])
+
   if (permissionDeniedMessage) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100dvh-180px)] border rounded-md bg-muted/10">
-        <div className="rounded-full bg-destructive/10 p-4 mb-4">
-          <IconTerminal size={32} className="text-destructive" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
-        <p className="text-sm text-muted-foreground text-center max-w-md">{permissionDeniedMessage}</p>
+      <div className="flex items-center justify-center h-64 border border-dashed rounded-lg">
+        <p className="text-sm text-muted-foreground">{permissionDeniedMessage}</p>
       </div>
     )
   }
 
-  // Confirmation gate for node terminals
-  if (!confirmed) {
+  if (requireConfirmation && !confirmed) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100dvh-180px)] border rounded-md bg-muted/10">
-        <div className="rounded-full bg-amber-500/10 p-4 mb-4">
-          <IconTerminal size={32} className="text-amber-500" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Node Terminal Access</h3>
-        <p className="text-sm text-muted-foreground text-center max-w-md mb-1">
-          You are about to open a <strong>privileged terminal</strong> on node <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{nodeName}</code>.
+      <div className="flex flex-col items-center justify-center h-64 gap-4 border border-dashed rounded-lg">
+        <IconTerminal size={32} className="text-muted-foreground" />
+        <p className="text-sm text-muted-foreground text-center max-w-md">
+          This will open a terminal session on the node. Make sure you understand the security implications.
         </p>
-        <p className="text-xs text-muted-foreground text-center max-w-md mb-4">
-          This creates a privileged pod with host access. The pod will be automatically cleaned up when the session ends.
-          All commands are audited.
-        </p>
-        <div className="flex gap-3">
-          <Button
-            variant="default"
-            onClick={() => setConfirmed(true)}
-            className="gap-2"
-          >
-            <IconTerminal size={16} />
-            Connect to Node
-          </Button>
-        </div>
+        <Button onClick={() => setConfirmed(true)}>Open Terminal</Button>
       </div>
     )
   }
 
   return (
     <div
-      className={`flex flex-col bg-background border border-border rounded-md overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[100] border-none rounded-none' : 'h-[calc(100dvh-180px)]'
-        }`}
+      className="flex flex-col bg-background border border-border rounded-lg overflow-hidden h-[calc(100dvh-180px)]"
+      onMouseDown={() => {
+        if (xtermRef.current) xtermRef.current.focus()
+      }}
     >
-      {/* Sleek Toolbar Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-muted/30 border-b border-border">
-
-        {/* Left Section */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <IconTerminal size={18} className="text-primary" />
-            <span className="font-semibold text-sm">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 bg-muted/30 border-b border-border">
+        {/* Left */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <IconTerminal size={16} className="text-primary" />
+            <span className="font-semibold text-xs">
               {type === 'node' ? 'Node Terminal' : 'Terminal'}
             </span>
             {isConnected && connectionDuration > 0 && (
-              <span className="text-[10px] text-muted-foreground font-mono">
+              <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
                 {formatDuration(connectionDuration)}
               </span>
             )}
           </div>
 
-          <div className="w-px h-4 bg-border" />
-
           <ConnectionIndicator
             isConnected={isConnected}
             onReconnect={() => setReconnectFlag((f) => !f)}
           />
-
-          {/* Inline Search */}
-          <div className="relative group ml-2 flex items-center">
-            <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              className="h-8 w-[160px] lg:w-[220px] rounded-md border border-input bg-background/50 px-8 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-              placeholder="Search terminal..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (e.shiftKey) findPrevious()
-                  else findNext()
-                }
-              }}
-            />
-            {searchTerm && (
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={findPrevious}>
-                  <IconChevronUp className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={findNext}>
-                  <IconChevronDown className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
+        {/* Right */}
+        <div className="flex items-center gap-1.5">
           {pods && pods.length > 0 && (
             <PodSelector
               pods={pods}
@@ -722,50 +635,64 @@ export function Terminal({
             />
           )}
 
-          <div className="w-px h-4 bg-border mx-1" />
+          <div className="w-px h-4 bg-border" />
 
-          {/* Actions */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={clearTerminal}>
-                  <IconClearAll size={16} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowSearch(s => !s)}
+                >
+                  <IconSearch size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Clear Buffer</TooltipContent>
+              <TooltipContent side="bottom">Search</TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={copyToClipboard}>
-                  <IconCopy size={16} />
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={clearTerminal}>
+                  <IconClearAll size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Copy All</TooltipContent>
+              <TooltipContent side="bottom">Clear</TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={downloadBuffer}>
-                  <IconDownload size={16} />
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={copyToClipboard}>
+                  <IconCopy size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Download Buffer</TooltipContent>
+              <TooltipContent side="bottom">Copy</TooltipContent>
             </Tooltip>
 
-            <DropdownMenu>              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                  <IconSettings size={16} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={downloadBuffer}>
+                  <IconDownload size={14} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Download</TooltipContent>
+            </Tooltip>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                  <IconSettings size={14} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Terminal Settings</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="text-xs">Settings</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="p-3 space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Theme</Label>
+                <div className="p-2 space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-semibold text-muted-foreground">Theme</Label>
                     <Select value={terminalTheme} onValueChange={handleThemeChange}>
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-7 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -780,10 +707,10 @@ export function Terminal({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Font Size</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-semibold text-muted-foreground">Font Size</Label>
                     <Select value={fontSize.toString()} onValueChange={(v) => handleFontSizeChange(Number(v))}>
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-7 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -793,10 +720,10 @@ export function Terminal({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Cursor</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-semibold text-muted-foreground">Cursor</Label>
                     <Select value={cursorStyle} onValueChange={handleCursorStyleChange}>
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-7 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -812,38 +739,83 @@ export function Terminal({
                   className="text-xs cursor-pointer"
                   onClick={() => {
                     setReconnectFlag((f) => !f)
-                    toast.info('Terminal reset requested')
+                    toast.info('Terminal reconnecting...')
                   }}
                 >
                   <IconRefresh className="mr-2 h-3.5 w-3.5" />
-                  Reset Connection
+                  Reconnect
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={toggleFullscreen}>
-                  {isFullscreen ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</TooltipContent>
-            </Tooltip>
           </TooltipProvider>
         </div>
       </div>
 
-      {/* Terminal Container */}
+      {/* Inline Search Bar */}
+      {showSearch && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-muted/20">
+          <IconSearch className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <input
+            autoFocus
+            className="flex-1 h-6 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+            placeholder="Search in terminal..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (e.shiftKey) findPrevious()
+                else findNext()
+              }
+              if (e.key === 'Escape') {
+                setShowSearch(false)
+                setSearchTerm('')
+                setSearchMatchCount(0)
+                setSearchCurrentIndex(0)
+                searchAddonRef.current?.clearDecorations()
+              }
+            }}
+          />
+          {searchTerm && (
+            <span className="text-[10px] text-muted-foreground font-mono tabular-nums whitespace-nowrap shrink-0">
+              {searchMatchCount > 0 ? `${searchCurrentIndex} of ${searchMatchCount}` : 'No results'}
+            </span>
+          )}
+          <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={findPrevious} disabled={searchMatchCount === 0}>
+            <IconChevronUp className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={findNext} disabled={searchMatchCount === 0}>
+            <IconChevronDown className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setShowSearch(false)
+              setSearchTerm('')
+              setSearchMatchCount(0)
+              setSearchCurrentIndex(0)
+              searchAddonRef.current?.clearDecorations()
+            }}
+          >
+            <IconX className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
+      {/* Terminal Area */}
       <div
-        className="flex-1 w-full h-full relative"
+        className="flex-1 min-h-0 w-full relative"
         style={{ backgroundColor: TERMINAL_THEMES[terminalTheme].background }}
       >
         <div
           ref={terminalRef}
-          className="absolute inset-0 p-2 overflow-hidden outline-none"
+          data-terminal-container
+          className="absolute inset-0 outline-none"
           style={{ overscrollBehavior: 'none', touchAction: 'none' }}
         />
       </div>
     </div>
   )
 }
+

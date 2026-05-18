@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { BarChart2, Cpu, HardDrive, LayoutGrid, MemoryStick, Zap } from 'lucide-react'
+import { BarChart2, Cpu, LayoutGrid, MemoryStick, Zap } from 'lucide-react'
 
 import { NodeWithMetrics } from '@/types/api'
 import { formatDate } from '@/lib/utils'
@@ -10,13 +10,14 @@ import { Badge } from '@/components/ui/badge'
 import { MetricCell } from '@/components/metrics-cell'
 import { NodeStatusIcon } from '@/components/node-status-icon'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 import { Button } from '@/components/ui/button'
 import { ClusterHeatmap } from '@/components/cluster-heatmap'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
 import { NodeLabelSelector } from '@/components/selector/node-label-selector'
+import { NodeQuerySelector } from '@/components/selector/node-query-selector'
+import { useSessionState } from '@/hooks/use-session-state'
 
 /**
  * Enhanced status detection. Returns a pipe-delimited string of all relevant states.
@@ -110,9 +111,13 @@ function getNodeIP(node: NodeWithMetrics): string {
 
 export function NodeListPage() {
   const { t } = useTranslation()
-  const [selectedLabels, setSelectedLabels] = useState<string>('')
-  const [showHeatmap, setShowHeatmap] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'ready' | 'notready' | 'unschedulable'>('all')
+  const [selectedLabels, setSelectedLabels] = useSessionState<string>('nodes-selectedLabels', '')
+  const [querySelector, setQuerySelector] = useSessionState<string>('nodes-querySelector', '')
+  const [showHeatmap, setShowHeatmap] = useSessionState<boolean>('nodes-showHeatmap', false)
+  const [statusFilter, setStatusFilter] = useSessionState<'all' | 'ready' | 'notready' | 'unschedulable'>('nodes-statusFilter', 'all')
+
+  // Merge label selector and query selector: query selector takes priority if set, otherwise use label selector
+  const effectiveLabelSelector = querySelector || selectedLabels
 
   const columnHelper = createColumnHelper<NodeWithMetrics>()
 
@@ -120,8 +125,9 @@ export function NodeListPage() {
     () => [
       columnHelper.accessor('metadata.name', {
         header: t('common.name'),
+        meta: { width: '12%' },
         cell: ({ row }) => (
-          <div className="font-medium text-blue-500 hover:underline text-sm">
+          <div className="font-medium text-blue-500 hover:underline text-sm truncate">
             <Link to={`/nodes/${row.original.metadata!.name}`}>
               {row.original.metadata!.name}
             </Link>
@@ -131,6 +137,7 @@ export function NodeListPage() {
       columnHelper.accessor((row) => getNodeStatus(row), {
         id: 'status',
         header: t('common.status'),
+        meta: { width: '10%' },
         cell: ({ getValue }) => {
           const statusStr = getValue()
           const parts = statusStr.split('|')
@@ -138,7 +145,7 @@ export function NodeListPage() {
           const issues = parts.slice(1)
 
           return (
-            <div className="flex flex-wrap gap-1 items-center">
+            <div className="flex gap-1 items-center min-w-0 overflow-hidden">
               <Badge variant="outline" className="text-muted-foreground px-1.5 text-[10px] font-bold uppercase tracking-tight gap-1">
                 <NodeStatusIcon status={mainStatus} className="size-3" />
                 {mainStatus.replace('Ready,', '').replace('NotReady,', '')}
@@ -164,6 +171,7 @@ export function NodeListPage() {
       columnHelper.accessor((row) => getNodeRoles(row), {
         id: 'roles',
         header: 'Roles',
+        meta: { width: '7%' },
         cell: ({ getValue }) => {
           const roles = getValue()
           return (
@@ -183,6 +191,7 @@ export function NodeListPage() {
       }),
       columnHelper.accessor((row) => row.metrics, {
         id: 'pods',
+        meta: { width: '8%' },
         header: () => (
           <span className="flex items-center gap-1">
             <BarChart2 className="size-3 text-blue-500" />
@@ -199,9 +208,9 @@ export function NodeListPage() {
                 <TooltipTrigger asChild>
                   <Link
                     to={`/nodes/${row.original.metadata!.name}?tab=pods`}
-                    className="flex items-center gap-1.5 group"
+                    className="flex items-center gap-1 group min-w-0"
                   >
-                    <div className="w-10 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="w-8 shrink-0 h-1.5 rounded-full bg-muted overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-blue-500'}`}
                         style={{ width: `${Math.min(pct, 100)}%` }}
@@ -222,6 +231,7 @@ export function NodeListPage() {
       }),
       columnHelper.accessor((row) => row.metrics?.cpuUsage || 0, {
         id: 'cpu',
+        meta: { width: '11%' },
         header: () => (
           <span className="flex items-center gap-1">
             <Cpu className="size-3 text-indigo-500" />
@@ -239,6 +249,7 @@ export function NodeListPage() {
       }),
       columnHelper.accessor((row) => row.metrics?.memoryUsage || 0, {
         id: 'memory',
+        meta: { width: '12%' },
         header: () => (
           <span className="flex items-center gap-1">
             <MemoryStick className="size-3 text-emerald-500" />
@@ -256,6 +267,7 @@ export function NodeListPage() {
       }),
       columnHelper.accessor((row) => row.metrics?.gpuRequest || 0, {
         id: 'gpu',
+        meta: { width: '8%' },
         header: () => (
           <span className="flex items-center gap-1">
             <Zap className="size-3 text-amber-500" />
@@ -281,6 +293,7 @@ export function NodeListPage() {
       columnHelper.accessor((row) => getNodeIP(row), {
         id: 'ip',
         header: 'IP Address',
+        meta: { width: '10%' },
         cell: ({ getValue }) => {
           const ip = getValue()
           return (
@@ -292,6 +305,7 @@ export function NodeListPage() {
       }),
       columnHelper.accessor('status.nodeInfo.kubeletVersion', {
         header: 'Version',
+        meta: { width: '6%' },
         cell: ({ getValue }) => {
           const version = getValue()
           return version ? (
@@ -303,10 +317,11 @@ export function NodeListPage() {
       }),
       columnHelper.accessor('metadata.creationTimestamp', {
         header: t('common.created'),
+        meta: { width: '11%' },
         cell: ({ getValue }) => {
           const dateStr = formatDate(getValue() || '')
           return (
-            <span className="text-muted-foreground text-xs">{dateStr}</span>
+            <span className="text-muted-foreground text-xs truncate block">{dateStr}</span>
           )
         },
       }),
@@ -314,16 +329,12 @@ export function NodeListPage() {
         id: 'actions',
         header: t('common.actions'),
         cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2">
-            <QuickYamlDialog
-              resourceType="nodes"
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
+          <div className="flex items-center justify-end gap-1">
             <DescribeDialog
               resourceType="nodes"
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         )
@@ -359,56 +370,52 @@ export function NodeListPage() {
   )
 
   const filterToolbar = (
-    <FilterBar>
+    <FilterBar className="flex-nowrap overflow-x-auto">
       <FilterGroup label="Status">
-        <Button
-          variant={statusFilter === 'all' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setStatusFilter('all')}
-          className="h-7 text-xs font-medium"
-        >
-          All
-        </Button>
-        <Button
-          variant={statusFilter === 'ready' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setStatusFilter('ready')}
-          className="h-7 text-xs font-medium"
-        >
-          Ready
-        </Button>
-        <Button
-          variant={statusFilter === 'notready' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setStatusFilter('notready')}
-          className="h-7 text-xs font-medium"
-        >
-          Not Ready
-        </Button>
-        <Button
-          variant={statusFilter === 'unschedulable' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setStatusFilter('unschedulable')}
-          className="h-7 text-xs font-medium"
-        >
-          Unschedulable
-        </Button>
+        <div className="flex items-center rounded-md border border-border/40 overflow-hidden">
+          {(['all', 'ready', 'notready', 'unschedulable'] as const).map((s) => (
+            <Button
+              key={s}
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatusFilter(s)}
+              className={`h-7 text-xs font-medium rounded-none border-none px-2.5 ${statusFilter === s
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+                  : 'hover:bg-muted/60'
+                }`}
+            >
+              {s === 'all' ? 'All' : s === 'ready' ? 'Ready' : s === 'notready' ? 'Not Ready' : 'Unschedulable'}
+            </Button>
+          ))}
+        </div>
       </FilterGroup>
-      <div className="w-px h-4 bg-border mx-1" />
-      <FilterGroup label="View">
+      <div className="w-px h-4 bg-border/50 shrink-0" />
+      <FilterGroup>
         <Button
           variant={showHeatmap ? 'secondary' : 'ghost'}
           size="sm"
           onClick={() => setShowHeatmap(!showHeatmap)}
-          className="h-7 gap-2 text-xs font-bold"
+          className="h-7 gap-1.5 text-xs font-medium"
         >
-          <LayoutGrid className="h-3.5 w-3.5" />
-          {showHeatmap ? 'Overview: On' : 'Overview: Off'}
+          <LayoutGrid className="h-3 w-3" />
+          Heatmap
         </Button>
       </FilterGroup>
-      <div className="w-px h-4 bg-border mx-1" />
-      <FilterGroup label="Dynamic Filters">
-        <NodeLabelSelector onLabelsChange={setSelectedLabels} />
+      <div className="w-px h-4 bg-border/50 shrink-0" />
+      <FilterGroup label="Labels">
+        <NodeLabelSelector onLabelsChange={(labels) => {
+          setSelectedLabels(labels)
+          if (labels) setQuerySelector('')
+        }} />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border/50 shrink-0" />
+      <FilterGroup>
+        <NodeQuerySelector
+          onSelectorChange={(sel) => {
+            setQuerySelector(sel)
+            if (sel) setSelectedLabels('')
+          }}
+        />
       </FilterGroup>
     </FilterBar>
   )
@@ -417,7 +424,7 @@ export function NodeListPage() {
     <div className="space-y-4">
       {showHeatmap && (
         <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <ClusterHeatmap selectedLabels={selectedLabels} />
+          <ClusterHeatmap selectedLabels={effectiveLabelSelector} />
         </div>
       )}
       <ResourceTable
@@ -432,7 +439,7 @@ export function NodeListPage() {
           'status_nodeInfo_osImage',
         ]}
         extraToolbars={[filterToolbar]}
-        labelSelector={selectedLabels}
+        labelSelector={effectiveLabelSelector}
       />
     </div>
   )

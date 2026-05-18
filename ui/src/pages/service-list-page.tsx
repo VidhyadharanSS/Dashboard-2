@@ -19,8 +19,9 @@ export function ServiceListPage() {
     () => [
       columnHelper.accessor('metadata.name', {
         header: t('common.name'),
+        meta: { width: '22%' },
         cell: ({ row }) => (
-          <div className="font-medium text-blue-500 hover:underline">
+          <div className="font-medium text-blue-500 hover:underline truncate">
             <Link
               to={`/services/${row.original.metadata!.namespace}/${
                 row.original.metadata!.name
@@ -33,6 +34,7 @@ export function ServiceListPage() {
       }),
       columnHelper.accessor('spec.type', {
         header: t('services.type'),
+        meta: { width: '10%' },
         enableColumnFilter: true,
         cell: ({ getValue }) => {
           const type = getValue() || 'ClusterIP'
@@ -41,6 +43,7 @@ export function ServiceListPage() {
       }),
       columnHelper.accessor('spec.clusterIP', {
         header: t('services.clusterIP'),
+        meta: { width: '14%' },
         cell: ({ getValue }) => {
           const val = getValue() || '-'
           return (
@@ -52,6 +55,7 @@ export function ServiceListPage() {
       }),
       columnHelper.accessor('status.loadBalancer.ingress', {
         header: t('services.externalIP'),
+        meta: { width: '14%' },
         cell: ({ row }) => {
           const val = getServiceExternalIP(row.original)
           return (
@@ -63,6 +67,7 @@ export function ServiceListPage() {
       }),
       columnHelper.accessor('spec.ports', {
         header: t('services.ports'),
+        meta: { width: '18%' },
         cell: ({ getValue }) => {
           const ports = getValue() || []
           if (ports.length === 0) return '-'
@@ -109,8 +114,10 @@ export function ServiceListPage() {
     <ResourceTable
       resourceName="Services"
       columns={columns}
-      clusterScope={false} // Services are namespace-scoped
+      clusterScope={false}
       searchQueryFilter={serviceSearchFilter}
+      enableMultiNamespace
     />
   )
 }
+

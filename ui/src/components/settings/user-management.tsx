@@ -224,16 +224,18 @@ export function UserManagement() {
         ),
         enableSorting: false,
         enableHiding: false,
+        meta: { width: '40px' },
       },
       {
-        id: 'id',
-        header: 'ID',
-        enableSorting: true,
-        accessorFn: (row) => row.id,
-        cell: ({ getValue }) => (
-          <div className="text-sm text-muted-foreground">
-            {String(getValue())}
-          </div>
+        id: 'rowNumber',
+        header: '#',
+        enableSorting: false,
+        enableHiding: false,
+        meta: { width: '50px' },
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground tabular-nums font-mono">
+            {pagination.pageIndex * pagination.pageSize + row.index + 1}
+          </span>
         ),
       },
       {
@@ -241,43 +243,51 @@ export function UserManagement() {
         header: t('username', 'Username'),
         enableSorting: false,
         accessorFn: (row) => row.username,
+        meta: { width: '23%' },
         cell: ({ row }) => (
-          <div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setEditingUser(row.original)}
-                aria-label={t('userManagement.actions.editUser', 'Edit user')}
-                className="p-0 bg-transparent border-0 inline-flex items-center"
-              >
-                <Avatar.Root className="inline-block">
-                  {row.original.avatar_url ? (
-                    <Avatar.Image
-                      src={row.original.avatar_url}
-                      alt={row.original.username}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <Avatar.Fallback className="h-8 w-8 rounded-full bg-muted-foreground text-white flex items-center justify-center">
-                      {row.original.username
-                        .split(' ')
-                        .map((part) => part[0])
-                        .join('')
-                        .toUpperCase()
-                        .slice(0, 2)}
-                    </Avatar.Fallback>
-                  )}
-                </Avatar.Root>
-              </button>
-              <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setEditingUser(row.original)}
+              aria-label={t('userManagement.actions.editUser', 'Edit user')}
+              className="p-0 bg-transparent border-0 inline-flex items-center shrink-0"
+            >
+              <Avatar.Root className="inline-block">
+                {row.original.avatar_url ? (
+                  <Avatar.Image
+                    src={row.original.avatar_url}
+                    alt={row.original.username}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <Avatar.Fallback className="h-8 w-8 rounded-full bg-muted-foreground text-white flex items-center justify-center text-xs font-semibold">
+                    {row.original.username
+                      .split(' ')
+                      .map((part) => part[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2)}
+                  </Avatar.Fallback>
+                )}
+              </Avatar.Root>
+            </button>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span className="font-medium truncate">
                   {row.original.username}
                 </span>
-                {/* Updated to display email under username */}
-                <span className="text-xs text-muted-foreground truncate">
-                  {row.original.email || row.original.name || ''}
-                </span>
+                {row.original.roles?.some((r) => r.name === 'admin') && (
+                  <span className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                    <IconShieldCheck className="h-2.5 w-2.5" />
+                    Admin
+                  </span>
+                )}
               </div>
+              {(row.original.email || row.original.name) && (
+                <span className="text-xs text-muted-foreground truncate">
+                  {row.original.email || row.original.name}
+                </span>
+              )}
             </div>
           </div>
         ),
@@ -286,17 +296,17 @@ export function UserManagement() {
         id: 'status',
         header: t('userManagement.table.status', 'Status'),
         enableSorting: false,
-        cell: ({ row: { original: user } }) => (
-          <div className="flex items-center gap-3">{getStatusBadge(user)}</div>
-        ),
+        meta: { width: '8%' },
+        cell: ({ row: { original: user } }) => getStatusBadge(user),
       },
       {
         id: 'provider',
         header: t('userManagement.table.provider', 'Provider'),
         accessorFn: (row) => row.provider || '-',
         enableSorting: false,
+        meta: { width: '8%' },
         cell: ({ getValue }) => (
-          <div className="code">{String(getValue() || '-')}</div>
+          <Badge variant="outline" className="text-[10px] font-mono">{String(getValue() || '-')}</Badge>
         ),
       },
       {
@@ -304,8 +314,9 @@ export function UserManagement() {
         header: t('userManagement.table.createdAt', 'Created At'),
         enableSorting: true,
         accessorFn: (row) => row.createdAt,
+        meta: { width: '14%' },
         cell: ({ getValue }) => (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground tabular-nums truncate">
             {formatDate(getValue() as string) || '-'}
           </div>
         ),
@@ -315,12 +326,13 @@ export function UserManagement() {
         header: t('userManagement.table.lastLoginAt', 'Last Login'),
         enableSorting: true,
         accessorFn: (row) => row.lastLoginAt ?? '',
+        meta: { width: '14%' },
         cell: ({
           row: {
             original: { lastLoginAt },
           },
         }) => (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground tabular-nums truncate">
             {lastLoginAt ? formatDate(lastLoginAt) : '-'}
           </div>
         ),
@@ -330,8 +342,9 @@ export function UserManagement() {
         header: t('userManagement.table.roles', 'Roles'),
         accessorFn: (row) => row.roles?.map((r) => r.name).join(', '),
         enableSorting: false,
+        meta: { width: '16%' },
         cell: ({ row: { original: user } }) => (
-          <div className="flex flex-wrap gap-1 max-w-[200px]">
+          <div className="flex flex-wrap gap-1">
             {user.roles && user.roles.length > 0 ? (
               user.roles.map((r) => (
                 <Badge key={r.name} variant="outline" className="text-[10px] px-1.5 py-0.5 leading-none h-4">
@@ -611,24 +624,72 @@ export function UserManagement() {
   const filteredRowCount = data?.users.length ?? 0
 
   return (
-    <div>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
+    <div className="w-full overflow-hidden">
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 shrink-0">
                 <IconUser className="h-5 w-5" />
                 {t('userManagement.title', 'User Management')}
               </CardTitle>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImportJson}
+                  accept=".json"
+                  className="hidden"
+                />
+                {Object.keys(rowSelection).length > 0 ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowBatchDeleteConfirm(true)}
+                    className="gap-2"
+                  >
+                    <IconTrash className="h-4 w-4" />
+                    {t('userManagement.actions.deleteSelected', {
+                      count: Object.keys(rowSelection).length,
+                      defaultValue: `Delete Selected (${Object.keys(rowSelection).length})`,
+                    })}
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="gap-2 h-9 text-xs"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <IconUpload className="h-4 w-4" />
+                      {t('userManagement.actions.batchCreate', 'Batch Create')}
+                    </Button>
+                    <Button variant="outline" className="gap-2 h-9 text-xs" onClick={() => setShowBatchDeleteConfirm(true)}>
+                      <IconTrash className="h-4 w-4" />
+                      {t('userManagement.actions.batchDelete', 'Batch Delete')}
+                    </Button>
+                    <Button
+                      className="gap-2 h-9 text-xs"
+                      onClick={() => {
+                        setEditingUser(null)
+                        setShowAddDialog(true)
+                      }}
+                    >
+                      <IconPlus className="h-4 w-4" />
+                      {t('userManagement.actions.createUser', 'Create User')}
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Select
                 value={roleFilter || 'all'}
                 onValueChange={(value) =>
                   setRoleFilter(value === 'all' ? '' : value)
                 }
               >
-                <SelectTrigger className="w-48 h-9 text-xs">
+                <SelectTrigger className="w-40 h-9 text-xs">
                   <SelectValue
                     placeholder={t('userManagement.filters.role', 'All roles')}
                   />
@@ -644,7 +705,7 @@ export function UserManagement() {
                   ))}
                 </SelectContent>
               </Select>
-              <div className="relative">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
                 <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder={t(
@@ -653,57 +714,9 @@ export function UserManagement() {
                   )}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-64 h-9 text-xs"
+                  className="pl-9 h-9 text-xs"
                 />
               </div>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImportJson}
-                accept=".json"
-                className="hidden"
-              />
-
-              {Object.keys(rowSelection).length > 0 ? (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowBatchDeleteConfirm(true)}
-                  className="gap-2"
-                >
-                  <IconTrash className="h-4 w-4" />
-                  {t('userManagement.actions.deleteSelected', {
-                    count: Object.keys(rowSelection).length,
-                    defaultValue: `Delete Selected (${Object.keys(rowSelection).length})`,
-                  })}
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    className="gap-2 h-9 text-xs"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <IconUpload className="h-4 w-4" />
-                    {t('userManagement.actions.batchCreate', 'Batch Create')}
-                  </Button>
-                  <Button className="gap-2 h-9 text-xs" onClick={() => setShowBatchDeleteConfirm(true)}>
-                    <IconTrash className="h-4 w-4" />
-                    {t('userManagement.actions.batchDelete', 'Batch Delete')}
-                  </Button>
-                  <Button
-                    className="gap-2 h-9 text-xs"
-                    onClick={() => {
-                      setEditingUser(null)
-                      setShowAddDialog(true)
-                    }}
-                  >
-                    <IconPlus className="h-4 w-4" />
-                    {t('userManagement.actions.createUser', 'Create User')}
-                  </Button>
-                </>
-              )}
             </div>
           </div>
         </CardHeader>

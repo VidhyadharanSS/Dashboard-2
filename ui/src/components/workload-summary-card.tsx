@@ -9,7 +9,7 @@ import {
     IconNetwork,
     IconCloud,
     IconSettings,
-    IconLock,
+    // IconLock removed \u2014 secrets widget removed (security hardening)
 } from '@tabler/icons-react'
 import { Badge } from './ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -36,7 +36,7 @@ export function WorkloadSummaryCard({ namespace }: { namespace: string }) {
         { kind: 'services', label: 'Services', icon: IconNetwork, path: '/services', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
         { kind: 'ingresses', label: 'Ingresses', icon: IconCloud, path: '/ingresses', color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
         { kind: 'configmaps', label: 'ConfigMaps', icon: IconSettings, path: '/configmaps', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
-        { kind: 'secrets', label: 'Secrets', icon: IconLock, path: '/secrets', color: 'text-rose-500', bgColor: 'bg-rose-500/10' },
+        // secrets removed — secret data must not be accessible via the dashboard (security hardening)
     ]
 
     return (

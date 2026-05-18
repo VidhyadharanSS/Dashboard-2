@@ -7,8 +7,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zxh326/kite/pkg/common"
+	"github.com/zxh326/kite/pkg/logger"
 	"github.com/zxh326/kite/pkg/model"
 	"github.com/zxh326/kite/pkg/rbac"
+	"github.com/zxh326/kite/pkg/utils"
 	"k8s.io/klog/v2"
 )
 
@@ -20,9 +23,30 @@ type createPasswordUser struct {
 }
 
 func CreateSuperUser(c *gin.Context) {
+	// When OAuth bootstrap is configured, block password-based superuser creation.
+	// The first admin will be created automatically on first OAuth login.
+	if common.OAuthBootstrapConfigured() && common.HasConfiguredSuperAdminEmails() {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "OAuth bootstrap is configured. Please sign in with your OAuth provider to create the admin account.",
+		})
+		return
+	}
+
 	var userreq createPasswordUser
 	if err := c.ShouldBindJSON(&userreq); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate username
+	if strings.TrimSpace(userreq.Username) == "" {
+		c.JSON(400, gin.H{"error": "Username is required"})
+		return
+	}
+
+	// Validate password strength
+	if pwErr := utils.ValidatePasswordStrength(userreq.Password); pwErr != "" {
+		c.JSON(400, gin.H{"error": pwErr})
 		return
 	}
 
@@ -37,10 +61,10 @@ func CreateSuperUser(c *gin.Context) {
 		return
 	}
 	user := &model.User{
-		Username: userreq.Username,
+		Username: strings.TrimSpace(userreq.Username),
 		Password: userreq.Password,
-		Name:     userreq.Name,
-		Email:    userreq.Email,
+		Name:     strings.TrimSpace(userreq.Name),
+		Email:    strings.TrimSpace(userreq.Email),
 		Provider: "password",
 	}
 
@@ -49,6 +73,8 @@ func CreateSuperUser(c *gin.Context) {
 		return
 	}
 	rbac.SyncNow <- struct{}{}
+	logger.Audit(user.Username, "CreateSuperUser", "users", "", "", "Super user account created",
+		logger.AuditOpts{Severity: logger.AuditCritical, SourceIP: c.ClientIP()})
 	c.JSON(201, user)
 }
 
@@ -63,12 +89,18 @@ func CreatePasswordUser(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "password is required when no email is provided"})
 		return
 	}
-	// check only admin or users count is zero
+	// Validate password strength when provided
+	if userreq.Password != "" {
+		if pwErr := utils.ValidatePasswordStrength(userreq.Password); pwErr != "" {
+			c.JSON(400, gin.H{"error": pwErr})
+			return
+		}
+	}
 	user := &model.User{
-		Username: userreq.Username,
+		Username: strings.TrimSpace(userreq.Username),
 		Password: userreq.Password,
-		Name:     userreq.Name,
-		Email:    userreq.Email,
+		Name:     strings.TrimSpace(userreq.Name),
+		Email:    strings.TrimSpace(userreq.Email),
 		Provider: "password",
 	}
 
@@ -244,10 +276,23 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
+	// Look up target user before deletion for audit log
+	target, _ := model.GetUserByID(uint64(id))
+	targetName := fmt.Sprintf("user#%d", id)
+	if target != nil {
+		targetName = target.Key()
+	}
+
 	if err := model.DeleteUserByID(id); err != nil {
 		c.JSON(500, gin.H{"error": "failed to delete user"})
 		return
 	}
+
+	admin := c.MustGet("user").(model.User)
+	logger.Audit(admin.Key(), "DeleteUser", "users", "", "",
+		fmt.Sprintf("Deleted user %s", targetName),
+		logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP()})
+
 	c.JSON(200, gin.H{"success": true})
 }
 
@@ -290,10 +335,31 @@ func ResetPassword(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	// Validate password strength
+	if pwErr := utils.ValidatePasswordStrength(req.Password); pwErr != "" {
+		c.JSON(400, gin.H{"error": pwErr})
+		return
+	}
 	if err := model.ResetPasswordByID(id, req.Password); err != nil {
 		c.JSON(500, gin.H{"error": "failed to reset password"})
 		return
 	}
+	// Audit log password reset
+	admin := c.MustGet("user").(model.User)
+	target, _ := model.GetUserByID(uint64(id))
+	targetName := fmt.Sprintf("user#%d", id)
+	if target != nil {
+		targetName = target.Key()
+	}
+	logger.Audit(admin.Key(), "ResetPassword", "users", "", "",
+		fmt.Sprintf("Password reset for user %s", targetName),
+		logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP()})
+
+	// Invalidate all sessions for the user whose password was reset
+	if target != nil {
+		model.DB.Where("user_id = ?", target.ID).Delete(&model.UserSession{})
+	}
+
 	c.JSON(200, gin.H{"success": true})
 }
 
@@ -314,6 +380,23 @@ func SetUserEnabled(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "failed to set enabled"})
 		return
 	}
+	// Audit log and invalidate sessions on disable
+	admin := c.MustGet("user").(model.User)
+	target, _ := model.GetUserByID(uint64(id))
+	targetName := fmt.Sprintf("user#%d", id)
+	if target != nil {
+		targetName = target.Key()
+	}
+	action := "EnableUser"
+	if !req.Enabled {
+		action = "DisableUser"
+		// Invalidate all sessions when a user is disabled
+		model.DB.Where("user_id = ?", id).Delete(&model.UserSession{})
+	}
+	logger.Audit(admin.Key(), action, "users", "", "",
+		fmt.Sprintf("User %s %s", targetName, strings.ToLower(action)),
+		logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP()})
+
 	c.JSON(200, gin.H{"success": true})
 }
 
@@ -357,3 +440,4 @@ func UpdateSidebarPreference(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"success": true})
 }
+

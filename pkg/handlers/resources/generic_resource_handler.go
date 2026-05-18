@@ -18,6 +18,12 @@ import (
 	"github.com/zxh326/kite/pkg/logger"
 	"github.com/zxh326/kite/pkg/model"
 	"github.com/zxh326/kite/pkg/rbac"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,6 +102,7 @@ func (h *GenericResourceHandler[T, V]) recordHistory(c *gin.Context, opType stri
 		PreviousYAML:  h.ToYAML(prev),
 		Success:       success,
 		ErrorMessage:  errMsg,
+		SourceIP:      c.ClientIP(),
 		OperatorID:    user.ID,
 	}
 	if err := model.DB.Create(&history).Error; err != nil {
@@ -107,12 +114,27 @@ func (h *GenericResourceHandler[T, V]) recordHistory(c *gin.Context, opType stri
 	if !success {
 		statusLabel = "FAILED"
 	}
-	logMsg := fmt.Sprintf("[%s] %s resource %s", statusLabel, strings.Title(opType), curr.GetName())
+	// Capitalize operation type (e.g. "create" -> "Create") for audit readability.
+	titleOp := strings.ToUpper(opType[:1]) + opType[1:]
+	logMsg := fmt.Sprintf("[%s] %s resource %s", statusLabel, titleOp, curr.GetName())
 	if !success && errMsg != "" {
 		logMsg += fmt.Sprintf(" | Error: %s", errMsg)
 	}
 
-	logger.Audit(user.Key(), strings.Title(opType), h.name, curr.GetNamespace(), cs.Name, logMsg, duration)
+	severity := logger.AuditInfo
+	if !success {
+		severity = logger.AuditError
+	} else if opType == "delete" {
+		severity = logger.AuditWarning
+	}
+
+	logger.AuditWithOpts(user.Key(), titleOp, h.name, curr.GetNamespace(), cs.Name, logMsg, logger.AuditOpts{
+		Duration: duration,
+		Severity: severity,
+		SourceIP: c.ClientIP(),
+		Name:     curr.GetName(),
+		Success:  &success,
+	})
 }
 
 func (h *GenericResourceHandler[T, V]) IsClusterScoped() bool {
@@ -272,12 +294,70 @@ func (h *GenericResourceHandler[T, V]) List(c *gin.Context) {
 					reducedItems = append(reducedItems, item)
 					continue
 				}
+				// For resources that override List() (pods, deployments, statefulsets, nodes),
+				// this code path won't be reached — their custom List() handles reduce.
+				// For other resources (configmaps, secrets, etc.) we create a slim copy with
+				// only metadata. The Annotations and ManagedFields are already stripped above.
 				reduced := reflect.New(h.objectType).Interface().(client.Object)
 				reduced.SetName(obj.GetName())
 				reduced.SetNamespace(obj.GetNamespace())
 				reduced.SetUID(obj.GetUID())
 				reduced.SetCreationTimestamp(obj.GetCreationTimestamp())
 				reduced.SetLabels(obj.GetLabels())
+
+				// ── Preserve status for workload / storage / service types so UI
+				// can show ready/replica counts, phases, claim refs, etc. ──
+				switch orig := item.(type) {
+				case *appsv1.DaemonSet:
+					if r, ok := reduced.(*appsv1.DaemonSet); ok {
+						r.Spec.Selector = orig.Spec.Selector
+						r.Status = orig.Status
+					}
+				case *corev1.PersistentVolume:
+					if r, ok := reduced.(*corev1.PersistentVolume); ok {
+						r.Spec = orig.Spec
+						r.Status = orig.Status
+					}
+				case *corev1.PersistentVolumeClaim:
+					if r, ok := reduced.(*corev1.PersistentVolumeClaim); ok {
+						r.Spec = orig.Spec
+						r.Status = orig.Status
+					}
+				case *batchv1.Job:
+					if r, ok := reduced.(*batchv1.Job); ok {
+						r.Spec.Selector = orig.Spec.Selector
+						r.Status = orig.Status
+					}
+				case *batchv1.CronJob:
+					if r, ok := reduced.(*batchv1.CronJob); ok {
+						r.Status = orig.Status
+					}
+				case *corev1.Service:
+					if r, ok := reduced.(*corev1.Service); ok {
+						r.Spec.Type = orig.Spec.Type
+						r.Spec.ClusterIP = orig.Spec.ClusterIP
+						r.Spec.Ports = orig.Spec.Ports
+						r.Spec.ExternalIPs = orig.Spec.ExternalIPs
+						r.Spec.Selector = orig.Spec.Selector
+					}
+				case *networkingv1.Ingress:
+					if r, ok := reduced.(*networkingv1.Ingress); ok {
+						r.Spec = orig.Spec
+						r.Status = orig.Status
+					}
+				case *storagev1.StorageClass:
+					if r, ok := reduced.(*storagev1.StorageClass); ok {
+						r.Provisioner = orig.Provisioner
+						r.ReclaimPolicy = orig.ReclaimPolicy
+						r.VolumeBindingMode = orig.VolumeBindingMode
+					}
+				case *autoscalingv2.HorizontalPodAutoscaler:
+					if r, ok := reduced.(*autoscalingv2.HorizontalPodAutoscaler); ok {
+						r.Spec = orig.Spec
+						r.Status = orig.Status
+					}
+				}
+
 				reducedItems = append(reducedItems, reduced)
 			}
 			_ = meta.SetList(objectList, reducedItems)

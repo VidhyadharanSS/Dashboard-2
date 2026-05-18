@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { IconCircleCheckFilled, IconLoader, IconReload } from '@tabler/icons-react'
+import { IconCircleCheckFilled, IconLoader } from '@tabler/icons-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { StatefulSet } from 'kubernetes-types/apps/v1'
 import { useTranslation } from 'react-i18next'
@@ -9,18 +9,23 @@ import { toast } from 'sonner'
 import * as api from '@/lib/api'
 import { formatDate, getAge } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
+import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
+import { WorkloadLabelSelector } from '@/components/selector/workload-label-selector'
+import { WorkloadQuerySelector } from '@/components/selector/workload-query-selector'
+import { useSessionState } from '@/hooks/use-session-state'
 
 export function StatefulSetListPage() {
   const { t } = useTranslation()
+  const [selectedLabels, setSelectedLabels] = useSessionState<string>('statefulsets-selectedLabels', '')
+  const [querySelector, setQuerySelector] = useSessionState<string>('statefulsets-querySelector', '')
+  const effectiveLabelSelector = querySelector || selectedLabels
 
   const handleBatchRestart = useCallback(async (rows: StatefulSet[]) => {
     const promises = rows.map((row) => {
@@ -28,7 +33,7 @@ export function StatefulSetListPage() {
       const namespace = row.metadata?.namespace
       if (!name || !namespace) return Promise.resolve()
 
-      return api.restartResource('statefulsets', name, namespace)
+      return api.restartResource('statefulsets', namespace, name)
         .then(() => toast.success(t('deployments.restartSuccess', { name, defaultValue: `Successfully restarted ${name}` })))
         .catch((error) => {
           console.error(`Failed to restart ${name}:`, error)
@@ -152,39 +157,12 @@ export function StatefulSetListPage() {
           const name = row.original.metadata?.name || ''
           return (
             <div className="flex items-center justify-end gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      try {
-                        await api.restartResource('statefulsets', name, ns!)
-                        toast.success(`Restarted ${name}`)
-                      } catch (err: unknown) {
-                        const msg = err instanceof Error ? err.message : String(err)
-                        toast.error(`Failed to restart: ${msg}`)
-                      }
-                    }}
-                  >
-                    <IconReload className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Restart StatefulSet</TooltipContent>
-              </Tooltip>
-              <QuickYamlDialog
-                resourceType="statefulsets"
-                namespace={ns}
-                name={name}
-                triggerVariant="ghost"
-                triggerSize="icon"
-              />
               <DescribeDialog
                 resourceType="statefulsets"
                 namespace={ns}
                 name={name}
+                compact
+                triggerVariant="ghost"
               />
             </div>
           )
@@ -208,6 +186,31 @@ export function StatefulSetListPage() {
     []
   )
 
+  const filterToolbar = (
+    <FilterBar>
+      <FilterGroup label="Label Filter">
+        <WorkloadLabelSelector
+          resourceType="statefulsets"
+          onLabelsChange={(labels) => {
+            setSelectedLabels(labels)
+            if (labels) setQuerySelector('')
+          }}
+          placeholder="Filter by Label"
+        />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border mx-1" />
+      <FilterGroup label="Query Selector">
+        <WorkloadQuerySelector
+          resourceType="statefulsets"
+          onSelectorChange={(sel) => {
+            setQuerySelector(sel)
+            if (sel) setSelectedLabels('')
+          }}
+        />
+      </FilterGroup>
+    </FilterBar>
+  )
+
   return (
     <ResourceTable
       resourceName={'StatefulSets'}
@@ -215,7 +218,9 @@ export function StatefulSetListPage() {
       columns={columns}
       searchQueryFilter={statefulSetSearchFilter}
       onBatchRestart={handleBatchRestart}
-      enableLabelFilter={true}
+      extraToolbars={[filterToolbar]}
+      labelSelector={effectiveLabelSelector}
+      enableMultiNamespace
     />
   )
 }

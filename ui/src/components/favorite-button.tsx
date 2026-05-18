@@ -43,12 +43,12 @@ export function FavoriteButton({ resourceType, name, namespace }: FavoriteButton
 
     const newState = toggleFavorite(resource)
     setAnimating(true)
-    setTimeout(() => setAnimating(false), 300)
+    setTimeout(() => setAnimating(false), 500)
 
     if (newState) {
-      toast.success(`Added "${name}" to favorites`)
+      toast.success(`⭐ "${name}" added to favorites`, { duration: 2500 })
     } else {
-      toast.success(`Removed "${name}" from favorites`)
+      toast.success(`Removed "${name}" from favorites`, { duration: 2000 })
     }
   }, [resourceId, name, resourceType, namespace, toggleFavorite])
 
@@ -57,25 +57,39 @@ export function FavoriteButton({ resourceType, name, namespace }: FavoriteButton
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="outline"
+            variant={starred ? 'default' : 'outline'}
             size="sm"
             onClick={handleToggle}
-            className={`gap-1.5 ${starred ? 'text-amber-500 border-amber-500/30 hover:border-amber-500/50' : ''}`}
+            className={`
+              gap-1.5 relative overflow-hidden transition-all duration-300
+              ${starred
+                ? 'bg-amber-500/15 text-amber-600 border-amber-400/40 hover:bg-amber-500/25 hover:border-amber-400/60 dark:text-amber-400 dark:border-amber-500/30 dark:hover:bg-amber-500/20'
+                : 'hover:border-amber-400/40 hover:text-amber-500'
+              }
+            `}
           >
             {starred ? (
               <IconStarFilled
-                className={`w-4 h-4 text-amber-500 ${animating ? 'scale-125 transition-transform' : 'transition-transform'}`}
+                className={`w-4 h-4 text-amber-500 transition-transform duration-300 ${animating ? 'scale-130' : ''}`}
+                style={animating ? { transform: 'scale(1.3) rotate(15deg)' } : undefined}
               />
             ) : (
               <IconStar
-                className={`w-4 h-4 ${animating ? 'scale-125 transition-transform' : 'transition-transform'}`}
+                className={`w-4 h-4 transition-transform duration-300 ${animating ? 'scale-110' : ''}`}
               />
             )}
-            {starred ? 'Starred' : 'Star'}
+            <span className="text-xs font-medium">{starred ? 'Starred' : 'Star'}</span>
+            {/* Subtle shine animation on star */}
+            {animating && starred && (
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/20 to-transparent animate-shimmer pointer-events-none" />
+            )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {starred ? 'Remove from favorites' : 'Add to favorites for quick access'}
+          {starred
+            ? 'Remove from favorites'
+            : 'Add to favorites for quick access via ⌘K or ⌘F'
+          }
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

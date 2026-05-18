@@ -14,8 +14,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
+import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
+import { WorkloadLabelSelector } from '@/components/selector/workload-label-selector'
+import { WorkloadQuerySelector } from '@/components/selector/workload-query-selector'
+import { useSessionState } from '@/hooks/use-session-state'
 
 function fallbackCopy(text: string) {
   try {
@@ -49,6 +52,9 @@ function getJobDuration(job: Job): string | null {
 }
 
 export function JobListPage() {
+  const [selectedLabels, setSelectedLabels] = useSessionState<string>('jobs-selectedLabels', '')
+  const [querySelector, setQuerySelector] = useSessionState<string>('jobs-querySelector', '')
+  const effectiveLabelSelector = querySelector || selectedLabels
 
   const columnHelper = createColumnHelper<Job>()
 
@@ -122,13 +128,12 @@ export function JobListPage() {
           return (
             <Badge
               variant="outline"
-              className={`px-1.5 w-fit ${
-                status === 'Complete'
+              className={`px-1.5 w-fit ${status === 'Complete'
                   ? 'border-green-500/40 text-green-600 dark:text-green-400'
                   : status === 'Failed'
                     ? 'border-red-500/40 text-red-500'
                     : 'text-muted-foreground'
-              }`}
+                }`}
             >
               {status === 'Complete' ? (
                 <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
@@ -151,10 +156,9 @@ export function JobListPage() {
           const completions = row.original.spec?.completions || 1
           const isComplete = succeeded >= completions
           return (
-            <span className={`text-sm font-medium tabular-nums ${
-              isComplete ? 'text-green-600 dark:text-green-400' :
-              succeeded === 0 ? 'text-muted-foreground' : 'text-amber-500'
-            }`}>
+            <span className={`text-sm font-medium tabular-nums ${isComplete ? 'text-green-600 dark:text-green-400' :
+                succeeded === 0 ? 'text-muted-foreground' : 'text-amber-500'
+              }`}>
               {succeeded}/{completions}
             </span>
           )
@@ -206,17 +210,12 @@ export function JobListPage() {
         header: 'Actions',
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <QuickYamlDialog
-              resourceType="jobs"
-              namespace={row.original.metadata?.namespace}
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
             <DescribeDialog
               resourceType="jobs"
               namespace={row.original.metadata?.namespace}
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         ),
@@ -232,11 +231,39 @@ export function JobListPage() {
     )
   }, [])
 
+  const filterToolbar = (
+    <FilterBar>
+      <FilterGroup label="Label Filter">
+        <WorkloadLabelSelector
+          resourceType="jobs"
+          onLabelsChange={(labels) => {
+            setSelectedLabels(labels)
+            if (labels) setQuerySelector('')
+          }}
+          placeholder="Filter by Label"
+        />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border mx-1" />
+      <FilterGroup label="Query Selector">
+        <WorkloadQuerySelector
+          resourceType="jobs"
+          onSelectorChange={(sel) => {
+            setQuerySelector(sel)
+            if (sel) setSelectedLabels('')
+          }}
+        />
+      </FilterGroup>
+    </FilterBar>
+  )
+
   return (
     <ResourceTable
       resourceName="Jobs"
       columns={columns}
       searchQueryFilter={jobSearchFilter}
+      extraToolbars={[filterToolbar]}
+      labelSelector={effectiveLabelSelector}
+      enableMultiNamespace
     />
   )
 }

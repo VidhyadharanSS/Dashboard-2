@@ -14,7 +14,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 
 function fallbackCopy(text: string) {
@@ -82,21 +81,19 @@ export function PVCListPage() {
           return (
             <Badge
               variant="outline"
-              className={`px-1.5 ${
-                phase === 'Bound'
+              className={`px-1.5 ${phase === 'Bound'
                   ? 'border-green-500/40 text-green-600 dark:text-green-400'
                   : phase === 'Pending'
                     ? 'border-amber-500/40 text-amber-600'
                     : phase === 'Lost'
                       ? 'border-red-500/40 text-red-500'
                       : ''
-              }`}
+                }`}
             >
-              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${
-                phase === 'Bound' ? 'bg-green-500' :
-                phase === 'Pending' ? 'bg-amber-500' :
-                phase === 'Lost' ? 'bg-red-500' : 'bg-muted-foreground'
-              }`} />
+              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${phase === 'Bound' ? 'bg-green-500' :
+                  phase === 'Pending' ? 'bg-amber-500' :
+                    phase === 'Lost' ? 'bg-red-500' : 'bg-muted-foreground'
+                }`} />
               {phase}
             </Badge>
           )
@@ -189,17 +186,12 @@ export function PVCListPage() {
         header: t('common.actions'),
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <QuickYamlDialog
-              resourceType="persistentvolumeclaims"
-              namespace={row.original.metadata?.namespace}
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
             <DescribeDialog
               resourceType="persistentvolumeclaims"
               namespace={row.original.metadata?.namespace}
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         ),
@@ -226,6 +218,7 @@ export function PVCListPage() {
       resourceName={'PersistentVolumeClaims'}
       columns={columns}
       searchQueryFilter={pvcSearchFilter}
+      enableMultiNamespace
     />
   )
 }

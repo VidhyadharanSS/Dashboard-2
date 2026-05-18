@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Pod } from 'kubernetes-types/core/v1'
 import { Copy } from 'lucide-react'
@@ -19,9 +19,12 @@ import {
 import { MetricCell } from '@/components/metrics-cell'
 import { PodStatusIcon } from '@/components/pod-status-icon'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 import { NodeLabelSelector } from '@/components/selector/node-label-selector'
+import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
+import { WorkloadLabelSelector } from '@/components/selector/workload-label-selector'
+import { WorkloadQuerySelector } from '@/components/selector/workload-query-selector'
+import { useSessionState } from '@/hooks/use-session-state'
 
 function fallbackCopy(text: string) {
   try {
@@ -43,7 +46,10 @@ function fallbackCopy(text: string) {
 
 export function PodListPage() {
   const { t } = useTranslation()
-  const [nodeNameFilter, setNodeNameFilter] = useState<string[] | null>(null)
+  const [nodeNameFilter, setNodeNameFilter] = useSessionState<string[] | null>('pods-nodeNameFilter', null)
+  const [selectedLabels, setSelectedLabels] = useSessionState<string>('pods-selectedLabels', '')
+  const [querySelector, setQuerySelector] = useSessionState<string>('pods-querySelector', '')
+  const effectiveLabelSelector = querySelector || selectedLabels
 
   const columnHelper = createColumnHelper<PodWithMetrics>()
 
@@ -142,50 +148,22 @@ export function PodListPage() {
         enableColumnFilter: true,
         cell: ({ row }) => {
           const status = getPodStatus(row.original).reason
-          
-          // Check for missing resource limits
-          const containers = row.original.spec?.containers || []
-          const hasMissingLimits = containers.some(
-            (c) => !c.resources?.limits?.cpu || !c.resources?.limits?.memory
-          )
-          const isLive = status !== 'Completed' && status !== 'Succeeded' && status !== 'Failed'
 
           return (
-            <div className="flex flex-wrap gap-1 items-center">
-              <Badge
-                variant="outline"
-                className={`px-1.5 shrink-0 gap-1 ${
-                  status === 'Running'
-                    ? 'border-green-500/40 text-green-600 dark:text-green-400'
-                    : status === 'Completed' || status === 'Succeeded'
-                      ? 'border-muted text-muted-foreground'
-                      : status === 'Pending' || status === 'ContainerCreating'
-                        ? 'border-amber-500/40 text-amber-600'
-                        : 'border-red-500/40 text-red-500'
+            <Badge
+              variant="outline"
+              className={`px-1.5 shrink-0 gap-1 ${status === 'Running'
+                  ? 'border-green-500/40 text-green-600 dark:text-green-400'
+                  : status === 'Completed' || status === 'Succeeded'
+                    ? 'border-muted text-muted-foreground'
+                    : status === 'Pending' || status === 'ContainerCreating'
+                      ? 'border-amber-500/40 text-amber-600'
+                      : 'border-red-500/40 text-red-500'
                 }`}
-              >
-                <PodStatusIcon status={status} className="size-3" />
-                {status}
-              </Badge>
-
-              {isLive && hasMissingLimits && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge 
-                        variant="outline" 
-                        className="px-1 text-[9px] h-4 leading-none uppercase border-orange-500/50 text-orange-600 dark:text-orange-400 bg-orange-500/5 cursor-help"
-                      >
-                        No Limits
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs">One or more containers lack CPU/Memory limits</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
+            >
+              <PodStatusIcon status={status} className="size-3" />
+              {status}
+            </Badge>
           )
         },
       }),
@@ -203,7 +181,7 @@ export function PodListPage() {
               : s.restartCount > 3
                 ? 'text-amber-500'
                 : 'text-muted-foreground'
-          
+
           return (
             <TooltipProvider>
               <Tooltip>
@@ -281,17 +259,12 @@ export function PodListPage() {
         header: t('common.actions'),
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <QuickYamlDialog
-              resourceType="pods"
-              namespace={row.original.metadata?.namespace}
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
             <DescribeDialog
               resourceType="pods"
               namespace={row.original.metadata?.namespace}
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         ),
@@ -319,9 +292,34 @@ export function PodListPage() {
     [nodeNameFilter]
   )
 
-  const extraToolbars = [
-    <NodeLabelSelector key="node-selector" onNodeNamesChange={setNodeNameFilter} />,
-  ]
+  const filterToolbar = (
+    <FilterBar>
+      <FilterGroup label="Node Filter">
+        <NodeLabelSelector onNodeNamesChange={setNodeNameFilter} />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border mx-1" />
+      <FilterGroup label="Label Filter">
+        <WorkloadLabelSelector
+          resourceType="pods"
+          onLabelsChange={(labels) => {
+            setSelectedLabels(labels)
+            if (labels) setQuerySelector('')
+          }}
+          placeholder="Filter by Pod Label"
+        />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border mx-1" />
+      <FilterGroup label="Query Selector">
+        <WorkloadQuerySelector
+          resourceType="pods"
+          onSelectorChange={(sel) => {
+            setQuerySelector(sel)
+            if (sel) setSelectedLabels('')
+          }}
+        />
+      </FilterGroup>
+    </FilterBar>
+  )
 
   return (
     <ResourceTable<Pod>
@@ -329,8 +327,9 @@ export function PodListPage() {
       columns={columns}
       clusterScope={false}
       searchQueryFilter={podSearchFilter}
-      enableLabelFilter={true}
-      extraToolbars={extraToolbars}
+      extraToolbars={[filterToolbar]}
+      labelSelector={effectiveLabelSelector}
+      enableMultiNamespace
     />
   )
 }

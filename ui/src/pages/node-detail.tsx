@@ -119,18 +119,19 @@ export function NodeDetail(props: { name: string }) {
         <div>
           <h1 className="text-lg font-bold">{name}</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
           <Button
             disabled={isLoading}
             variant="outline"
-            size="sm"
+            size="icon"
+            className="h-8 w-8"
             onClick={handleManualRefresh}
+            title="Refresh"
           >
-            <IconRefresh className="w-4 h-4" />
-            Refresh
+            <IconRefresh className="w-3.5 h-3.5" />
           </Button>
-          <QuickYamlDialog resourceType="nodes" name={name} triggerAsText />
-          <DescribeDialog resourceType="nodes" name={name} />
+          <QuickYamlDialog resourceType="nodes" name={name} triggerVariant="outline" triggerSize="icon" />
+          <DescribeDialog resourceType="nodes" name={name} compact triggerVariant="outline" />
         </div>
       </div>
 
@@ -556,7 +557,7 @@ export function NodeDetail(props: { name: string }) {
             label: 'Monitor',
             content: <NodeMonitoring name={name} />,
           },
-          
+
           {
             value: 'events',
             label: 'Events',

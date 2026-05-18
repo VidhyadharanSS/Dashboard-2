@@ -19,7 +19,6 @@ import { NodeListPage } from './node-list-page'
 import { PodListPage } from './pod-list-page'
 import { PVListPage } from './pv-list-page'
 import { PVCListPage } from './pvc-list-page'
-import { SecretListPage } from './secret-list-page'
 import { ServiceListPage } from './service-list-page'
 import { SimpleListPage } from './simple-list-page'
 import { StatefulSetListPage } from './statefulset-list-page'
@@ -56,8 +55,7 @@ export function ResourceList() {
       return <DaemonSetListPage />
     case 'configmaps':
       return <ConfigMapListPage />
-    case 'secrets':
-      return <SecretListPage />
+    // case 'secrets' removed — secret data must not be accessible via the dashboard (security hardening)
     case 'persistentvolumeclaims':
       return <PVCListPage />
     case 'persistentvolumes':

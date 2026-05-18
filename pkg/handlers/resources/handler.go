@@ -47,6 +47,19 @@ type Restartable interface {
 	Restart(c *gin.Context, namespace, name string) error
 }
 
+// workloadCreateDisabled lists resource types for which direct creation via the
+// dashboard is disabled per security audit requirements. New workloads must be
+// created through the Kites AppServer orchestration layer.
+var workloadCreateDisabled = map[string]bool{
+	"pods":         true,
+	"deployments":  true,
+	"statefulsets": true,
+	"daemonsets":   true,
+	"jobs":         true,
+	"cronjobs":     true,
+	"replicasets":  true,
+}
+
 var handlers = map[string]resourceHandler{}
 
 func RegisterRoutes(group *gin.RouterGroup) {
@@ -58,7 +71,7 @@ func RegisterRoutes(group *gin.RouterGroup) {
 		"endpoints":                NewGenericResourceHandler[*corev1.Endpoints, *corev1.EndpointsList]("endpoints", false, false),
 		"endpointslices":           NewGenericResourceHandler[*discoveryv1.EndpointSlice, *discoveryv1.EndpointSliceList]("endpointslices", false, false),
 		"configmaps":               NewGenericResourceHandler[*corev1.ConfigMap, *corev1.ConfigMapList]("configmaps", false, true),
-		"secrets":                  NewGenericResourceHandler[*corev1.Secret, *corev1.SecretList]("secrets", false, true),
+		// secrets handler removed — secret data must not be accessible via the dashboard (security audit finding #5)
 		"persistentvolumes":        NewGenericResourceHandler[*corev1.PersistentVolume, *corev1.PersistentVolumeList]("persistentvolumes", true, true),
 		"persistentvolumeclaims":   NewGenericResourceHandler[*corev1.PersistentVolumeClaim, *corev1.PersistentVolumeClaimList]("persistentvolumeclaims", false, true),
 		"serviceaccounts":          NewGenericResourceHandler[*corev1.ServiceAccount, *corev1.ServiceAccountList]("serviceaccounts", false, false),
@@ -87,9 +100,9 @@ func RegisterRoutes(group *gin.RouterGroup) {
 		g := group.Group("/" + name)
 		handler.registerCustomRoutes(g)
 		if handler.IsClusterScoped() {
-			registerClusterScopeRoutes(g, handler)
+			registerClusterScopeRoutes(g, handler, workloadCreateDisabled[name])
 		} else {
-			registerNamespaceScopeRoutes(g, handler)
+			registerNamespaceScopeRoutes(g, handler, workloadCreateDisabled[name])
 		}
 
 		if handler.Searchable() {
@@ -98,7 +111,7 @@ func RegisterRoutes(group *gin.RouterGroup) {
 	}
 
 	// Register related resources route for namespace-scoped resource types
-	supportedRelatedResourceTypes := []string{"pods", "deployments", "statefulsets", "daemonsets", "configmaps", "secrets", "persistentvolumeclaims", "httproutes", "horizontalpodautoscalers", "services", "ingresses"}
+	supportedRelatedResourceTypes := []string{"pods", "deployments", "statefulsets", "daemonsets", "configmaps", "persistentvolumeclaims", "httproutes", "horizontalpodautoscalers", "services", "ingresses"}
 	for _, resourceType := range supportedRelatedResourceTypes {
 		if handler, exists := handlers[resourceType]; exists && !handler.IsClusterScoped() {
 			g := group.Group("/" + resourceType)
@@ -144,11 +157,17 @@ func RegisterRoutes(group *gin.RouterGroup) {
 	}
 }
 
-func registerClusterScopeRoutes(group *gin.RouterGroup, handler resourceHandler) {
+func registerClusterScopeRoutes(group *gin.RouterGroup, handler resourceHandler, disableCreate bool) {
 	group.GET("", handler.List)
 	group.GET("/_all", handler.List)
 	group.GET("/_all/:name", handler.Get)
-	group.POST("/_all", handler.Create)
+	if !disableCreate {
+		group.POST("/_all", handler.Create)
+	} else {
+		group.POST("/_all", func(c *gin.Context) {
+			c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "workload creation is disabled via the dashboard"})
+		})
+	}
 	group.PUT("/_all/:name", handler.Update)
 	group.DELETE("/_all/:name", handler.Delete)
 	group.PATCH("/_all/:name", handler.Patch)
@@ -156,11 +175,17 @@ func registerClusterScopeRoutes(group *gin.RouterGroup, handler resourceHandler)
 	group.GET("/_all/:name/describe", handler.Describe)
 }
 
-func registerNamespaceScopeRoutes(group *gin.RouterGroup, handler resourceHandler) {
+func registerNamespaceScopeRoutes(group *gin.RouterGroup, handler resourceHandler, disableCreate bool) {
 	group.GET("", handler.List)
 	group.GET("/:namespace", handler.List)
 	group.GET("/:namespace/:name", handler.Get)
-	group.POST("/:namespace", handler.Create)
+	if !disableCreate {
+		group.POST("/:namespace", handler.Create)
+	} else {
+		group.POST("/:namespace", func(c *gin.Context) {
+			c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "workload creation is disabled via the dashboard"})
+		})
+	}
 	group.PUT("/:namespace/:name", handler.Update)
 	group.DELETE("/:namespace/:name", handler.Delete)
 	group.PATCH("/:namespace/:name", handler.Patch)

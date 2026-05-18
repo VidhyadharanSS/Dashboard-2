@@ -4,7 +4,10 @@ type Cluster struct {
 	Model
 	Name          string       `json:"name" gorm:"type:varchar(100);uniqueIndex;not null"`
 	Description   string       `json:"description" gorm:"type:text"`
-	Config        SecretString `json:"config" gorm:"type:text"`
+	// Config is excluded from JSON serialization to prevent accidental exposure
+	// of decrypted kubeconfig in API responses. Handlers that need to include it
+	// must do so explicitly via gin.H or a DTO.
+	Config        SecretString `json:"-" gorm:"type:text"`
 	PrometheusURL string       `json:"prometheus_url,omitempty" gorm:"type:varchar(255)"`
 	InCluster     bool         `json:"in_cluster" gorm:"type:boolean;default:false"`
 	IsDefault     bool         `json:"is_default" gorm:"type:boolean;default:false"`
@@ -62,3 +65,4 @@ func ListClusters() ([]*Cluster, error) {
 func CountClusters() (count int64, err error) {
 	return count, DB.Model(&Cluster{}).Count(&count).Error
 }
+

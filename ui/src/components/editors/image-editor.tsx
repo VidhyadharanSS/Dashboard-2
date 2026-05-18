@@ -74,27 +74,32 @@ export function ImageEditor({ container, onUpdate }: ImageEditorProps) {
           ref={inputRef}
           value={container.image || ''}
           onFocus={handleInputFocus}
-          onBlur={() => setShowTagDropdown(false)}
+          onBlur={() => setTimeout(() => setShowTagDropdown(false), 200)}
           onChange={(e) => updateImage(e.target.value)}
           placeholder="nginx:latest"
           autoComplete="off"
         />
         {showTagDropdown && (
-          <div className="absolute z-10 mt-1 w-full bg-popover border rounded shadow max-h-60 overflow-auto">
+          <div className="absolute z-50 top-full left-0 mt-1 w-full bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
             {tagLoading && (
+              <div className="px-3 py-2 text-sm text-muted-foreground animate-pulse">
+                Loading tags...
+              </div>
+            )}
+            {tagOptions && tagOptions.length === 0 && !tagLoading && (
               <div className="px-3 py-2 text-sm text-muted-foreground">
-                Loading...
+                No tags found
               </div>
             )}
             {tagOptions?.map((tag) => (
               <div
                 key={tag.name}
-                className="px-3 py-2 cursor-pointer hover:bg-accent text-sm flex justify-between"
+                className="px-3 py-2 cursor-pointer hover:bg-accent text-sm flex justify-between items-center min-w-0 overflow-hidden"
                 onMouseDown={() => handleTagSelect(tag.name)}
               >
-                <span>{tag.name}</span>
+                <span className="truncate min-w-0">{tag.name}</span>
                 {tag.timestamp && (
-                  <span className="text-xs text-muted-foreground ml-2">
+                  <span className="text-xs text-muted-foreground ml-2 shrink-0">
                     {formatDate(tag.timestamp)}
                   </span>
                 )}
@@ -135,3 +140,4 @@ export function ImageEditor({ container, onUpdate }: ImageEditorProps) {
     </div>
   )
 }
+

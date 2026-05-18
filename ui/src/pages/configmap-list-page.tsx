@@ -80,6 +80,8 @@ export function ConfigMapListPage() {
       resourceName="ConfigMaps"
       columns={columns}
       searchQueryFilter={configMapSearchFilter}
+      enableMultiNamespace
     />
   )
 }
+

@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { useMemo } from 'react'
-import Icon from '@/assets/icon.svg'
 import { useSidebarConfig } from '@/contexts/sidebar-config-context'
 import { CollapsibleContent } from '@radix-ui/react-collapsible'
 import { IconLayoutDashboard, IconSearch, IconChartBar } from '@tabler/icons-react'
@@ -135,12 +134,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <Link to="/" onClick={handleMenuItemClick}>
                 <div className="relative flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
-                    <img src={Icon} alt="Kites Logo" className="h-8 w-8" />
-                    <div className="flex flex-col">
-                      <span className="text-base font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                        Kites
-                      </span>
-                    </div>
+                    <span className="text-base font-bold tracking-widest text-foreground uppercase">KITES</span>
                   </div>
                 </div>
               </Link>
@@ -182,7 +176,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
 
             {/* Advanced Search link */}
-{}
+            { }
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Advanced Search"
@@ -197,7 +191,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuButton>
             </SidebarMenuItem>
 
-            {}
+            { }
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Prometheus Metrics"

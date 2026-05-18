@@ -121,7 +121,7 @@ func buildAuditQuery(db *gorm.DB, operatorID uint64, search, operation, clusterN
 	return query
 }
 
-const lightColumns = "id, created_at, updated_at, cluster_name, resource_type, resource_name, namespace, operation_type, success, error_message, operator_id"
+const lightColumns = "id, created_at, updated_at, cluster_name, resource_type, resource_name, namespace, operation_type, success, error_message, source_ip, operator_id"
 
 // ListAuditLogs returns audit logs for admin users.
 func ListAuditLogs(c *gin.Context) {
@@ -625,6 +625,26 @@ func GetAuditRetentionInfo(c *gin.Context) {
 		"totalEntries": totalEntries,
 		"oldestEntry":  oldestDate,
 		"ageBrackets":  result,
+	})
+}
+
+// GetAuditFilterOptions returns distinct resource types and namespaces for filter dropdowns.
+func GetAuditFilterOptions(c *gin.Context) {
+	types, err := model.GetDistinctResourceTypes()
+	if err != nil {
+		klog.Errorf("Audit Filters: Failed to fetch resource types: %v", err)
+		types = []string{}
+	}
+
+	namespaces, err := model.GetDistinctNamespaces()
+	if err != nil {
+		klog.Errorf("Audit Filters: Failed to fetch namespaces: %v", err)
+		namespaces = []string{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"resourceTypes": types,
+		"namespaces":    namespaces,
 	})
 }
 

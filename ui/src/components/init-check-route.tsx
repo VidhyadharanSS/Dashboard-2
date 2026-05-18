@@ -25,3 +25,4 @@ export function InitCheckRoute({ children }: InitCheckRouteProps) {
 
   return <>{children}</>
 }
+

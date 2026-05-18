@@ -5,19 +5,23 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"k8s.io/klog/v2"
 )
 
-// Rotator is a thread-safe io.Writer that rotates logs based on size
+// Rotator is a thread-safe io.Writer that rotates logs based on size and
+// cleans up old backup files beyond a configurable retention count.
 type Rotator struct {
-	filename string
-	maxSize  int64
-	current  *os.File
-	size     int64
-	mu       sync.Mutex
+	filename     string
+	maxSize      int64
+	maxBackups   int
+	current      *os.File
+	size         int64
+	mu           sync.Mutex
 }
 
 func NewRotator(filename string, maxSizeMB int) (*Rotator, error) {
@@ -25,8 +29,9 @@ func NewRotator(filename string, maxSizeMB int) (*Rotator, error) {
 		maxSizeMB = 10 // Default 10MB
 	}
 	r := &Rotator{
-		filename: filename,
-		maxSize:  int64(maxSizeMB) * 1024 * 1024,
+		filename:   filename,
+		maxSize:    int64(maxSizeMB) * 1024 * 1024,
+		maxBackups: 5, // Keep 5 most recent backups per log file
 	}
 	if err := r.open(); err != nil {
 		return nil, err
@@ -60,9 +65,14 @@ func (r *Rotator) Write(p []byte) (n int, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if r.current == nil {
+		return 0, fmt.Errorf("logger %s: file handle is nil", r.filename)
+	}
+
 	if r.size+int64(len(p)) > r.maxSize {
 		if err := r.rotate(); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to rotate log %s: %v\n", r.filename, err)
+			// Still try to write to the current file even if rotation failed
 		}
 	}
 
@@ -72,7 +82,9 @@ func (r *Rotator) Write(p []byte) (n int, err error) {
 }
 
 func (r *Rotator) rotate() error {
-	r.current.Close()
+	if r.current != nil {
+		r.current.Close()
+	}
 
 	backupName := fmt.Sprintf("%s.%s", r.filename, time.Now().Format("20060102150405"))
 	if err := os.Rename(r.filename, backupName); err != nil {
@@ -81,7 +93,52 @@ func (r *Rotator) rotate() error {
 		return err
 	}
 
-	return r.open()
+	if err := r.open(); err != nil {
+		return err
+	}
+
+	// Clean up old backups beyond retention limit in a goroutine to avoid blocking writes
+	go r.cleanOldBackups()
+	return nil
+}
+
+// cleanOldBackups removes rotated backup files beyond maxBackups retention count.
+func (r *Rotator) cleanOldBackups() {
+	if r.maxBackups <= 0 {
+		return
+	}
+
+	dir := filepath.Dir(r.filename)
+	base := filepath.Base(r.filename)
+	prefix := base + "."
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	var backups []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, prefix) && !entry.IsDir() {
+			backups = append(backups, filepath.Join(dir, name))
+		}
+	}
+
+	if len(backups) <= r.maxBackups {
+		return
+	}
+
+	// Sort ascending (oldest first) — backup names contain timestamps so lexicographic sort works
+	sort.Strings(backups)
+
+	// Remove oldest backups beyond retention
+	toRemove := backups[:len(backups)-r.maxBackups]
+	for _, path := range toRemove {
+		if err := os.Remove(path); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to remove old log backup %s: %v\n", path, err)
+		}
+	}
 }
 
 func (r *Rotator) Close() error {
@@ -91,6 +148,33 @@ func (r *Rotator) Close() error {
 		return r.current.Close()
 	}
 	return nil
+}
+
+// safeMultiWriter wraps io.MultiWriter with a mutex so concurrent writes to
+// the underlying writers (Rotator + os.Stdout) are not interleaved.
+type safeMultiWriter struct {
+	mu      sync.Mutex
+	writers []io.Writer
+}
+
+func newSafeMultiWriter(writers ...io.Writer) io.Writer {
+	return &safeMultiWriter{writers: writers}
+}
+
+func (w *safeMultiWriter) Write(p []byte) (n int, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, writer := range w.writers {
+		n, err = writer.Write(p)
+		if err != nil {
+			return
+		}
+		if n != len(p) {
+			err = io.ErrShortWrite
+			return
+		}
+	}
+	return len(p), nil
 }
 
 var (
@@ -133,37 +217,41 @@ func Init(logDir string, maxSizeMB int) error {
 		klog.Infof("Logger initialized with timezone: %s", loc.String())
 	}
 
-	AccessLogger, err = NewRotator(filepath.Join(logDir, "access.log"), maxSizeMB)
+	accessRotator, err := NewRotator(filepath.Join(logDir, "access.log"), maxSizeMB)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialize access logger: %w", err)
 	}
 
-	AuditLogger, err = NewRotator(filepath.Join(logDir, "audit.log"), maxSizeMB)
+	auditRotator, err := NewRotator(filepath.Join(logDir, "audit.log"), maxSizeMB)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialize audit logger: %w", err)
 	}
 
-	ApplicationLogger, err = NewRotator(filepath.Join(logDir, "application.log"), maxSizeMB)
+	appRotator, err := NewRotator(filepath.Join(logDir, "application.log"), maxSizeMB)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialize application logger: %w", err)
 	}
 
-	SecurityLogger, err = NewRotator(filepath.Join(logDir, "security.log"), maxSizeMB)
+	var secRotator *Rotator
+	secRotator, err = NewRotator(filepath.Join(logDir, "security.log"), maxSizeMB)
 	if err != nil {
 		// Non-fatal: fall back to audit log
 		klog.Warningf("Failed to initialize security log, falling back to audit log: %v", err)
-		SecurityLogger = nil
+		secRotator = nil
 	}
 
-	// MultiWriter to also output to stdout for container logs visibility
-	AccessLogger = io.MultiWriter(AccessLogger, os.Stdout)
-	AuditLogger = io.MultiWriter(AuditLogger, os.Stdout)
-	ApplicationLogger = io.MultiWriter(ApplicationLogger, os.Stdout)
-	if SecurityLogger != nil {
-		SecurityLogger = io.MultiWriter(SecurityLogger, os.Stdout)
+	// Use thread-safe multi-writer to also output to stdout for container logs visibility.
+	// The safeMultiWriter wraps writes in a mutex so concurrent goroutines do not interleave
+	// their output across the rotator + stdout pair.
+	AccessLogger = newSafeMultiWriter(accessRotator, os.Stdout)
+	AuditLogger = newSafeMultiWriter(auditRotator, os.Stdout)
+	ApplicationLogger = newSafeMultiWriter(appRotator, os.Stdout)
+	if secRotator != nil {
+		SecurityLogger = newSafeMultiWriter(secRotator, os.Stdout)
 	}
 
 	App("INFO", "logger", fmt.Sprintf("Logging system initialized — logDir=%s maxSizeMB=%d timezone=%s", logDir, maxSizeMB, time.Local.String()))
 
 	return nil
 }
+

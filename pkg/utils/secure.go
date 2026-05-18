@@ -3,11 +3,13 @@ package utils
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"unicode"
 
 	"github.com/zxh326/kite/pkg/common"
 	"golang.org/x/crypto/bcrypt"
@@ -20,6 +22,39 @@ func HashPassword(password string) (string, error) {
 
 func CheckPasswordHash(password, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
+
+// SecureCompare performs a constant-time string comparison to prevent timing attacks.
+// Returns true if the two strings are equal.
+func SecureCompare(a, b string) bool {
+	return hmac.Equal([]byte(a), []byte(b))
+}
+
+// ValidatePasswordStrength ensures a password meets minimum security requirements.
+// Returns an error message if the password is too weak, or empty string if acceptable.
+func ValidatePasswordStrength(password string) string {
+	if len(password) < 8 {
+		return "Password must be at least 8 characters long"
+	}
+	if len(password) > 128 {
+		return "Password must be at most 128 characters long"
+	}
+
+	var hasUpper, hasLower, hasDigit bool
+	for _, c := range password {
+		switch {
+		case unicode.IsUpper(c):
+			hasUpper = true
+		case unicode.IsLower(c):
+			hasLower = true
+		case unicode.IsDigit(c):
+			hasDigit = true
+		}
+	}
+	if !hasUpper || !hasLower || !hasDigit {
+		return "Password must contain at least one uppercase letter, one lowercase letter, and one digit"
+	}
+	return ""
 }
 
 func EncryptString(input string) string {
@@ -68,3 +103,4 @@ func DecryptString(encrypted string) (string, error) {
 	}
 	return string(plaintext), nil
 }
+

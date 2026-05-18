@@ -92,12 +92,14 @@ func InitDB() {
 	}
 	models := []interface{}{
 		User{},
+		UserSession{},
 		Cluster{},
 		OAuthProvider{},
 		Role{},
 		RoleAssignment{},
 		ResourceHistory{},
 		ResourceTemplate{},
+		SystemSetting{},
 	}
 	for _, model := range models {
 		err = DB.AutoMigrate(model)
@@ -113,3 +115,4 @@ func InitDB() {
 		sqldb.SetConnMaxLifetime(common.DBMaxIdleTime)
 	}
 }
+

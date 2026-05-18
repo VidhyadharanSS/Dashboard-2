@@ -56,7 +56,7 @@ export const DeploymentStatusIcon = ({
     case 'Scaled Down':
       return (
         <IconTrendingDown
-          className={`text-gray-500 dark:text-gray-400 ${className}`}
+          className={`text-muted-foreground ${className}`}
         />
       )
 
@@ -70,8 +70,9 @@ export const DeploymentStatusIcon = ({
     default:
       return (
         <IconExclamationCircle
-          className={`fill-gray-500 dark:fill-gray-400 ${className}`}
+          className={`fill-muted-foreground ${className}`}
         />
       )
   }
 }
+

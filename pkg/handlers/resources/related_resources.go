@@ -17,14 +17,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func discoverServices(ctx context.Context, k8sClient *kube.K8sClient, namespace string, selector *metav1.LabelSelector) ([]common.RelatedResource, error) {
-	if selector == nil || selector.MatchLabels == nil {
+func discoverServices(ctx context.Context, k8sClient *kube.K8sClient, namespace string, podLabels map[string]string) ([]common.RelatedResource, error) {
+	if len(podLabels) == 0 {
 		return []common.RelatedResource{}, nil
 	}
 
@@ -37,7 +36,7 @@ func discoverServices(ctx context.Context, k8sClient *kube.K8sClient, namespace 
 	for _, service := range serviceList.Items {
 		if service.Spec.Selector != nil {
 			serviceSelector := labels.SelectorFromSet(service.Spec.Selector)
-			if serviceSelector.Matches(labels.Set(selector.MatchLabels)) {
+			if serviceSelector.Matches(labels.Set(podLabels)) {
 				relatedServices = append(relatedServices, common.RelatedResource{
 					Type:      "services",
 					Namespace: service.Namespace,
@@ -96,6 +95,24 @@ func discoverConfigs(namespace string, podSpec *corev1.PodTemplateSpec) []common
 	pvcSet := make(map[string]struct{})
 
 	for _, container := range podSpec.Spec.Containers {
+		for _, envVar := range container.Env {
+			if envVar.ValueFrom != nil && envVar.ValueFrom.ConfigMapKeyRef != nil {
+				configMapSet[envVar.ValueFrom.ConfigMapKeyRef.Name] = struct{}{}
+			}
+			if envVar.ValueFrom != nil && envVar.ValueFrom.SecretKeyRef != nil {
+				secretSet[envVar.ValueFrom.SecretKeyRef.Name] = struct{}{}
+			}
+		}
+		for _, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil {
+				configMapSet[envFrom.ConfigMapRef.Name] = struct{}{}
+			}
+			if envFrom.SecretRef != nil {
+				secretSet[envFrom.SecretRef.Name] = struct{}{}
+			}
+		}
+	}
+	for _, container := range podSpec.Spec.InitContainers {
 		for _, envVar := range container.Env {
 			if envVar.ValueFrom != nil && envVar.ValueFrom.ConfigMapKeyRef != nil {
 				configMapSet[envVar.ValueFrom.ConfigMapKeyRef.Name] = struct{}{}
@@ -275,7 +292,7 @@ func GetRelatedResources(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	var podSpec *corev1.PodTemplateSpec
-	var selector *metav1.LabelSelector
+	var podLabels map[string]string
 
 	response := common.TopologyResponse{
 		Nodes: []common.RelatedResource{},
@@ -317,9 +334,7 @@ func GetRelatedResources(c *gin.Context) {
 	switch res := resource.(type) {
 	case *corev1.Pod:
 		podSpec = &corev1.PodTemplateSpec{Spec: res.Spec}
-		if res.Labels != nil {
-			selector = &metav1.LabelSelector{MatchLabels: res.Labels}
-		}
+		podLabels = res.Labels
 		if res.Spec.NodeName != "" {
 			nodeKey := addNode("nodes", "", res.Spec.NodeName)
 			addLink(rootKey, nodeKey, "runs on")
@@ -327,13 +342,13 @@ func GetRelatedResources(c *gin.Context) {
 
 	case *appsv1.Deployment:
 		podSpec = &res.Spec.Template
-		selector = res.Spec.Selector
+		podLabels = res.Spec.Template.Labels
 	case *appsv1.StatefulSet:
 		podSpec = &res.Spec.Template
-		selector = res.Spec.Selector
+		podLabels = res.Spec.Template.Labels
 	case *appsv1.DaemonSet:
 		podSpec = &res.Spec.Template
-		selector = res.Spec.Selector
+		podLabels = res.Spec.Template.Labels
 
 	case *corev1.Service:
 		relatedPods := discoverPodsByService(ctx, cs.K8sClient, res)
@@ -464,16 +479,43 @@ func GetRelatedResources(c *gin.Context) {
 		}
 	}
 
-	if podSpec != nil && selector != nil {
-		relatedServices, _ := discoverServices(ctx, cs.K8sClient, namespace, selector)
+	if podSpec != nil && len(podLabels) > 0 {
+		relatedServices, _ := discoverServices(ctx, cs.K8sClient, namespace, podLabels)
 		for _, s := range relatedServices {
 			svcKey := addNode(s.Type, s.Namespace, s.Name)
 			addLink(svcKey, rootKey, "targets")
+
+			// Discover Ingresses that route to this service
+			var ingressList v1.IngressList
+			if err := cs.K8sClient.List(ctx, &ingressList, &client.ListOptions{Namespace: namespace}); err == nil {
+				for _, ing := range ingressList.Items {
+					svcNames := discoverIngressServices(namespace, &ing)
+					for _, svcRef := range svcNames {
+						if svcRef.Name == s.Name {
+							ingKey := addNode("ingresses", ing.Namespace, ing.Name)
+							addLink(ingKey, svcKey, "routes to")
+							break
+						}
+					}
+				}
+			}
 		}
 		relatedConfigs := discoverConfigs(namespace, podSpec)
 		for _, c := range relatedConfigs {
 			confKey := addNode(c.Type, c.Namespace, c.Name)
 			addLink(rootKey, confKey, "uses")
+		}
+
+		// Discover HPAs that target this workload
+		var hpaList autoscalingv2.HorizontalPodAutoscalerList
+		if err := cs.K8sClient.List(ctx, &hpaList, &client.ListOptions{Namespace: namespace}); err == nil {
+			for _, hpa := range hpaList.Items {
+				targetKind := strings.ToLower(hpa.Spec.ScaleTargetRef.Kind) + "s"
+				if targetKind == resourceType && hpa.Spec.ScaleTargetRef.Name == name {
+					hpaKey := addNode("horizontalpodautoscalers", hpa.Namespace, hpa.Name)
+					addLink(hpaKey, rootKey, "scales")
+				}
+			}
 		}
 	}
 
@@ -558,3 +600,4 @@ func getAutoScalingRelatedResources(res *autoscalingv2.HorizontalPodAutoscaler, 
 	})
 	return result
 }
+

@@ -134,7 +134,7 @@ export function NamespaceHealthWidget() {
                                                             {failing} failing
                                                         </span>
                                                     )}
-                                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                                    <span className="text-[10px] text-muted-foreground">
                                                         {running}/{total}
                                                     </span>
                                                 </div>

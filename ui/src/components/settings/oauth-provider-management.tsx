@@ -1,5 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
-import { IconEdit, IconKey, IconPlus, IconTrash } from '@tabler/icons-react'
+import {
+  IconEdit,
+  IconKey,
+  IconLock,
+  IconLockOpen,
+  IconPlus,
+  IconShieldLock,
+  IconTrash,
+} from '@tabler/icons-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
@@ -11,12 +19,16 @@ import {
   deleteOAuthProvider,
   OAuthProviderCreateRequest,
   OAuthProviderUpdateRequest,
+  updateAuthSettings,
   updateOAuthProvider,
+  useAuthSettings,
   useOAuthProviderList,
 } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 
 import { Action, ActionTable } from '../action-table'
@@ -26,8 +38,26 @@ export function OAuthProviderManagement() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
+  // Auth settings (password login toggle)
+  const { data: authSettings } = useAuthSettings()
+
   // Use real API to fetch OAuth providers
   const { data: providers = [], isLoading, error } = useOAuthProviderList()
+
+  // Toggle password login mutation
+  const togglePasswordMutation = useMutation({
+    mutationFn: (disabled: boolean) =>
+      updateAuthSettings({ passwordLoginDisabled: disabled }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['auth-settings'] })
+      // Also refresh the providers list since it may now include/exclude "password"
+      queryClient.invalidateQueries({ queryKey: ['providers'] })
+      toast.success(data.message || 'Authentication settings updated')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update authentication settings')
+    },
+  })
 
   const [showProviderDialog, setShowProviderDialog] = useState(false)
   const [editingProvider, setEditingProvider] = useState<OAuthProvider | null>(
@@ -252,8 +282,94 @@ export function OAuthProviderManagement() {
     )
   }
 
+  const passwordDisabled = authSettings?.passwordLoginDisabled ?? false
+  const envLocked = authSettings?.passwordLoginEnvLocked ?? false
+  const hasOAuthProviders = providers.length > 0 && providers.some((p) => p.enabled)
+
   return (
     <div className="space-y-6">
+      {/* Password Login Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <IconShieldLock className="h-5 w-5" />
+            {t('oauthManagement.authSettings', 'Authentication Settings')}
+          </CardTitle>
+          <CardDescription>
+            {t(
+              'oauthManagement.authSettingsDescription',
+              'Control which authentication methods are available on the login page.'
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Password login toggle */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5 flex-1">
+                <div className="flex items-center gap-2">
+                  {passwordDisabled ? (
+                    <IconLock className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <IconLockOpen className="h-4 w-4 text-green-500" />
+                  )}
+                  <Label htmlFor="password-login-toggle" className="text-sm font-medium">
+                    {t('oauthManagement.passwordLogin', 'Password Login')}
+                  </Label>
+                  {envLocked && (
+                    <Badge variant="outline" className="text-xs">
+                      {t('oauthManagement.envLocked', 'Locked by env')}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {passwordDisabled
+                    ? t(
+                        'oauthManagement.passwordLoginDisabledDesc',
+                        'Password login is disabled. Users must authenticate via an OAuth provider.'
+                      )
+                    : t(
+                        'oauthManagement.passwordLoginEnabledDesc',
+                        'Users can sign in with username and password. Disable this if all users authenticate via OAuth.'
+                      )}
+                </p>
+              </div>
+              <Switch
+                id="password-login-toggle"
+                checked={!passwordDisabled}
+                disabled={envLocked || togglePasswordMutation.isPending}
+                onCheckedChange={(checked) => {
+                  togglePasswordMutation.mutate(!checked)
+                }}
+              />
+            </div>
+
+            {/* Warning if disabling password without OAuth providers */}
+            {passwordDisabled && !hasOAuthProviders && (
+              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+                <strong>⚠️ {t('common.warning', 'Warning')}:</strong>{' '}
+                {t(
+                  'oauthManagement.noOAuthWarning',
+                  'Password login is disabled but no OAuth providers are enabled. Users will not be able to log in. Please configure at least one OAuth provider below.'
+                )}
+              </div>
+            )}
+
+            {/* Info banner when env-locked */}
+            {envLocked && (
+              <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-3 text-sm text-blue-700 dark:text-blue-400">
+                <strong>ℹ️ {t('common.info', 'Info')}:</strong>{' '}
+                {t(
+                  'oauthManagement.envLockedInfo',
+                  'Password login is controlled by the DISABLE_PASSWORD_LOGIN environment variable. To change this setting, update the environment variable and restart the application.'
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* OAuth Provider Management */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -326,3 +442,4 @@ export function OAuthProviderManagement() {
     </div>
   )
 }
+

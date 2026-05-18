@@ -22,6 +22,8 @@ type ResourceHistory struct {
 	Success      bool   `json:"success" gorm:"type:boolean"`
 	ErrorMessage string `json:"errorMessage" gorm:"type:text"`
 
+	SourceIP string `json:"sourceIP,omitempty" gorm:"type:varchar(45)"` // IPv4/IPv6 address
+
 	OperatorID uint  `json:"operatorId" gorm:"not null;index"`
 	Operator   *User `json:"operator" gorm:"foreignKey:OperatorID;constraint:OnDelete:CASCADE"`
 }
@@ -29,3 +31,18 @@ type ResourceHistory struct {
 func (ResourceHistory) TableName() string {
 	return "resource_histories"
 }
+
+// GetDistinctResourceTypes returns all unique resource types in the history table.
+func GetDistinctResourceTypes() ([]string, error) {
+	var types []string
+	err := DB.Model(&ResourceHistory{}).Distinct("resource_type").Pluck("resource_type", &types).Error
+	return types, err
+}
+
+// GetDistinctNamespaces returns all unique namespaces in the history table.
+func GetDistinctNamespaces() ([]string, error) {
+	var namespaces []string
+	err := DB.Model(&ResourceHistory{}).Where("namespace != ''").Distinct("namespace").Pluck("namespace", &namespaces).Error
+	return namespaces, err
+}
+

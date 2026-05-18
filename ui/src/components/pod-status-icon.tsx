@@ -146,7 +146,7 @@ export const PodStatusIcon = ({
       case 'loading':
         return (
           <IconLoader
-            className={`${animationClass} text-gray-500 dark:text-gray-400 ${className}`}
+            className={`${animationClass} text-muted-foreground ${className}`}
           />
         )
 
@@ -154,7 +154,7 @@ export const PodStatusIcon = ({
       default:
         return (
           <IconExclamationCircle
-            className={`fill-gray-500 dark:fill-gray-400 ${className}`}
+            className={`fill-muted-foreground ${className}`}
           />
         )
     }
@@ -162,3 +162,4 @@ export const PodStatusIcon = ({
 
   return renderIcon()
 }
+

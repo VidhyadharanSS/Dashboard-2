@@ -76,6 +76,8 @@ export function IngressListPage() {
       resourceName="Ingresses"
       columns={columns}
       searchQueryFilter={filter}
+      enableMultiNamespace
     />
   )
 }
+

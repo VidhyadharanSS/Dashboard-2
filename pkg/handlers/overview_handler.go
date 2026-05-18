@@ -256,23 +256,38 @@ func GetOverview(c *gin.Context) {
 // )
 
 func InitCheck(c *gin.Context) {
-	// if initialized {
-	// 	c.JSON(http.StatusOK, gin.H{"initialized": true})
-	// 	return
-	// }
 	step := 0
 	uc, _ := model.CountUsers()
+
+	// Determine if OAuth bootstrap is active:
+	// When an OAuth provider is pre-configured via env vars with a superadmin email,
+	// the password-based user creation step is replaced with an OAuth sign-in step.
+	oauthBootstrap := common.OAuthBootstrapConfigured() && common.HasConfiguredSuperAdminEmails()
+
 	if uc == 0 && !common.AnonymousUserEnabled {
 		c.SetCookie("auth_token", "", -1, "/", "", false, true)
-		c.JSON(http.StatusOK, gin.H{"initialized": false, "step": step})
+		c.JSON(http.StatusOK, gin.H{
+			"initialized":    false,
+			"step":           step,
+			"oauthBootstrap": oauthBootstrap,
+		})
+		return
 	}
+
+	// Step 1: At least one user exists (created via password form OR via OAuth login)
 	if uc > 0 || common.AnonymousUserEnabled {
 		step++
 	}
+
 	cc, _ := model.CountClusters()
 	if cc > 0 {
 		step++
 	}
 	initialized := step == 2
-	c.JSON(http.StatusOK, gin.H{"initialized": initialized, "step": step})
+	c.JSON(http.StatusOK, gin.H{
+		"initialized":    initialized,
+		"step":           step,
+		"oauthBootstrap": oauthBootstrap,
+	})
 }
+

@@ -3,7 +3,6 @@ import {
   Activity,
   Clock,
   Cpu,
-  HardDrive,
   MemoryStick,
   Network,
   RefreshCw,
@@ -67,9 +66,8 @@ function MetricPill({ icon: Icon, label, value, color, bgColor, pct }: MetricPil
         {pct !== undefined && (
           <div className="mt-1 h-1 rounded-full bg-background/60 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-700 ${
-                pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : color.replace('text-', 'bg-')
-              }`}
+              className={`h-full rounded-full transition-all duration-700 ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : color.replace('text-', 'bg-')
+                }`}
               style={{ width: `${Math.min(pct, 100)}%` }}
             />
           </div>
@@ -222,12 +220,14 @@ export function NodeMonitoring({ name }: NodeMonitoringProps) {
           isLoading={isLoading}
           syncId="node-monitor"
         />
-        <NetworkUsageChart
-          networkIn={resourceUsage?.networkIn || []}
-          networkOut={resourceUsage?.networkOut || []}
-          isLoading={isLoading}
-          syncId="node-monitor"
-        />
+        <div className="xl:col-span-2">
+          <NetworkUsageChart
+            networkIn={resourceUsage?.networkIn || []}
+            networkOut={resourceUsage?.networkOut || []}
+            isLoading={isLoading}
+            syncId="node-monitor"
+          />
+        </div>
       </div>
     </div>
   )

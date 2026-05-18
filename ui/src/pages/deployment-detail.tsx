@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNamespaceContext } from '@/hooks/use-namespace-context'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import {
+  IconAlertTriangle,
+  IconCheck,
+  IconExternalLink,
+  IconInfoCircle,
   IconLoader,
   IconRefresh,
   IconReload,
   IconScale,
+  IconServer2,
   IconTrash,
   IconHistory,
   IconRotate2,
+  IconCircleCheckFilled,
 } from '@tabler/icons-react'
 import * as yaml from 'js-yaml'
 import { Deployment } from 'kubernetes-types/apps/v1'
+import { HorizontalPodAutoscaler } from 'kubernetes-types/autoscaling/v2'
 import { Container } from 'kubernetes-types/core/v1'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -35,18 +42,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { ResponsiveTabs } from '@/components/ui/responsive-tabs'
 import { ContainerTable } from '@/components/container-table'
-import { DeploymentStatusIcon } from '@/components/deployment-status-icon'
+
 import { DescribeDialog } from '@/components/describe-dialog'
 import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ErrorMessage } from '@/components/error-message'
 import { EventTable } from '@/components/event-table'
-import { LabelsAnno } from '@/components/lables-anno'
+
 import { LogViewer } from '@/components/log-viewer'
 import { PodMonitoring } from '@/components/pod-monitoring'
 import { PodTable } from '@/components/pod-table'
@@ -59,6 +79,12 @@ import { RolloutMonitor } from '@/components/rollout-monitor'
 import { Terminal } from '@/components/terminal'
 import { VolumeTable } from '@/components/volume-table'
 import { YamlEditor } from '@/components/yaml-editor'
+import {
+  SidebarEvents,
+  SidebarRelatedResources,
+  SidebarLabels,
+  SidebarAnnotations,
+} from '@/components/overview-sidebar'
 
 export function DeploymentDetail(props: { namespace: string; name: string }) {
   const { namespace, name } = props
@@ -68,7 +94,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
   const navigate = useNavigate()
   const { setActiveNamespace } = useNamespaceContext()
 
-  const [isYamlDirty, setIsYamlDirty] = useState(false) // true = user has unsaved edits — do NOT overwrite from server
+  const [isYamlDirty, setIsYamlDirty] = useState(false)
   const [isScalePopoverOpen, setIsScalePopoverOpen] = useState(false)
   const [isRestartPopoverOpen, setIsRestartPopoverOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -76,9 +102,12 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
   const [refreshInterval, setRefreshInterval] = useState<number>(0)
   const [isRolloutMonitorOpen, setIsRolloutMonitorOpen] = useState(false)
   const [isRollingBack, setIsRollingBack] = useState(false)
+  const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false)
+  const [pendingRollbackRevision, setPendingRollbackRevision] = useState<number | undefined>(undefined)
+  const [viewingRevision, setViewingRevision] = useState<RevisionInfo | null>(null)
+  const [, setSearchParams] = useSearchParams()
   const { t } = useTranslation()
 
-  // Fetch deployment data
   const {
     data: deployment,
     isLoading: isLoadingDeployment,
@@ -103,11 +132,13 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
     }
   )
 
+  const { data: allHPAs } = useResourcesWatch('horizontalpodautoscalers', namespace, { enabled: !!deployment })
+  const deploymentHPA = (allHPAs as HorizontalPodAutoscaler[] | undefined)?.find(
+    (h) => h.spec?.scaleTargetRef?.kind === 'Deployment' && h.spec?.scaleTargetRef?.name === name
+  )
+
   useEffect(() => {
     if (deployment) {
-      // Only sync YAML from server when the user hasn't made any local edits.
-      // During OOM/CrashLoop storms the deployment refetches every 15s;
-      // without this guard it would wipe out in-progress user changes.
       if (!isYamlDirty) {
         setYamlContent(yaml.dump(deployment, { indent: 2 }))
       }
@@ -115,7 +146,6 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
     }
   }, [deployment, isYamlDirty])
 
-  // Auto-reset refresh interval when deployment reaches stable state
   useEffect(() => {
     if (deployment) {
       const status = getDeploymentStatus(deployment)
@@ -127,10 +157,10 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
       if (isStable) {
         const timer = setTimeout(() => {
           setRefreshInterval(0)
-        }, 15000) // Changed from 10s to 15s to reduce load
+        }, 15000)
         return () => clearTimeout(timer)
       } else {
-        setRefreshInterval(15000) // Changed from 10s to 15s to protect Master Node
+        setRefreshInterval(15000)
       }
     }
   }, [deployment, refreshInterval])
@@ -142,7 +172,6 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
 
   const handleRestart = useCallback(async () => {
     if (!deployment) return
-
     try {
       await restartDeployment(namespace, name)
       toast.success('Deployment restart initiated')
@@ -157,13 +186,8 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
 
   const handleScale = useCallback(async () => {
     if (!deployment) return
-
     try {
-      const updatedDeployment = {
-        spec: {
-          replicas: scaleReplicas,
-        },
-      }
+      const updatedDeployment = { spec: { replicas: scaleReplicas } }
       await patchResource('deployments', name, namespace, updatedDeployment)
       toast.success(`Deployment scaled to ${scaleReplicas} replicas`)
       setIsScalePopoverOpen(false)
@@ -175,20 +199,25 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
     }
   }, [t, deployment, name, namespace, scaleReplicas])
 
-  // Fetch deployment revisions for rollback
   const { data: revisionsData, refetch: refetchRevisions } = useDeploymentRevisions(
     namespace,
     name,
     { enabled: !!deployment }
   )
 
-  const handleRollback = useCallback(async (revision?: number) => {
+  const confirmRollback = useCallback((revision?: number) => {
+    setPendingRollbackRevision(revision)
+    setRollbackDialogOpen(true)
+  }, [])
+
+  const executeRollback = useCallback(async () => {
     setIsRollingBack(true)
     try {
-      const result = await rollbackDeployment(namespace, name, revision)
+      const result = await rollbackDeployment(namespace, name, pendingRollbackRevision)
       toast.success(`Rollback initiated to revision ${result.revision}`)
       setRefreshInterval(15000)
       setIsRolloutMonitorOpen(true)
+      setRollbackDialogOpen(false)
       refetchDeployment()
       refetchRevisions()
     } catch (error) {
@@ -197,7 +226,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
     } finally {
       setIsRollingBack(false)
     }
-  }, [namespace, name, t, refetchDeployment, refetchRevisions])
+  }, [namespace, name, pendingRollbackRevision, t, refetchDeployment, refetchRevisions])
 
   const handleSaveYaml = async (content: Deployment) => {
     setIsSavingYaml(true)
@@ -217,7 +246,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
 
   const handleYamlChange = (content: string) => {
     setYamlContent(content)
-    setIsYamlDirty(true) // user started editing — protect from background refetch resets
+    setIsYamlDirty(true)
   }
 
   const handleContainerUpdate = async (
@@ -225,44 +254,32 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
     init = false
   ) => {
     if (!deployment) return
-
     try {
-      // Create a deep copy of the deployment
       const updatedDeployment = { ...deployment }
-
       if (init) {
-        // Update the specific container in the deployment spec
         if (updatedDeployment.spec?.template?.spec?.initContainers) {
           const containerIndex =
             updatedDeployment.spec.template.spec.initContainers.findIndex(
               (c) => c.name === updatedContainer.name
             )
-
           if (containerIndex >= 0) {
-            updatedDeployment.spec.template.spec.initContainers[
-              containerIndex
-            ] = updatedContainer
+            updatedDeployment.spec.template.spec.initContainers[containerIndex] = updatedContainer
           }
         }
       } else {
-        // Update the specific container in the deployment spec
         if (updatedDeployment.spec?.template?.spec?.containers) {
           const containerIndex =
             updatedDeployment.spec.template.spec.containers.findIndex(
               (c) => c.name === updatedContainer.name
             )
-
           if (containerIndex >= 0) {
-            updatedDeployment.spec.template.spec.containers[containerIndex] =
-              updatedContainer
+            updatedDeployment.spec.template.spec.containers[containerIndex] = updatedContainer
           }
         }
       }
-
-      // Call the update API
       await updateResource('deployments', name, namespace, updatedDeployment)
       toast.success(`Container ${updatedContainer.name} updated successfully`)
-      setRefreshInterval(15000) // Changed from 10s to 15s
+      setRefreshInterval(15000)
     } catch (error) {
       console.error('Failed to update container:', error)
       toast.error(translateError(error, t))
@@ -297,6 +314,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
   const { status } = deployment
   const readyReplicas = status?.readyReplicas || 0
   const totalReplicas = status?.replicas || 0
+  const deploymentStatus = getDeploymentStatus(deployment)
 
   return (
     <div className="space-y-2 animate-page-enter">
@@ -317,27 +335,32 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
             </button>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
           <FavoriteButton resourceType="deployments" name={name} namespace={namespace} />
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <IconRefresh className="w-4 h-4" />
-            Refresh
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleRefresh}>
+                <IconRefresh className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Refresh</TooltipContent>
+          </Tooltip>
           <QuickYamlDialog
             resourceType="deployments"
             namespace={namespace}
             name={name}
-            triggerAsText
+            triggerVariant="outline"
+            triggerSize="icon"
           />
           <DescribeDialog
             resourceType="deployments"
             namespace={namespace}
             name={name}
+            compact
+            triggerVariant="outline"
           />
-          <Popover
-            open={isScalePopoverOpen}
-            onOpenChange={setIsScalePopoverOpen}
-          >
+          <div className="w-px h-5 bg-border mx-0.5" />
+          <Popover open={isScalePopoverOpen} onOpenChange={setIsScalePopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
                 <IconScale className="w-4 h-4" />
@@ -355,35 +378,17 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                 <div className="space-y-2">
                   <Label htmlFor="replicas">Replicas</Label>
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 w-9 p-0"
-                      onClick={() =>
-                        setScaleReplicas(Math.max(0, scaleReplicas - 1))
-                      }
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0"
+                      onClick={() => setScaleReplicas(Math.max(0, scaleReplicas - 1))}
                       disabled={scaleReplicas <= 0}
-                    >
-                      -
-                    </Button>
-                    <Input
-                      id="replicas"
-                      type="number"
-                      min="0"
-                      value={scaleReplicas}
-                      onChange={(e) =>
-                        setScaleReplicas(parseInt(e.target.value) || 0)
-                      }
+                    >-</Button>
+                    <Input id="replicas" type="number" min="0" value={scaleReplicas}
+                      onChange={(e) => setScaleReplicas(parseInt(e.target.value) || 0)}
                       className="text-center"
                     />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 w-9 p-0"
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0"
                       onClick={() => setScaleReplicas(scaleReplicas + 1)}
-                    >
-                      +
-                    </Button>
+                    >+</Button>
                   </div>
                 </div>
                 <Button onClick={handleScale} className="w-full">
@@ -393,64 +398,14 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
               </div>
             </PopoverContent>
           </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isRollingBack}>
-                <IconRotate2 className="w-4 h-4" />
-                {isRollingBack ? 'Rolling back...' : 'Rollback'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80" align="end">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <IconHistory className="w-4 h-4" />
-                    Rollback Deployment
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Rollback to the previous revision. This will update the pod template
-                    to match a previous ReplicaSet configuration.
-                  </p>
-                </div>
-                {revisionsData && revisionsData.revisions.length > 1 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {revisionsData.revisions
-                      .filter((r: RevisionInfo) => !r.isCurrent)
-                      .slice(0, 5)
-                      .map((rev: RevisionInfo) => (
-                        <Button
-                          key={rev.revision}
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-between text-xs"
-                          onClick={() => handleRollback(parseInt(rev.revision))}
-                          disabled={isRollingBack}
-                        >
-                          <span>Rev {rev.revision}</span>
-                          <span className="text-muted-foreground font-mono truncate max-w-[120px]">
-                            {rev.image?.split(':').pop() || 'unknown'}
-                          </span>
-                        </Button>
-                      ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">No previous revisions available</p>
-                )}
-                <Button
-                  onClick={() => handleRollback()}
-                  className="w-full"
-                  disabled={isRollingBack || !revisionsData || revisionsData.revisions.length < 2}
-                >
-                  <IconRotate2 className="w-4 h-4 mr-2" />
-                  Rollback to Previous
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Popover
-            open={isRestartPopoverOpen}
-            onOpenChange={setIsRestartPopoverOpen}
+          <Button variant="outline" size="sm"
+            disabled={isRollingBack || !revisionsData || revisionsData.revisions.length < 2}
+            onClick={() => confirmRollback()}
           >
+            <IconRotate2 className="w-4 h-4" />
+            {isRollingBack ? 'Rolling back...' : 'Rollback'}
+          </Button>
+          <Popover open={isRestartPopoverOpen} onOpenChange={setIsRestartPopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
                 <IconReload className="w-4 h-4" />
@@ -468,20 +423,10 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsRestartPopoverOpen(false)}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" onClick={() => setIsRestartPopoverOpen(false)} className="flex-1">
                     Cancel
                   </Button>
-                  <Button
-                    onClick={() => {
-                      handleRestart()
-                      setIsRestartPopoverOpen(false)
-                    }}
-                    className="flex-1"
-                  >
+                  <Button onClick={() => { handleRestart(); setIsRestartPopoverOpen(false) }} className="flex-1">
                     <IconReload className="w-4 h-4 mr-2" />
                     Restart
                   </Button>
@@ -489,16 +434,13 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
               </div>
             </PopoverContent>
           </Popover>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
+          <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
             <IconTrash className="w-4 h-4" />
             Delete
           </Button>
         </div>
       </div>
+
       {/* Tabs */}
       <ResponsiveTabs
         tabs={[
@@ -506,200 +448,358 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
             value: 'overview',
             label: 'Overview',
             content: (
-              <div className="space-y-4">
-                {/* Status Overview */}
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-sm">
-                      <DeploymentStatusIcon status={getDeploymentStatus(deployment)} />
-                      Status Overview
-                      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
-                        getDeploymentStatus(deployment) === 'Available' ? 'bg-green-500/10 text-green-600' :
-                        getDeploymentStatus(deployment) === 'Progressing' ? 'bg-blue-500/10 text-blue-600 animate-pulse' :
-                        getDeploymentStatus(deployment) === 'Scaled Down' ? 'bg-muted text-muted-foreground' :
-                        'bg-red-500/10 text-red-600'
-                      }`}>{getDeploymentStatus(deployment)}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {/* Ready Replicas */}
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Ready</p>
-                        <p className="text-sm font-semibold">
-                          <span className={readyReplicas === totalReplicas && totalReplicas > 0 ? 'text-green-600' : 'text-amber-600'}>{readyReplicas}</span>
-                          <span className="text-muted-foreground mx-1">/</span>{totalReplicas}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Replicas</p>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* ── Left Column ── */}
+                <div className="lg:col-span-2 space-y-4">
+                  {/* Status Cards Row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Status</p>
+                      <div className="flex items-center gap-1.5">
+                        <IconCircleCheckFilled className={`w-4 h-4 ${deploymentStatus === 'Available' ? 'text-green-500' :
+                          deploymentStatus === 'Progressing' ? 'text-blue-500' :
+                            'text-red-500'
+                          }`} />
+                        <span className="text-sm font-bold">{deploymentStatus}</span>
                       </div>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Desired</p>
+                      <p className="text-lg font-bold">{deployment.spec?.replicas ?? 0}</p>
+                      <p className="text-[10px] text-muted-foreground">Replicas</p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Ready</p>
+                      <p className="text-lg font-bold">{readyReplicas}/{totalReplicas}</p>
+                      <p className="text-[10px] text-muted-foreground">Replicas</p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Up-to-date</p>
+                      <p className="text-lg font-bold">{status?.updatedReplicas ?? 0}</p>
+                      <p className="text-[10px] text-muted-foreground">Replicas</p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Available</p>
+                      <p className="text-lg font-bold">{status?.availableReplicas ?? 0}</p>
+                      <p className="text-[10px] text-muted-foreground">Replicas</p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Created</p>
+                      <p className="text-sm font-bold">{formatDate(deployment.metadata?.creationTimestamp || '')}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {deployment.metadata?.creationTimestamp
+                          ? new Date(deployment.metadata.creationTimestamp).toLocaleString()
+                          : ''}
+                      </p>
+                    </Card>
+                  </div>
 
-                      {/* Updated Replicas */}
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Updated</p>
-                        <p className="text-sm font-semibold">{status?.updatedReplicas || 0}</p>
-                        <p className="text-xs text-muted-foreground">Replicas</p>
-                      </div>
-
-                      {/* Available Replicas */}
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Available</p>
-                        <p className="text-sm font-semibold">{status?.availableReplicas || 0}</p>
-                        <p className="text-xs text-muted-foreground">Replicas</p>
-                      </div>
-
-                      {/* Desired */}
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Desired</p>
-                        <p className="text-sm font-semibold">{deployment.spec?.replicas || 0}</p>
-                        <p className="text-xs text-muted-foreground">Replicas</p>
-                      </div>
-                    </div>
-
-                    {/* Progress bar for rolling update */}
-                    {totalReplicas > 0 && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Rollout Progress</span>
-                          <span>{Math.round((readyReplicas / totalReplicas) * 100)}%</span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ease-out ${
-                              readyReplicas === totalReplicas ? 'bg-green-500' :
-                              readyReplicas > 0 ? 'bg-blue-500' : 'bg-muted-foreground/30'
-                            }`}
-                            style={{ width: `${Math.round((readyReplicas / totalReplicas) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Progressing message */}
-                    {getDeploymentStatus(deployment) === 'Progressing' && deployment.status?.conditions && (() => {
-                      const progCond = deployment.status!.conditions!.find(c => c.type === 'Progressing')
-                      return progCond?.message ? (
-                        <p className="text-xs text-muted-foreground bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-2">
-                          ℹ️ {progCond.message}
-                        </p>
-                      ) : null
-                    })()}
-                  </CardContent>
-                </Card>
-                {/* Deployment Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Deployment Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Created
-                        </Label>
-                        <p className="text-sm">
-                          {formatDate(
-                            deployment.metadata?.creationTimestamp || '',
-                            true
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Strategy
-                        </Label>
-                        <p className="text-sm">
-                          {deployment.spec?.strategy?.type || 'RollingUpdate'}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Replicas
-                        </Label>
-                        <p className="text-sm">
-                          {deployment.spec?.replicas || 0}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Selector
-                        </Label>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {Object.entries(
-                            deployment.spec?.selector?.matchLabels || {}
-                          ).map(([key, value]) => (
-                            <Badge
-                              key={key}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {key}: {value}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <LabelsAnno
-                      labels={deployment.metadata?.labels || {}}
-                      annotations={deployment.metadata?.annotations || {}}
-                    />
-                  </CardContent>
-                </Card>
-
-                {deployment.spec?.template.spec?.initContainers?.length &&
-                  deployment.spec?.template.spec?.initContainers?.length >
-                  0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>
-                          Init Containers (
-                          {
-                            deployment.spec?.template?.spec?.initContainers
-                              ?.length
-                          }
-                          )
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-6">
-                          <div className="space-y-4">
-                            {deployment.spec?.template?.spec?.initContainers?.map(
-                              (container, index) => (
-                                <ContainerTable
-                                  key={container.name}
-                                  container={container}
-                                  resourceType="deployments"
-                                  resourceName={name}
-                                  namespace={namespace}
-                                  containerIndex={index}
-                                  init
-                                  onImageUpdateSuccess={refetchDeployment}
-                                  onContainerUpdate={(updatedContainer) =>
-                                    handleContainerUpdate(
-                                      updatedContainer,
-                                      true
-                                    )
-                                  }
-                                />
-                              )
-                            )}
-                          </div>
+                  {/* HPA Banner */}
+                  {deploymentHPA && (
+                    <Card className="border-cyan-400/40 bg-cyan-500/5">
+                      <CardContent className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+                          <span className="font-semibold text-cyan-600 dark:text-cyan-400 text-xs uppercase tracking-wide">HPA Managed</span>
+                          <span className="text-muted-foreground text-xs">
+                            Min: <span className="font-medium text-foreground">{deploymentHPA.spec?.minReplicas ?? 1}</span>
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            Max: <span className="font-medium text-foreground">{deploymentHPA.spec?.maxReplicas}</span>
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            Current: <span className="font-medium text-foreground">{deploymentHPA.status?.currentReplicas ?? 0}</span>
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            Desired: <span className="font-medium text-foreground">{deploymentHPA.status?.desiredReplicas}</span>
+                          </span>
+                          <Link
+                            to={`/horizontalpodautoscalers/${namespace}/${deploymentHPA.metadata?.name}`}
+                            className="ml-auto text-xs text-blue-500 hover:underline"
+                          >
+                            {deploymentHPA.metadata?.name}
+                          </Link>
                         </div>
                       </CardContent>
                     </Card>
                   )}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      Containers (
-                      {deployment.spec?.template?.spec?.containers?.length || 0}
-                      )
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
+
+                  {/* Pods Table */}
+                  {relatedPods && (
+                    <Card>
+                      <CardHeader className="pb-2 pt-4 px-4">
+                        <CardTitle className="text-sm font-semibold">
+                          Pods ({relatedPods.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-0 pb-0">
+                        <PodTable
+                          pods={relatedPods}
+                          isLoading={isLoadingPods}
+                          labelSelector={labelSelector}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Deployment Information */}
+                  <Card>
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <CardTitle className="text-sm font-semibold">Deployment Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground text-xs">Owner</span>
+                          <p className="font-medium">None</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Selector</span>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {Object.entries(deployment.spec?.selector?.matchLabels || {}).map(([key, value]) => (
+                              <Badge key={key} variant="secondary" className="text-[10px]">
+                                {key}={value}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground text-xs">Images</span>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {deployment.spec?.template?.spec?.containers?.map((c) => (
+                              <Badge key={c.name} variant="outline" className="text-[10px] font-mono">
+                                {c.image}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Strategy</span>
+                          <p className="font-medium">{deployment.spec?.strategy?.type || 'RollingUpdate'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Revision</span>
+                          <p className="font-medium">{deployment.metadata?.annotations?.['deployment.kubernetes.io/revision'] || '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Max Surge</span>
+                          <p className="font-medium">{deployment.spec?.strategy?.rollingUpdate?.maxSurge ?? '25%'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Max Unavailable</span>
+                          <p className="font-medium">{deployment.spec?.strategy?.rollingUpdate?.maxUnavailable ?? '25%'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Service Account</span>
+                          <p className="font-medium">{deployment.spec?.template?.spec?.serviceAccountName || 'default'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Containers</span>
+                          <p className="font-medium">{deployment.spec?.template?.spec?.containers?.length || 0}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Volumes</span>
+                          <p className="font-medium">{deployment.spec?.template?.spec?.volumes?.length || 0}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Min Ready</span>
+                          <p className="font-medium">{deployment.spec?.minReadySeconds ?? 0}s</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Progress Deadline</span>
+                          <p className="font-medium">{deployment.spec?.progressDeadlineSeconds ?? 600}s</p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground text-xs">UID</span>
+                          <p className="font-mono text-xs text-muted-foreground">{deployment.metadata?.uid}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Init Containers */}
+                  {deployment.spec?.template.spec?.initContainers?.length &&
+                    deployment.spec.template.spec.initContainers.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2 pt-4 px-4">
+                          <CardTitle className="text-sm font-semibold">
+                            Init Containers ({deployment.spec.template.spec.initContainers.length})
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-4">
+                          <div className="space-y-4">
+                            {deployment.spec.template.spec.initContainers.map((container, index) => (
+                              <ContainerTable
+                                key={container.name}
+                                container={container}
+                                resourceType="deployments"
+                                resourceName={name}
+                                namespace={namespace}
+                                containerIndex={index}
+                                init
+                                onImageUpdateSuccess={refetchDeployment}
+                                onContainerUpdate={(updatedContainer) =>
+                                  handleContainerUpdate(updatedContainer, true)
+                                }
+                              />
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                  {/* Containers */}
+                  <Card>
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <CardTitle className="text-sm font-semibold">
+                        Containers ({deployment.spec?.template?.spec?.containers?.length || 0})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
                       <div className="space-y-4">
-                        {deployment.spec?.template?.spec?.containers?.map(
-                          (container, index) => (
+                        {deployment.spec?.template?.spec?.containers?.map((container, index) => (
+                          <ContainerTable
+                            key={container.name}
+                            container={container}
+                            resourceType="deployments"
+                            resourceName={name}
+                            namespace={namespace}
+                            containerIndex={index}
+                            onImageUpdateSuccess={refetchDeployment}
+                            onContainerUpdate={(updatedContainer) =>
+                              handleContainerUpdate(updatedContainer)
+                            }
+                          />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Resource Topology Link */}
+                  <Card className="overflow-hidden">
+                    <CardContent className="py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm">
+                        <IconServer2 className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">Resource Topology</span>
+                        <span className="text-xs text-muted-foreground">
+                          View related resources and connections
+                        </span>
+                      </div>
+                      <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs"
+                        onClick={() => {
+                          setSearchParams((prev) => {
+                            prev.set('tab', 'Related')
+                            return prev
+                          }, { replace: true })
+                        }}
+                      >
+                        View Topology
+                        <IconExternalLink className="w-3 h-3" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Conditions */}
+                  {status?.conditions && (
+                    <Card>
+                      <CardHeader className="pb-2 pt-4 px-4">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                          Conditions
+                          <Badge variant="outline" className="text-[10px] font-normal ml-auto">
+                            {status.conditions.filter(c => c.status === 'True').length}/{status.conditions.length} passing
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4">
+                        <div className="space-y-2">
+                          {status.conditions.map((condition, index) => {
+                            const isTrue = condition.status === 'True'
+                            const isFailing = !isTrue && condition.type === 'Available'
+                            return (
+                              <div key={index}
+                                className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${isFailing ? 'border-red-500/30 bg-red-500/5' :
+                                  isTrue ? 'border-border bg-card' :
+                                    'border-amber-500/30 bg-amber-500/5'
+                                  }`}
+                              >
+                                <div className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${isTrue ? 'bg-emerald-500/15' : isFailing ? 'bg-red-500/15' : 'bg-amber-500/15'
+                                  }`}>
+                                  {isTrue ? (
+                                    <IconCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                  ) : (
+                                    <IconAlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={isTrue ? 'default' : isFailing ? 'destructive' : 'secondary'} className="text-[10px]">
+                                      {condition.type}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px] h-4">{condition.status}</Badge>
+                                    {condition.reason && (
+                                      <span className="text-[10px] text-muted-foreground font-mono">{condition.reason}</span>
+                                    )}
+                                  </div>
+                                  {condition.message && (
+                                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{condition.message}</p>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0 mt-0.5">
+                                  {formatDate(condition.lastTransitionTime || condition.lastUpdateTime || '')}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* ── Right Sidebar ── */}
+                <div className="space-y-4">
+                  <SidebarEvents resource="deployments" name={name} namespace={namespace} />
+                  <SidebarRelatedResources resource="deployments" name={name} namespace={namespace} />
+                  <SidebarLabels labels={deployment.metadata?.labels || {}} />
+                  <SidebarAnnotations annotations={deployment.metadata?.annotations || {}} />
+                </div>
+              </div>
+            ),
+          },
+          {
+            value: 'pods',
+            label: (
+              <>
+                Pods{' '}
+                {relatedPods && <Badge variant="secondary">{relatedPods.length}</Badge>}
+              </>
+            ),
+            content: (
+              <PodTable
+                pods={relatedPods}
+                isLoading={isLoadingPods}
+                labelSelector={labelSelector}
+              />
+            ),
+          },
+          {
+            value: 'containers',
+            label: (
+              <>
+                Containers{' '}
+                <Badge variant="secondary">
+                  {deployment.spec?.template?.spec?.containers?.length || 0}
+                </Badge>
+              </>
+            ),
+            content: (
+              <div className="space-y-4">
+                {deployment.spec?.template.spec?.initContainers?.length &&
+                  deployment.spec.template.spec.initContainers.length > 0 && (
+                    <Card>
+                      <CardHeader><CardTitle>Init Containers ({deployment.spec.template.spec.initContainers.length})</CardTitle></CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {deployment.spec.template.spec.initContainers.map((container, index) => (
                             <ContainerTable
                               key={container.name}
                               container={container}
@@ -707,54 +807,38 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                               resourceName={name}
                               namespace={namespace}
                               containerIndex={index}
+                              init
                               onImageUpdateSuccess={refetchDeployment}
                               onContainerUpdate={(updatedContainer) =>
-                                handleContainerUpdate(updatedContainer)
+                                handleContainerUpdate(updatedContainer, true)
                               }
                             />
-                          )
-                        )}
-                      </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                <Card>
+                  <CardHeader><CardTitle>Containers ({deployment.spec?.template?.spec?.containers?.length || 0})</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {deployment.spec?.template?.spec?.containers?.map((container, index) => (
+                        <ContainerTable
+                          key={container.name}
+                          container={container}
+                          resourceType="deployments"
+                          resourceName={name}
+                          namespace={namespace}
+                          containerIndex={index}
+                          onImageUpdateSuccess={refetchDeployment}
+                          onContainerUpdate={(updatedContainer) =>
+                            handleContainerUpdate(updatedContainer)
+                          }
+                        />
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Conditions */}
-                {status?.conditions && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Conditions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {status.conditions.map((condition, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-3 p-2 border rounded"
-                          >
-                            <Badge
-                              variant={
-                                condition.status === 'True'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                            >
-                              {condition.type}
-                            </Badge>
-                            <span className="text-sm">{condition.message}</span>
-                            <span className="text-xs text-muted-foreground ml-auto">
-                              {formatDate(
-                                condition.lastTransitionTime ||
-                                condition.lastUpdateTime ||
-                                ''
-                              )}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
               </div>
             ),
           },
@@ -776,24 +860,6 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
           ...(relatedPods
             ? [
               {
-                value: 'pods',
-                label: (
-                  <>
-                    Pods{' '}
-                    {relatedPods && (
-                      <Badge variant="secondary">{relatedPods.length}</Badge>
-                    )}
-                  </>
-                ),
-                content: (
-                  <PodTable
-                    pods={relatedPods}
-                    isLoading={isLoadingPods}
-                    labelSelector={labelSelector}
-                  />
-                ),
-              },
-              {
                 value: 'logs',
                 label: 'Logs',
                 content: (
@@ -802,9 +868,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                       namespace={namespace}
                       pods={relatedPods}
                       containers={deployment.spec?.template.spec?.containers}
-                      initContainers={
-                        deployment.spec?.template.spec?.initContainers
-                      }
+                      initContainers={deployment.spec?.template.spec?.initContainers}
                       labelSelector={labelSelector}
                     />
                   </div>
@@ -819,12 +883,8 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                       <Terminal
                         namespace={namespace}
                         pods={relatedPods}
-                        containers={
-                          deployment.spec?.template.spec?.containers
-                        }
-                        initContainers={
-                          deployment.spec?.template.spec?.initContainers
-                        }
+                        containers={deployment.spec?.template.spec?.containers}
+                        initContainers={deployment.spec?.template.spec?.initContainers}
                       />
                     )}
                   </div>
@@ -878,65 +938,99 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                   <CardTitle className="flex items-center gap-2">
                     <IconHistory className="w-5 h-5" />
                     Deployment Revisions
-                    {revisionsData?.currentRevision && (
-                      <Badge variant="outline" className="ml-auto text-xs">
-                        Current: Rev {revisionsData.currentRevision}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2 ml-auto">
+                      {revisionsData?.revisions && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {revisionsData.revisions.length} revision{revisionsData.revisions.length !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                      {revisionsData?.currentRevision && (
+                        <Badge variant="outline" className="text-xs font-mono">
+                          Current: #{revisionsData.currentRevision}
+                        </Badge>
+                      )}
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {!revisionsData || revisionsData.revisions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      No revisions found. Revisions are created when the deployment template changes.
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-12 gap-3">
+                      <IconHistory className="h-10 w-10 text-muted-foreground/30" />
+                      <p className="text-sm text-muted-foreground">No revisions found</p>
+                      <p className="text-xs text-muted-foreground/70">
+                        Revisions are created when the deployment pod template changes.
+                      </p>
+                    </div>
                   ) : (
-                    <div className="space-y-2">
-                      {revisionsData.revisions.map((rev: RevisionInfo) => (
-                        <div
-                          key={rev.revision}
-                          className={`flex items-center gap-3 p-3 border rounded-lg transition-colors ${
-                            rev.isCurrent
-                              ? 'border-primary/40 bg-primary/5'
-                              : 'border-border hover:bg-muted/50'
-                          }`}
-                        >
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            rev.isCurrent
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground'
-                          }`}>
-                            {rev.revision}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{rev.replicaName}</span>
-                              {rev.isCurrent && (
-                                <Badge variant="default" className="text-[10px] h-4">CURRENT</Badge>
+                    <div className="relative">
+                      <div className="absolute left-[19px] top-4 bottom-4 w-px bg-border" />
+                      <div className="space-y-1">
+                        {revisionsData.revisions.map((rev: RevisionInfo, idx: number) => {
+                          const imageTag = rev.image?.split(':').pop() || 'latest'
+                          const imageRepo = rev.image?.split(':')[0]?.split('/').pop() || ''
+                          return (
+                            <div key={rev.revision}
+                              className={`relative flex items-start gap-3 p-3 rounded-lg transition-all group ${rev.isCurrent ? 'border border-primary/40 bg-primary/5' : 'hover:bg-muted/50'
+                                }`}
+                            >
+                              <div className="relative z-10 shrink-0">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2 ${rev.isCurrent
+                                  ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20'
+                                  : 'bg-card text-muted-foreground border-border group-hover:border-primary/50 transition-colors'
+                                  }`}>
+                                  {rev.revision}
+                                </div>
+                                {rev.isCurrent && (
+                                  <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 rounded-full border-2 border-card flex items-center justify-center">
+                                    <IconCheck className="h-2 w-2 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0 pt-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium truncate">{rev.replicaName}</span>
+                                  {rev.isCurrent && (
+                                    <Badge className="text-[10px] h-4 bg-primary/15 text-primary border-primary/25">ACTIVE</Badge>
+                                  )}
+                                  {idx === 0 && !rev.isCurrent && (
+                                    <Badge variant="secondary" className="text-[10px] h-4">LATEST</Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  <Badge variant="outline" className="text-[10px] h-5 font-mono gap-1 shrink-0">
+                                    {imageRepo && <span className="text-muted-foreground">{imageRepo}:</span>}
+                                    <span className="font-bold">{imageTag}</span>
+                                  </Badge>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {rev.replicas} replica{rev.replicas !== 1 ? 's' : ''}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">·</span>
+                                  <span className="text-[10px] text-muted-foreground">{formatDate(rev.createdAt)}</span>
+                                </div>
+                              </div>
+                              {!rev.isCurrent && (
+                                <div className="flex gap-1.5 shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button variant="ghost" size="sm"
+                                    className="gap-1 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                    onClick={() => setViewingRevision(rev)}
+                                  >
+                                    <IconInfoCircle className="w-3.5 h-3.5" />
+                                    Info
+                                  </Button>
+                                  <Button variant="outline" size="sm"
+                                    className="gap-1.5 h-7 px-2.5"
+                                    onClick={() => confirmRollback(parseInt(rev.revision))}
+                                    disabled={isRollingBack}
+                                  >
+                                    <IconRotate2 className="w-3.5 h-3.5" />
+                                    Rollback to Rev {rev.revision}
+                                  </Button>
+                                </div>
                               )}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              <span className="font-mono">{rev.image || 'unknown image'}</span>
-                              <span className="mx-2">·</span>
-                              <span>{rev.replicas} replicas</span>
-                              <span className="mx-2">·</span>
-                              <span>{formatDate(rev.createdAt)}</span>
-                            </div>
-                          </div>
-                          {!rev.isCurrent && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="shrink-0"
-                              onClick={() => handleRollback(parseInt(rev.revision))}
-                              disabled={isRollingBack}
-                            >
-                              <IconRotate2 className="w-3.5 h-3.5 mr-1" />
-                              Rollback
-                            </Button>
-                          )}
-                        </div>
-                      ))}
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -944,40 +1038,32 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
             ),
           },
           ...(deployment.spec?.template?.spec?.volumes
-            ? [
-              {
-                value: 'volumes',
-                label: (
-                  <>
-                    Volumes{' '}
-                    <Badge variant="secondary">
-                      {deployment.spec.template.spec.volumes.length}
-                    </Badge>
-                  </>
-                ),
-                content: (
-                  <VolumeTable
-                    namespace={namespace}
-                    volumes={deployment.spec?.template?.spec?.volumes}
-                    containers={toSimpleContainer(
-                      deployment.spec?.template?.spec?.initContainers,
-                      deployment.spec?.template?.spec?.containers
-                    )}
-                    isLoading={isLoadingDeployment}
-                  />
-                ),
-              },
-            ]
+            ? [{
+              value: 'volumes',
+              label: (
+                <>
+                  Volumes{' '}
+                  <Badge variant="secondary">{deployment.spec.template.spec.volumes.length}</Badge>
+                </>
+              ),
+              content: (
+                <VolumeTable
+                  namespace={namespace}
+                  volumes={deployment.spec?.template?.spec?.volumes}
+                  containers={toSimpleContainer(
+                    deployment.spec?.template?.spec?.initContainers,
+                    deployment.spec?.template?.spec?.containers
+                  )}
+                  isLoading={isLoadingDeployment}
+                />
+              ),
+            }]
             : []),
           {
             value: 'events',
             label: 'Events',
             content: (
-              <EventTable
-                resource="deployments"
-                name={name}
-                namespace={namespace}
-              />
+              <EventTable resource="deployments" name={name} namespace={namespace} />
             ),
           },
           {
@@ -1010,6 +1096,102 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
         open={isRolloutMonitorOpen}
         onOpenChange={setIsRolloutMonitorOpen}
       />
+
+      {/* Revision Info Dialog */}
+      <Dialog open={!!viewingRevision} onOpenChange={(open) => { if (!open) setViewingRevision(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IconInfoCircle className="h-5 w-5 text-primary" />
+              Revision {viewingRevision?.revision} Details
+            </DialogTitle>
+          </DialogHeader>
+          {viewingRevision && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-[120px_1fr] gap-y-2.5 gap-x-4">
+                <span className="text-muted-foreground">Revision</span>
+                <span className="font-mono font-semibold">#{viewingRevision.revision}</span>
+                <span className="text-muted-foreground">Replica Set</span>
+                <span className="font-mono text-xs break-all">{viewingRevision.replicaName}</span>
+                <span className="text-muted-foreground">Image</span>
+                <span className="font-mono text-xs break-all">{viewingRevision.image || '—'}</span>
+                <span className="text-muted-foreground">Replicas</span>
+                <span>{viewingRevision.replicas}</span>
+                <span className="text-muted-foreground">Created</span>
+                <span className="text-xs">{formatDate(viewingRevision.createdAt)}</span>
+                <span className="text-muted-foreground">Status</span>
+                <span>{viewingRevision.isCurrent
+                  ? <Badge className="text-[10px] h-4 bg-primary/15 text-primary border-primary/25">ACTIVE</Badge>
+                  : <Badge variant="secondary" className="text-[10px] h-4">Past</Badge>
+                }</span>
+              </div>
+              {viewingRevision.labels && Object.keys(viewingRevision.labels).length > 0 && (
+                <div>
+                  <p className="text-muted-foreground mb-1.5">Labels</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(viewingRevision.labels).map(([k, v]) => (
+                      <Badge key={k} variant="outline" className="font-mono text-[10px]">{k}={v}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setViewingRevision(null)}>Close</Button>
+            {viewingRevision && !viewingRevision.isCurrent && (
+              <Button
+                onClick={() => {
+                  setViewingRevision(null)
+                  confirmRollback(parseInt(viewingRevision.revision))
+                }}
+                disabled={isRollingBack}
+                className="gap-1.5"
+              >
+                <IconRotate2 className="w-4 h-4" />
+                Rollback to This Revision
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rollback Confirmation Dialog */}
+      <Dialog open={rollbackDialogOpen} onOpenChange={(open) => { if (!open && !isRollingBack) { setRollbackDialogOpen(false) } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IconRotate2 className="h-5 w-5 text-amber-500" />
+              Confirm Rollback
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  You are about to rollback <strong className="text-foreground">{name}</strong> in
+                  namespace <strong className="text-foreground">{namespace}</strong>
+                  {pendingRollbackRevision
+                    ? <> to <strong className="text-foreground">revision #{pendingRollbackRevision}</strong></>
+                    : <> to its <strong className="text-foreground">previous revision</strong></>
+                  }.
+                </p>
+                <p className="text-amber-600 dark:text-amber-400 text-xs">
+                  ⚠ This will update the pod template to match a prior ReplicaSet configuration. Running pods will be replaced.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRollbackDialogOpen(false)} disabled={isRollingBack}>
+              Cancel
+            </Button>
+            <Button onClick={executeRollback} disabled={isRollingBack} className="gap-1.5">
+              <IconRotate2 className="h-4 w-4" />
+              {isRollingBack ? 'Rolling back...' : 'Confirm Rollback'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
@@ -34,19 +34,57 @@ export function ResponsiveTabs({
   const isMobile = useIsMobile()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const [value, onValueChange] = useState(
-    searchParams.get('tab') || tabs[0]?.value || ''
-  )
+  // Stable set of valid tab values (only recompute when tab keys actually change)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tabValuesKey = tabs.map(t => t.value).join(',')
+  const tabValues = useMemo(() => tabs.map(t => t.value), [tabValuesKey])
 
-  useEffect(() => {
+  const initialTab = searchParams.get('tab') || tabs[0]?.value || ''
+  const [value, setValue] = useState(initialTab)
+
+  // Track whether we are the source of the URL change to avoid echo loops
+  const isInternalUpdate = useRef(false)
+
+  // When the user (or code) changes the active tab, update both state and URL
+  const onValueChange = useCallback((newValue: string) => {
+    setValue(newValue)
+    isInternalUpdate.current = true
     setSearchParams(
       (prev) => {
-        prev.set('tab', value)
+        prev.set('tab', newValue)
         return prev
       },
       { replace: true }
     )
-  }, [setSearchParams, value])
+    // Reset the flag after the current tick so the URL-sync effect doesn't echo
+    queueMicrotask(() => { isInternalUpdate.current = false })
+  }, [setSearchParams])
+
+  // Sync tab state when URL changes externally (e.g. "View Topology" button in overview)
+  useEffect(() => {
+    if (isInternalUpdate.current) return // we caused this change, skip
+    const tabFromUrl = searchParams.get('tab')
+    if (tabFromUrl && tabFromUrl !== value && tabValues.includes(tabFromUrl)) {
+      setValue(tabFromUrl)
+    }
+  }, [searchParams, tabValues, value])
+
+  // On mount, write the active tab to the URL if it's not already there
+  useEffect(() => {
+    const current = searchParams.get('tab')
+    if (!current && value) {
+      isInternalUpdate.current = true
+      setSearchParams(
+        (prev) => {
+          prev.set('tab', value)
+          return prev
+        },
+        { replace: true }
+      )
+      queueMicrotask(() => { isInternalUpdate.current = false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const currentTab = tabs.find((tab) => tab.value === value)
 

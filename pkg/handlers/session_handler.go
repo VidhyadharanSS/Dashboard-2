@@ -9,18 +9,28 @@ import (
 	"github.com/zxh326/kite/pkg/model"
 )
 
+// SessionWithCurrent wraps a session with a flag indicating if it's the caller's current session.
+type SessionWithCurrent struct {
+	model.UserSession
+	IsCurrent bool        `json:"isCurrent"`
+	UserInfo  *SafeUser   `json:"user"`
+}
+
+// SafeUser contains only the fields safe to expose in session listings.
+type SafeUser struct {
+	ID       uint   `json:"id"`
+	Username string `json:"username"`
+	Name     string `json:"name,omitempty"`
+	Email    string `json:"email,omitempty"`
+	Provider string `json:"provider,omitempty"`
+}
+
 func ListUserSessions(c *gin.Context) {
 	user := c.MustGet("user").(model.User)
 	sessions, err := model.ListUserSessions(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list sessions"})
 		return
-	}
-
-	// Enrich with session count metadata
-	type SessionWithCurrent struct {
-		model.UserSession
-		IsCurrent bool `json:"isCurrent"`
 	}
 
 	// Get current token to mark the active session
@@ -34,8 +44,9 @@ func ListUserSessions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"sessions": enriched,
-		"total":    len(sessions),
+		"sessions":    enriched,
+		"total":       len(sessions),
+		"currentUser": user.Username,
 	})
 }
 
@@ -83,9 +94,32 @@ func ListAllSessions(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list all sessions"})
 		return
 	}
+
+	// Enrich with isCurrent flag and safe user info
+	currentToken, _ := c.Cookie("auth_token")
+	enriched := make([]SessionWithCurrent, len(sessions))
+	for i, s := range sessions {
+		sc := SessionWithCurrent{
+			UserSession: s,
+			IsCurrent:   s.Token == currentToken,
+		}
+		if s.User.ID != 0 {
+			sc.UserInfo = &SafeUser{
+				ID:       s.User.ID,
+				Username: s.User.Username,
+				Name:     s.User.Name,
+				Email:    s.User.Email,
+				Provider: s.User.Provider,
+			}
+		}
+		// Clear the embedded User to avoid leaking sensitive fields
+		sc.UserSession.User = model.User{}
+		enriched[i] = sc
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"sessions": sessions,
-		"total":    len(sessions),
+		"sessions": enriched,
+		"total":    len(enriched),
 	})
 }
 

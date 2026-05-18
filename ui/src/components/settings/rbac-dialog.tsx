@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { IconEdit, IconShieldCheck, IconX } from '@tabler/icons-react'
+import { useEffect, useState, useCallback } from 'react'
+import { IconEdit, IconShieldCheck, IconX, IconWand } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 
 import { Cluster, Role } from '@/types/api'
 import { useClusterList } from '@/lib/api'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,6 +16,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import { Separator } from '../ui/separator'
 
@@ -24,6 +31,28 @@ interface RBACDialogProps {
   role?: Role | null
   onSubmit: (data: Partial<Role>) => void
 }
+
+/* ─── Role presets for quick setup ─── */
+const ROLE_PRESETS = [
+  {
+    name: 'Read-Only',
+    description: 'View all resources without modification',
+    resources: ['*'],
+    verbs: ['get', 'list', 'watch'],
+  },
+  {
+    name: 'Developer',
+    description: 'Manage workloads and view logs',
+    resources: ['pods', 'deployments', 'statefulsets', 'daemonsets', 'services', 'configmaps', 'secrets', 'jobs', 'cronjobs', 'ingresses', 'events'],
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete', 'log', 'exec'],
+  },
+  {
+    name: 'Operator',
+    description: 'Full access to workloads and RBAC',
+    resources: ['*'],
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
+  },
+]
 
 export function RBACDialog({
   open,
@@ -59,6 +88,15 @@ export function RBACDialog({
     setForm((prev) => ({ ...(prev || {}), [field]: items }))
   }
 
+  const applyPreset = useCallback((preset: typeof ROLE_PRESETS[0]) => {
+    setForm((prev) => ({
+      ...prev,
+      resources: preset.resources,
+      verbs: preset.verbs,
+      description: prev?.description || preset.description,
+    }))
+  }, [])
+
   function ListEditor({
     label,
     items,
@@ -87,26 +125,41 @@ export function RBACDialog({
       onChange(items.filter((i) => i !== val))
     }
 
+    const isWildcard = items.includes('*')
+
     return (
       <div className="space-y-2">
-        <Label>{label}</Label>
-        <div className="flex flex-wrap gap-2">
-          {items.map((it) => (
-            <div
-              key={it}
-              className="inline-flex items-center gap-2 rounded-full border px-2 py-1 text-sm"
-            >
-              <span className="select-none">{it}</span>
-              <button
-                type="button"
-                aria-label={`remove ${it}`}
-                onClick={() => remove(it)}
-                className="inline-flex items-center justify-center"
+        <div className="flex items-center justify-between">
+          <Label>{label}</Label>
+          <span className="text-[10px] text-muted-foreground font-mono">
+            {items.length} item{items.length !== 1 ? 's' : ''}
+            {isWildcard && ' (wildcard)'}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+          {items.map((it) => {
+            const isSpecial = it === '*'
+            return (
+              <Badge
+                key={it}
+                variant={isSpecial ? 'default' : 'secondary'}
+                className={`gap-1 pr-1 text-xs ${isSpecial ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/25' : ''}`}
               >
-                <IconX className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+                <span className="select-none font-mono">{it}</span>
+                <button
+                  type="button"
+                  aria-label={`remove ${it}`}
+                  onClick={() => remove(it)}
+                  className="inline-flex items-center justify-center h-4 w-4 rounded-full hover:bg-background/50 transition-colors"
+                >
+                  <IconX className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            )
+          })}
+          {items.length === 0 && (
+            <span className="text-[10px] text-muted-foreground italic py-1">No items — type below to add</span>
+          )}
         </div>
         <div className="relative">
           <div className="flex gap-2">
@@ -126,12 +179,13 @@ export function RBACDialog({
                   add()
                 }
               }}
+              className="h-8 text-xs"
             />
           </div>
 
           {/* Dropdown suggestions (if provided) */}
           {focused && suggestions && suggestions.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full bg-popover border rounded shadow max-h-60 overflow-auto">
+            <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
               {suggestions
                 .filter((s) =>
                   s.toLowerCase().includes(input.trim().toLowerCase())
@@ -141,7 +195,7 @@ export function RBACDialog({
                 .map((s) => (
                   <div
                     key={s}
-                    className="px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                    className="px-3 py-1.5 cursor-pointer hover:bg-accent text-xs flex items-center gap-2"
                     onMouseDown={(e) => {
                       // prevent input blur before click
                       e.preventDefault()
@@ -150,7 +204,8 @@ export function RBACDialog({
                       setInput('')
                     }}
                   >
-                    <span>{s}</span>
+                    <span className={`font-mono ${s === '*' ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}`}>{s}</span>
+                    {s === '*' && <span className="text-[10px] text-muted-foreground">(all)</span>}
                   </div>
                 ))}
             </div>
@@ -205,9 +260,46 @@ export function RBACDialog({
               id="role-desc"
               value={form.description || ''}
               onChange={(e) => handleChange('description', e.target.value)}
-              rows={3}
+              rows={2}
             />
           </div>
+
+          {/* Quick presets — only show for new roles */}
+          {!isEdit && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <IconWand className="h-3.5 w-3.5 text-primary" />
+                <Label className="text-xs font-medium">Quick Presets</Label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <TooltipProvider>
+                  {ROLE_PRESETS.map((preset) => (
+                    <Tooltip key={preset.name}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => applyPreset(preset)}
+                        >
+                          {preset.name}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs max-w-[220px]">
+                        <p className="font-medium">{preset.description}</p>
+                        <p className="text-muted-foreground mt-1">
+                          Resources: {preset.resources.slice(0, 3).join(', ')}{preset.resources.length > 3 ? '…' : ''}<br/>
+                          Verbs: {preset.verbs.join(', ')}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              </div>
+            </div>
+          )}
+
           <Separator />
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -287,3 +379,4 @@ export function RBACDialog({
 }
 
 export default RBACDialog
+

@@ -74,7 +74,27 @@ function getColumnAlignClass(column: any): string {
   return 'text-left'
 }
 
-const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex }: { row: any; searchQuery: string; isSelected: boolean; rowIndex: number }) => (
+/**
+ * Returns an inline width style for `table-fixed` layout.
+ * Column widths can be specified via `columnDef.meta.width` (e.g. "120px", "15%").
+ * Known structural columns get fixed pixel widths; remaining columns share space.
+ */
+function getColumnWidth(column: any, _totalColumns: number): React.CSSProperties {
+  const id = column.id as string
+  const meta = column.columnDef?.meta as { width?: string } | undefined
+
+  // Explicit width from column meta
+  if (meta?.width) return { width: meta.width }
+
+  // Known fixed-width columns
+  if (id === 'select') return { width: '40px' }
+  if (id === 'actions') return { width: '100px' }
+
+  // No explicit width — let table-fixed distribute evenly
+  return {}
+}
+
+const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex, totalColumns }: { row: any; searchQuery: string; isSelected: boolean; rowIndex: number; totalColumns: number }) => (
   <TableRow
     data-state={isSelected && 'selected'}
     className="transition-all duration-150 hover:bg-accent/40 group/row"
@@ -86,17 +106,21 @@ const ResourceTableRow = React.memo(({ row, searchQuery, isSelected, rowIndex }:
         : String(cell.getValue() || '-')
 
       const alignClass = getColumnAlignClass(cell.column)
+      const widthStyle = getColumnWidth(cell.column, totalColumns)
 
       return (
         <TableCell
           key={cell.id}
           className={`align-middle ${alignClass}`}
+          style={widthStyle}
         >
-          {typeof content === 'string' ? (
-            <Highlight text={content} query={searchQuery} />
-          ) : (
-            content
-          )}
+          <div className="overflow-hidden text-ellipsis">
+            {typeof content === 'string' ? (
+              <Highlight text={content} query={searchQuery} />
+            ) : (
+              content
+            )}
+          </div>
         </TableCell>
       )
     })}
@@ -158,6 +182,7 @@ export function ResourceTableView<T>({
         searchQuery={searchQuery}
         isSelected={row.getIsSelected()}
         rowIndex={index}
+        totalColumns={columnCount}
       />
     ))
   }
@@ -186,10 +211,12 @@ export function ResourceTableView<T>({
       <TableRow key={`skeleton-${i}`}>
         {table.getAllLeafColumns().map((col) => {
           const alignClass = getColumnAlignClass(col)
+          const widthStyle = getColumnWidth(col, columnCount)
           return (
             <TableCell
               key={col.id}
               className={`align-middle ${alignClass}`}
+              style={widthStyle}
             >
               <Skeleton className="h-4 w-full opacity-50" />
             </TableCell>
@@ -230,10 +257,12 @@ export function ResourceTableView<T>({
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => {
                         const alignClass = getColumnAlignClass(header.column)
+                        const widthStyle = getColumnWidth(header.column, columnCount)
                         return (
                           <TableHead
                             key={header.id}
-                            className={alignClass}
+                            className={`${alignClass}`}
+                            style={widthStyle}
                           >
                             {header.isPlaceholder ? null : header.column.getCanSort() ? (
                               <button
@@ -369,3 +398,4 @@ export function ResourceTableView<T>({
     </div>
   )
 }
+

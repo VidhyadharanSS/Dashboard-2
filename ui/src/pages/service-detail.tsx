@@ -131,28 +131,33 @@ export function ServiceDetail(props: { name: string; namespace?: string }) {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
           <FavoriteButton resourceType="services" name={name} namespace={namespace} />
           <Button
             disabled={isLoading}
             variant="outline"
-            size="sm"
+            size="icon"
+            className="h-8 w-8"
             onClick={handleManualRefresh}
+            title="Refresh"
           >
-            <IconRefresh className="w-4 h-4" />
-            Refresh
+            <IconRefresh className="w-3.5 h-3.5" />
           </Button>
           <QuickYamlDialog
             resourceType="services"
             namespace={namespace}
             name={name}
-            triggerAsText
+            triggerVariant="outline"
+            triggerSize="icon"
           />
           <DescribeDialog
             resourceType={'services' as ResourceType}
             namespace={namespace}
             name={name}
+            compact
+            triggerVariant="outline"
           />
+          <div className="w-px h-5 bg-border mx-0.5" />
           <Button
             variant="destructive"
             size="sm"

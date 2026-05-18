@@ -84,8 +84,10 @@ export function SecretListPage() {
     <ResourceTable
       resourceName="Secrets"
       columns={columns}
-      clusterScope={false} // Secrets are namespace-scoped
+      clusterScope={false}
       searchQueryFilter={secretSearchFilter}
+      enableMultiNamespace
     />
   )
 }
+

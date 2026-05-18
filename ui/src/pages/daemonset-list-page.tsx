@@ -16,11 +16,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
+import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
+import { WorkloadLabelSelector } from '@/components/selector/workload-label-selector'
+import { WorkloadQuerySelector } from '@/components/selector/workload-query-selector'
+import { useSessionState } from '@/hooks/use-session-state'
 
 export function DaemonSetListPage() {
   const { t } = useTranslation()
+  const [selectedLabels, setSelectedLabels] = useSessionState<string>('daemonsets-selectedLabels', '')
+  const [querySelector, setQuerySelector] = useSessionState<string>('daemonsets-querySelector', '')
+  const effectiveLabelSelector = querySelector || selectedLabels
 
   const handleBatchRestart = useCallback(async (rows: DaemonSet[]) => {
     const promises = rows.map((row) => {
@@ -28,7 +34,7 @@ export function DaemonSetListPage() {
       const namespace = row.metadata?.namespace
       if (!name || !namespace) return Promise.resolve()
 
-      return api.restartResource('daemonsets', name, namespace)
+      return api.restartResource('daemonsets', namespace, name)
         .then(() => toast.success(t('deployments.restartSuccess', { name, defaultValue: `Successfully restarted ${name}` })))
         .catch((error) => {
           console.error(`Failed to restart ${name}:`, error)
@@ -146,17 +152,12 @@ export function DaemonSetListPage() {
         header: t('common.actions'),
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <QuickYamlDialog
-              resourceType="daemonsets"
-              namespace={row.original.metadata?.namespace}
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
             <DescribeDialog
               resourceType="daemonsets"
               namespace={row.original.metadata?.namespace}
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         ),
@@ -176,13 +177,40 @@ export function DaemonSetListPage() {
     []
   )
 
+  const filterToolbar = (
+    <FilterBar>
+      <FilterGroup label="Label Filter">
+        <WorkloadLabelSelector
+          resourceType="daemonsets"
+          onLabelsChange={(labels) => {
+            setSelectedLabels(labels)
+            if (labels) setQuerySelector('')
+          }}
+          placeholder="Filter by Label"
+        />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border mx-1" />
+      <FilterGroup label="Query Selector">
+        <WorkloadQuerySelector
+          resourceType="daemonsets"
+          onSelectorChange={(sel) => {
+            setQuerySelector(sel)
+            if (sel) setSelectedLabels('')
+          }}
+        />
+      </FilterGroup>
+    </FilterBar>
+  )
+
   return (
     <ResourceTable
       resourceName={'DaemonSets'}
       columns={columns}
       searchQueryFilter={daemonSetSearchFilter}
       onBatchRestart={handleBatchRestart}
-      enableLabelFilter={true}
+      extraToolbars={[filterToolbar]}
+      labelSelector={effectiveLabelSelector}
+      enableMultiNamespace
     />
   )
 }

@@ -86,6 +86,8 @@ export interface ResourceTableProps<T> {
   enableLabelFilter?: boolean // If true, show label selector filter input
   headerContent?: (data: T[]) => React.ReactNode // Extra content below title/toolbar but above table
   namespace?: string // Forced namespace
+  /** Enable multi-namespace selection mode */
+  enableMultiNamespace?: boolean
 }
 
 export function ResourceTable<T>({
@@ -103,6 +105,7 @@ export function ResourceTable<T>({
   headerContent,
   labelSelector,
   namespace: forcedNamespace,
+  enableMultiNamespace = false,
 }: ResourceTableProps<T> & { labelSelector?: string }) {
   const [localLabelFilter, setLocalLabelFilter] = React.useState('')
   const [appliedLabelFilter, setAppliedLabelFilter] = React.useState('')
@@ -118,6 +121,8 @@ export function ResourceTable<T>({
   const { canAccess } = usePermissions()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [restartDialogOpen, setRestartDialogOpen] = useState(false)
+  const [isRestarting, setIsRestarting] = useState(false)
   const [searchQuery, setSearchQuery] = useState<string>(() => {
     const currentCluster = localStorage.getItem('current-cluster')
     const storageKey = `${currentCluster}-${resourceName}-searchQuery`
@@ -190,6 +195,10 @@ export function ResourceTable<T>({
       : storedNamespace || 'default' // Default to 'default' if not set
   })
 
+  // Multi-namespace selection state
+  const [multiNamespaces, setMultiNamespaces] = useState<string[]>([])
+  const isMultiNsActive = enableMultiNamespace && multiNamespaces.length > 0
+
   const [searchParams] = useSearchParams()
 
   useEffect(() => {
@@ -251,7 +260,20 @@ export function ResourceTable<T>({
     { reduce: true, enabled: useSSE, labelSelector: labelSelector }
   )
 
-  // (moved below after error is defined)
+  // Multi-namespace fetch (only active when user picks multiple namespaces)
+  const {
+    data: multiNsData,
+    isLoading: multiNsLoading,
+  } = useResources(
+    resourceType ?? (resourceName.toLowerCase() as ResourceType),
+    '_all',
+    {
+      refreshInterval: useSSE ? 0 : refreshInterval,
+      reduce: true,
+      disable: !isMultiNsActive,
+      labelSelector: labelSelector || appliedLabelFilter || undefined,
+    }
+  )
 
   // Update sessionStorage when search query changes
   useEffect(() => {
@@ -381,9 +403,17 @@ export function ResourceTable<T>({
   }, [columns, clusterScope, selectedNamespace, t])
 
   const data = useMemo(() => {
+    // Multi-namespace mode: filter _all results by selected namespaces
+    if (isMultiNsActive && multiNsData) {
+      const nsSet = new Set(multiNamespaces)
+      return (multiNsData as any[]).filter((item: any) => {
+        const ns = item?.metadata?.namespace
+        return ns && nsSet.has(ns)
+      }) as unknown as typeof queryData
+    }
     if (useSSE) return watchData
     return queryData
-  }, [useSSE, watchData, queryData])
+  }, [useSSE, watchData, queryData, isMultiNsActive, multiNsData, multiNamespaces])
 
   // Track last refresh time
   useEffect(() => {
@@ -391,7 +421,7 @@ export function ResourceTable<T>({
       setLastRefreshed(new Date())
     }
   }, [data])
-  const isLoading = useSSE ? watchLoading : queryLoading
+  const isLoading = isMultiNsActive ? multiNsLoading : (useSSE ? watchLoading : queryLoading)
   const isError = useSSE ? Boolean(watchError) : queryIsError
   const error = useSSE
     ? (watchError as Error | null)
@@ -544,42 +574,86 @@ export function ResourceTable<T>({
   })
 
   // Handle batch delete - must be after table is defined
+  // For namespace-scoped resources, we must always provide a valid namespace.
+  // When viewing "All Namespaces" (_all), each row's own metadata.namespace is used.
+  // When a specific namespace is selected, we use that as the fallback.
+  // This prevents the URL from falling through to the CRD handler (which produces
+  // "<resource>.apps not found" errors).
   const handleBatchDelete = useCallback(async () => {
     setIsDeleting(true)
     const selectedRows = table
       .getSelectedRowModel()
       .rows.map((row) => row.original)
 
-    const deletePromises = selectedRows.map((row) => {
+    const resolvedResourceType = resourceType ?? (resourceName.toLowerCase() as ResourceType)
+    const activeNamespace = forcedNamespace || selectedNamespace
+
+    const deletePromises = selectedRows.map(async (row) => {
       const metadata = (
         row as { metadata?: { name?: string; namespace?: string } }
       )?.metadata
       const name = metadata?.name
-      const namespace = clusterScope ? undefined : metadata?.namespace
 
       if (!name) {
-        return Promise.resolve()
+        return { status: 'skipped' as const, name: '', error: 'Missing resource name' }
       }
 
-      return deleteResource(
-        resourceType ?? (resourceName.toLowerCase() as ResourceType),
-        name,
-        namespace
-      )
-        .then(() => {
-          toast.success(t('resourceTable.deleteSuccess', { name }))
-        })
-        .catch((error) => {
-          console.error(`Failed to delete ${name}:`, error)
-          toast.error(
-            t('resourceTable.deleteFailed', { name, error: error.message })
-          )
-          throw error
-        })
+      // For cluster-scoped resources (nodes, namespaces, PVs, etc.), namespace is always undefined.
+      // For namespace-scoped resources, prefer the row's own namespace (critical when viewing _all),
+      // then fall back to the table's active namespace selection.
+      let namespace: string | undefined
+      if (clusterScope) {
+        namespace = undefined
+      } else {
+        namespace = metadata?.namespace
+          || (activeNamespace && activeNamespace !== '_all' ? activeNamespace : undefined)
+
+        // If still no namespace (shouldn't happen for real k8s resources), skip to avoid CRD fallthrough
+        if (!namespace) {
+          console.warn(`Skipping delete for ${name}: no namespace found for namespace-scoped resource`)
+          return { status: 'failed' as const, name, error: 'Could not determine namespace' }
+        }
+      }
+
+      try {
+        await deleteResource(resolvedResourceType, name, namespace)
+        return { status: 'fulfilled' as const, name }
+      } catch (error) {
+        console.error(`Failed to delete ${name}:`, error)
+        return {
+          status: 'failed' as const,
+          name,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
     })
 
     try {
-      await Promise.allSettled(deletePromises)
+      const outcomes = await Promise.all(deletePromises)
+      const successItems = outcomes.filter((outcome) => outcome.status === 'fulfilled')
+      const failureItems = outcomes.filter((outcome) => outcome.status === 'failed')
+      if (successItems.length > 0) {
+        toast.success(
+          successItems.length === 1
+            ? t('resourceTable.deleteSuccess', { name: successItems[0].name })
+            : t('resourceTable.batchDeleteSuccess', {
+              defaultValue: `Deleted ${successItems.length} resources successfully`,
+              count: successItems.length,
+            })
+        )
+      }
+      if (failureItems.length > 0) {
+        const firstFailure = failureItems[0]
+        toast.error(
+          failureItems.length === 1
+            ? t('resourceTable.deleteFailed', { name: firstFailure.name, error: firstFailure.error })
+            : t('resourceTable.batchDeleteFailed', {
+              defaultValue: `${failureItems.length} resources failed to delete. First error: ${firstFailure.error}`,
+              count: failureItems.length,
+              error: firstFailure.error,
+            })
+        )
+      }
       // Reset selection and close dialog
       setRowSelection({})
       setDeleteDialogOpen(false)
@@ -590,7 +664,7 @@ export function ResourceTable<T>({
     } finally {
       setIsDeleting(false)
     }
-  }, [table, clusterScope, resourceType, resourceName, t, useSSE, refetch])
+  }, [table, clusterScope, resourceType, resourceName, t, useSSE, refetch, forcedNamespace, selectedNamespace])
   // Calculate total and filtered row counts
   // Resource health summary computation
   const healthSummary = useMemo(() => {
@@ -717,9 +791,9 @@ export function ResourceTable<T>({
   return (
     <div className="flex flex-col gap-3 animate-page-enter">
       {/* Header: Title (left) + All Controls (right) */}
-{}
+      { }
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 animate-fade-slide-in">
-        {}
+        { }
         <div className="shrink-0">
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold capitalize tracking-tight">{resourceName}</h1>
@@ -742,13 +816,19 @@ export function ResourceTable<T>({
             )}
           </div>
           {!clusterScope && selectedNamespace && (
-            <div className="text-muted-foreground flex items-center mt-1.5 text-sm">
+            <div className="text-muted-foreground flex items-center mt-1.5 text-sm gap-1.5 flex-wrap">
               <span>Namespace:</span>
-              <Badge variant="outline" className="ml-2 font-medium bg-primary/5 border-primary/20 text-primary">
-                {selectedNamespace === '_all'
-                  ? 'All Namespaces'
-                  : selectedNamespace}
-              </Badge>
+              {isMultiNsActive ? (
+                multiNamespaces.map(ns => (
+                  <Badge key={ns} variant="outline" className="font-medium bg-primary/5 border-primary/20 text-primary text-[10px]">
+                    {ns}
+                  </Badge>
+                ))
+              ) : (
+                <Badge variant="outline" className="font-medium bg-primary/5 border-primary/20 text-primary">
+                  {selectedNamespace === '_all' ? 'All Namespaces' : selectedNamespace}
+                </Badge>
+              )}
             </div>
           )}
           {/* Resource Health Summary Bar */}
@@ -818,12 +898,17 @@ export function ResourceTable<T>({
             </div>
           )}
         </div>        {/* Controls column - two rows stacked */}
-        <div className="flex flex-col gap-2 items-end min-w-0">
+        <div className="flex flex-col gap-2.5 items-end min-w-0">
+          {/* Row 0: Extra filter toolbars (Label / Query selectors) */}
+          {extraToolbars && extraToolbars.length > 0 && (
+            <div className="flex items-center gap-2 justify-end w-full overflow-x-auto">
+              {extraToolbars.map((toolbar, index) => (
+                <React.Fragment key={index}>{toolbar}</React.Fragment>
+              ))}
+            </div>
+          )}
           {/* Row 1: Filters */}
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {extraToolbars?.map((toolbar, index) => (
-              <React.Fragment key={index}>{toolbar}</React.Fragment>
-            ))}
             {/* Watch/Live mode toggle switch */}
             {resourceName === 'Pods' && (
               <div className="flex items-center gap-2">
@@ -874,9 +959,17 @@ export function ResourceTable<T>({
             </Select>
             {!clusterScope && (
               <NamespaceSelector
-                selectedNamespace={selectedNamespace}
+                selectedNamespace={isMultiNsActive ? '_all' : selectedNamespace}
                 handleNamespaceChange={handleNamespaceChange}
                 showAll={true}
+                multiSelect={enableMultiNamespace}
+                selectedNamespaces={multiNamespaces}
+                onNamespacesChange={(nss) => {
+                  setMultiNamespaces(nss)
+                  if (nss.length > 0) {
+                    setPagination(prev => ({ ...prev, pageIndex: 0 }))
+                  }
+                }}
               />
             )}
             {/* Column Filters as searchable comboboxes */}
@@ -896,8 +989,14 @@ export function ResourceTable<T>({
                 const filterValue = (column.getFilterValue() as string) || ''
                 const headerLabel =
                   typeof columnDef.header === 'string' ? columnDef.header : 'Column'
+                // Smart pluralization — avoid "Statuss", "Addresss" etc.
+                const pluralLabel = headerLabel.endsWith('s') || headerLabel.endsWith('x') || headerLabel.endsWith('z') || headerLabel.endsWith('sh') || headerLabel.endsWith('ch')
+                  ? `${headerLabel}es`
+                  : headerLabel.endsWith('y') && !['a', 'e', 'i', 'o', 'u'].includes(headerLabel.charAt(headerLabel.length - 2).toLowerCase())
+                    ? `${headerLabel.slice(0, -1)}ies`
+                    : `${headerLabel}s`
                 const colOptions = [
-                  { value: 'all', label: `All ${headerLabel}s` },
+                  { value: 'all', label: `All ${pluralLabel}` },
                   ...Array.from(uniqueValues.keys())
                     .filter(Boolean)
                     .sort()
@@ -971,7 +1070,7 @@ export function ResourceTable<T>({
 
           {/* Row 2: Search + Batch Actions + Create + Column Toggle */}
           <div className="flex items-center gap-2">
-{}
+            { }
             <div className="relative group/search focus-glow rounded-lg">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60 group-focus-within/search:text-primary transition-colors duration-200" />
               <Input
@@ -993,11 +1092,7 @@ export function ResourceTable<T>({
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={async () => {
-                        const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original)
-                        await onBatchRestart(selectedRows)
-                        table.toggleAllRowsSelected(false)
-                      }}
+                      onClick={() => setRestartDialogOpen(true)}
                       className="h-7 text-xs gap-1.5"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
@@ -1123,6 +1218,65 @@ export function ResourceTable<T>({
               disabled={isDeleting}
             >
               {isDeleting ? t('resourceTable.deleting') : t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restart Confirmation Dialog */}
+      <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-amber-500" />
+              Confirm Restart
+            </DialogTitle>
+            <DialogDescription>
+              You are about to restart <strong className="text-foreground">{table.getSelectedRowModel().rows.length}</strong> {resourceName.toLowerCase()}.
+              This will trigger a rolling restart by patching the pod template annotation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3">
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              ⚠ All selected {resourceName.toLowerCase()} will have their pods gradually replaced. During restart, there may be brief interruptions depending on your pod disruption budget.
+            </p>
+          </div>
+          {table.getSelectedRowModel().rows.length <= 5 && (
+            <div className="space-y-1">
+              {table.getSelectedRowModel().rows.map((row) => {
+                const meta = (row.original as any)?.metadata
+                return (
+                  <div key={row.id} className="flex items-center gap-2 text-xs font-mono bg-muted/40 rounded px-2 py-1">
+                    <RefreshCw className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">{meta?.namespace}/{meta?.name}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRestartDialogOpen(false)} disabled={isRestarting}>
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              disabled={isRestarting}
+              onClick={async () => {
+                if (!onBatchRestart) return
+                setIsRestarting(true)
+                try {
+                  const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original)
+                  await onBatchRestart(selectedRows)
+                  table.toggleAllRowsSelected(false)
+                  setRestartDialogOpen(false)
+                } finally {
+                  setIsRestarting(false)
+                }
+              }}
+              className="gap-1.5"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
+              {isRestarting ? 'Restarting...' : 'Confirm Restart'}
             </Button>
           </DialogFooter>
         </DialogContent>

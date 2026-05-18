@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -15,10 +16,56 @@ import (
 )
 
 // wsUpgrader is a shared WebSocket upgrader for all handlers.
-// CheckOrigin always returns true because authentication is handled by
-// middleware (JWT / session token) rather than browser Origin headers.
+//
+// Auth is always enforced via JWT cookie on every WS request, so CheckOrigin
+// is defense-in-depth only.  The origin check compares against:
+//   1. The configured HOST env var (if set),
+//   2. The HTTP Host header of the request itself (covers proxies, port-forwards),
+//   3. Common localhost variants (127.0.0.1, ::1, localhost).
+//
+// This avoids false rejections when the app is behind a reverse proxy, accessed
+// via IP address, or served through `kubectl port-forward` / SSH tunnels.
 var wsUpgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // Non-browser clients (curl, etc.)
+		}
+
+		// Development mode — no HOST configured, allow all
+		if common.Host == "" {
+			return true
+		}
+
+		// Extract just the host[:port] from the Origin header.
+		// Origin is like "http://10.69.105.237:8080" — strip the scheme.
+		originHost := strings.TrimPrefix(origin, "https://")
+		originHost = strings.TrimPrefix(originHost, "http://")
+
+		// 1. Match against the request's own Host header (most reliable behind proxies)
+		if r.Host != "" && originHost == r.Host {
+			return true
+		}
+
+		// 2. Match against configured HOST env var
+		configuredHost := strings.TrimPrefix(common.Host, "https://")
+		configuredHost = strings.TrimPrefix(configuredHost, "http://")
+		if originHost == configuredHost {
+			return true
+		}
+
+		// 3. Allow localhost variants (dev, port-forward, tunnels)
+		originHostOnly := originHost
+		if idx := strings.LastIndex(originHostOnly, ":"); idx != -1 {
+			originHostOnly = originHostOnly[:idx]
+		}
+		switch originHostOnly {
+		case "localhost", "127.0.0.1", "::1", "0.0.0.0":
+			return true
+		}
+
+		return false
+	},
 	// Use reasonable buffer sizes for terminal traffic
 	ReadBufferSize:  4096,
 	WriteBufferSize: 4096,

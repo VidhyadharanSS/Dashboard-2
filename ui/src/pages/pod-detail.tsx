@@ -4,6 +4,7 @@ import {
   IconExternalLink,
   IconLoader,
   IconRefresh,
+  IconServer2,
   IconTrash,
   IconBox,
 } from '@tabler/icons-react'
@@ -11,7 +12,7 @@ import * as yaml from 'js-yaml'
 import { Container, Pod } from 'kubernetes-types/core/v1'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { useNamespaceContext } from '@/hooks/use-namespace-context'
@@ -41,7 +42,6 @@ import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceEditor } from '@/components/editors/resource-editor'
 import { ErrorMessage } from '@/components/error-message'
 import { EventTable } from '@/components/event-table'
-import { LabelsAnno } from '@/components/lables-anno'
 import { LogViewer } from '@/components/log-viewer'
 import { PodFileBrowser } from '@/components/pod-file-browser'
 import { PodMonitoring } from '@/components/pod-monitoring'
@@ -54,6 +54,12 @@ import { VolumeTable } from '@/components/volume-table'
 import { YamlEditor } from '@/components/yaml-editor'
 import { FavoriteButton } from '@/components/favorite-button'
 import { ResourceTopology } from '@/components/resource-topology'
+import {
+  SidebarEvents,
+  SidebarRelatedResources,
+  SidebarLabels,
+  SidebarAnnotations,
+} from '@/components/overview-sidebar'
 
 export function PodDetail(props: { namespace: string; name: string }) {
   const { namespace, name } = props
@@ -66,8 +72,8 @@ export function PodDetail(props: { namespace: string; name: string }) {
   const [resizeContainer, setResizeContainer] = useState<Container | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const navigate = useNavigate()
+  const [, setSearchParams] = useSearchParams()
   const { setActiveNamespace } = useNamespaceContext()
-
 
   const { t } = useTranslation()
   const { clusters, currentCluster } = useCluster()
@@ -88,7 +94,6 @@ export function PodDetail(props: { namespace: string; name: string }) {
 
   const ownerInfo = useMemo(() => getOwnerInfo(pod?.metadata), [pod])
 
-  // If the owner is a ReplicaSet, we fetch it to find the parent Deployment
   const { data: ownerReplicaSet } = useResource(
     'replicasets',
     ownerInfo?.kind === 'ReplicaSet' ? ownerInfo.name : '',
@@ -130,7 +135,6 @@ export function PodDetail(props: { namespace: string; name: string }) {
     try {
       await updateResource('pods', name, namespace, content)
       toast.success('YAML saved successfully')
-      // Refresh data after successful save
       await handleRefresh()
     } catch (error) {
       toast.error(translateError(error, t))
@@ -140,18 +144,13 @@ export function PodDetail(props: { namespace: string; name: string }) {
   }
 
   const handleResizeSave = async () => {
-    if (!resizeContainer) {
-      return
-    }
+    if (!resizeContainer) return
     setIsResizing(true)
     try {
       await resizePod(namespace, name, {
         spec: {
           containers: [
-            {
-              name: resizeContainer.name,
-              resources: resizeContainer.resources,
-            },
+            { name: resizeContainer.name, resources: resizeContainer.resources },
           ],
         },
       })
@@ -170,7 +169,6 @@ export function PodDetail(props: { namespace: string; name: string }) {
   }
 
   const handleManualRefresh = async () => {
-    // Increment refresh key to force YamlEditor re-render
     setRefreshKey((prev) => prev + 1)
     await handleRefresh()
   }
@@ -207,11 +205,7 @@ export function PodDetail(props: { namespace: string; name: string }) {
 
   if (isError || !pod) {
     return (
-      <ErrorMessage
-        resourceName={'Pod'}
-        error={podError}
-        refetch={handleRefresh}
-      />
+      <ErrorMessage resourceName={'Pod'} error={podError} refetch={handleRefresh} />
     )
   }
 
@@ -224,48 +218,26 @@ export function PodDetail(props: { namespace: string; name: string }) {
           <p className="text-muted-foreground">
             Namespace:{' '}
             <button
-              onClick={() => {
-                setActiveNamespace(namespace)
-                navigate(`/pods?namespace=${namespace}`)
-              }}
+              onClick={() => { setActiveNamespace(namespace); navigate(`/pods?namespace=${namespace}`) }}
               className="font-medium text-primary hover:underline"
-            >
-              {namespace}
-            </button>
+            >{namespace}</button>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
           <FavoriteButton resourceType="pods" name={name} namespace={namespace} />
-          <Button variant="outline" size="sm" onClick={handleManualRefresh}>
-            <IconRefresh className="w-4 h-4" />
-            Refresh
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleManualRefresh} title="Refresh">
+            <IconRefresh className="w-3.5 h-3.5" />
           </Button>
-          <QuickYamlDialog
-            resourceType="pods"
-            namespace={namespace}
-            name={name}
-            triggerAsText
-          />
-          <DescribeDialog
-            resourceType="pods"
-            namespace={namespace}
-            name={name}
-          />
+          <QuickYamlDialog resourceType="pods" namespace={namespace} name={name} triggerVariant="outline" triggerSize="icon" />
+          <DescribeDialog resourceType="pods" namespace={namespace} name={name} compact triggerVariant="outline" />
+          <div className="w-px h-5 bg-border mx-0.5" />
           {resizeAvailable && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsResizeDialogOpen(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setIsResizeDialogOpen(true)}>
               <IconAdjustments className="w-4 h-4" />
               {t('pods.resizeResources')}
             </Button>
           )}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
+          <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
             <IconTrash className="w-4 h-4" />
             Delete
           </Button>
@@ -278,280 +250,289 @@ export function PodDetail(props: { namespace: string; name: string }) {
             value: 'overview',
             label: 'Overview',
             content: (
-              <div className="space-y-4">
-                {/* Status Overview */}
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-sm">
-                      <PodStatusIcon status={podStatus?.reason} className="w-4 h-4" />
-                      Status Overview
-                      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
-                        podStatus.reason === 'Running' ? 'bg-green-500/10 text-green-600' :
-                        podStatus.reason === 'Completed' || podStatus.reason === 'Succeeded' ? 'bg-blue-500/10 text-blue-600' :
-                        podStatus.reason === 'Pending' ? 'bg-yellow-500/10 text-yellow-600' :
-                        'bg-red-500/10 text-red-600'
-                      }`}>{podStatus.reason}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {/* Phase */}
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Phase</p>
-                        <p className="text-sm font-semibold">{podStatus.reason}</p>
-                        {getPodErrorMessage(pod) && (
-                          <p className="text-xs text-red-500 truncate" title={getPodErrorMessage(pod) || ''}>
-                            {getPodErrorMessage(pod)}
-                          </p>
-                        )}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* ── Left Column ── */}
+                <div className="lg:col-span-2 space-y-4">
+                  {/* Status Cards Row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Status</p>
+                      <div className="flex items-center gap-1.5">
+                        <PodStatusIcon status={podStatus?.reason} className="w-4 h-4" />
+                        <span className="text-sm font-bold">{podStatus.reason}</span>
                       </div>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Ready</p>
+                      <p className="text-lg font-bold">{podStatus.readyContainers}/{podStatus.totalContainers}</p>
+                      <p className="text-[10px] text-muted-foreground">Containers</p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Restarts</p>
+                      <p className={`text-lg font-bold ${
+                        parseInt(podStatus.restartString) > 5 ? 'text-red-500' :
+                        parseInt(podStatus.restartString) > 0 ? 'text-amber-500' : ''
+                      }`}>{podStatus.restartString}</p>
+                      <p className="text-[10px] text-muted-foreground">Total</p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Node</p>
+                      <p className="text-sm font-bold truncate">
+                        {pod.spec?.nodeName ? (
+                          <Link to={`/nodes/${pod.spec.nodeName}`} className="text-primary hover:underline">
+                            {pod.spec.nodeName}
+                          </Link>
+                        ) : <span className="text-muted-foreground">Unscheduled</span>}
+                      </p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">IP</p>
+                      <p className="text-sm font-bold font-mono">{pod.status?.podIP || '-'}</p>
+                    </Card>
+                    <Card className="p-3 space-y-1">
+                      <p className="text-[11px] text-muted-foreground font-medium">Created</p>
+                      <p className="text-sm font-bold">{formatDate(pod.metadata?.creationTimestamp || '')}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {pod.metadata?.creationTimestamp
+                          ? new Date(pod.metadata.creationTimestamp).toLocaleString()
+                          : ''}
+                      </p>
+                    </Card>
+                  </div>
 
-                      {/* Containers */}
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Containers</p>
-                        <p className="text-sm font-semibold">
-                          <span className="text-green-600">{podStatus.readyContainers}</span>
-                          <span className="text-muted-foreground mx-1">/</span>
-                          {podStatus.totalContainers}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Ready</p>
-                      </div>
-
-                      {/* Restarts */}
-                      <div className={`p-3 rounded-xl border space-y-1 ${
-                        parseInt(podStatus.restartString) > 5 ? 'bg-red-500/5 border-red-500/20' :
-                        parseInt(podStatus.restartString) > 0 ? 'bg-yellow-500/5 border-yellow-500/20' :
-                        'bg-muted/30 border-border/40'
-                      }`}>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Restarts</p>
-                        <p className={`text-sm font-semibold ${
-                          parseInt(podStatus.restartString) > 5 ? 'text-red-600' :
-                          parseInt(podStatus.restartString) > 0 ? 'text-yellow-600' : ''
-                        }`}>{podStatus.restartString}</p>
-                        <p className="text-xs text-muted-foreground">Total</p>
-                      </div>
-
-                      {/* Node */}
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Node</p>
-                        <p className="text-sm font-semibold truncate">
-                          {pod.spec?.nodeName ? (
-                            <Link to={`/nodes/${pod.spec.nodeName}`} className="text-primary hover:underline">
-                              {pod.spec.nodeName}
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground">Unscheduled</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                {/* Pod Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pod Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Created
-                        </Label>
-                        <p className="text-sm">
-                          {formatDate(
-                            pod.metadata?.creationTimestamp || '',
-                            true
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Started
-                        </Label>
-                        <p className="text-sm">
-                          {pod.status?.startTime
-                            ? formatDate(pod.status.startTime)
-                            : 'Not started'}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Pod IP
-                        </Label>
-                        <p className="text-sm font-mono">
-                          {pod.status?.podIP || 'Not assigned'}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Host IP
-                        </Label>
-                        <p className="text-sm font-mono">
-                          {pod.status?.hostIP || 'Not assigned'}
-                        </p>
-                      </div>
-                      {ownerInfo && (
+                  {/* Pod Information */}
+                  <Card>
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <CardTitle className="text-sm font-semibold">Pod Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                         <div>
-                          <Label className="text-xs text-muted-foreground">
-                            Owner
-                          </Label>
-                          <div className="flex flex-col gap-1 mt-1">
-                            <p className="text-sm">
-                              <Link
-                                to={ownerInfo.path}
-                                className="text-blue-600 hover:text-blue-800 hover:underline"
-                              >
-                                {ownerInfo.kind}/{ownerInfo.name}
+                          <span className="text-muted-foreground text-xs">Created</span>
+                          <p className="font-medium">{formatDate(pod.metadata?.creationTimestamp || '', true)}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Started</span>
+                          <p className="font-medium">{pod.status?.startTime ? formatDate(pod.status.startTime) : 'Not started'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Pod IP</span>
+                          <p className="font-medium font-mono">{pod.status?.podIP || 'Not assigned'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Host IP</span>
+                          <p className="font-medium font-mono">
+                            {pod.status?.hostIP && pod.spec?.nodeName ? (
+                              <Link to={`/nodes/${pod.spec.nodeName}`} className="text-primary hover:underline" title={`Go to node ${pod.spec.nodeName}`}>
+                                {pod.status.hostIP}
                               </Link>
-                            </p>
-                            {parentOwnerInfo && (
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                <span>↳</span>
-                                <Link
-                                  to={parentOwnerInfo.path}
-                                  className="text-blue-600 hover:text-blue-800 hover:underline"
-                                >
-                                  {parentOwnerInfo.kind}/{parentOwnerInfo.name}
+                            ) : <span>{pod.status?.hostIP || 'Not assigned'}</span>}
+                          </p>
+                        </div>
+                        {ownerInfo && (
+                          <div>
+                            <span className="text-muted-foreground text-xs">Owner</span>
+                            <div className="flex flex-col gap-1 mt-0.5">
+                              <p className="font-medium">
+                                <Link to={ownerInfo.path} className="text-primary hover:underline">
+                                  {ownerInfo.kind}/{ownerInfo.name}
                                 </Link>
                               </p>
-                            )}
+                              {parentOwnerInfo && (
+                                <p className="text-muted-foreground flex items-center gap-1">
+                                  <span>↳</span>
+                                  <Link to={parentOwnerInfo.path} className="text-primary hover:underline">
+                                    {parentOwnerInfo.kind}/{parentOwnerInfo.name}
+                                  </Link>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-muted-foreground text-xs">Service Account</span>
+                          <p className="font-medium">{pod.spec?.serviceAccountName || 'default'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Ports</span>
+                          <div className="flex flex-wrap items-center gap-1">
+                            {pod.spec?.containers
+                              .flatMap((c) => c.ports || [])
+                              .map((port, index, array) => (
+                                <span key={`${port.containerPort}-${port.protocol}`}>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <button className="font-mono text-primary hover:underline inline-flex items-center gap-1 cursor-pointer">
+                                        {port.name && `${port.name}:`}
+                                        {port.containerPort}
+                                        <IconExternalLink className="w-3 h-3" />
+                                      </button>
+                                    </DialogTrigger>
+                                    <DialogContent className="!max-w-[95vw] w-[95vw] h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+                                      <DialogHeader className="px-4 py-3 border-b shrink-0">
+                                        <DialogTitle className="flex items-center gap-2 text-sm">
+                                          <IconBox className="w-4 h-4" />
+                                          Port Proxy — {pod.metadata?.name}:{port.containerPort}
+                                          {port.name && <span className="text-muted-foreground font-normal">({port.name})</span>}
+                                        </DialogTitle>
+                                      </DialogHeader>
+                                      <div className="flex-1 overflow-hidden bg-background">
+                                        <iframe
+                                          src={withSubPath(`/api/v1/namespaces/${namespace}/pods/${name}:${port.containerPort}/proxy/`)}
+                                          className="w-full h-full border-0 block"
+                                          title={`Proxy ${port.containerPort}`}
+                                          style={{ minHeight: 0 }}
+                                        />
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                  {index < array.length - 1 && ', '}
+                                </span>
+                              ))}
+                            {(!pod.spec?.containers || pod.spec.containers.length === 0 ||
+                              pod.spec.containers.every((c) => !c.ports || c.ports.length === 0)) && <span>No ports defined</span>}
                           </div>
                         </div>
-                      )}
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Ports
-                        </Label>
-                        <div className="flex flex-wrap items-center gap-1">
-                          {pod.spec?.containers
-                            .flatMap((c) => c.ports || [])
-                            .map((port, index, array) => (
-                              <span
-                                key={`${port.containerPort}-${port.protocol}`}
-                              >
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <button
-                                      className="font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                    >
-                                      {port.name && `${port.name}:`}
-                                      {port.containerPort}
-                                      <IconExternalLink className="w-3 h-3" />
-                                    </button>
-                                  </DialogTrigger>
-                                  <DialogContent className="!max-w-[95vw] w-[95vw] h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
-                                    <DialogHeader className="px-4 py-3 border-b shrink-0">
-                                      <DialogTitle className="flex items-center gap-2 text-sm">
-                                        <IconBox className="w-4 h-4" />
-                                        Port Proxy — {pod.metadata?.name}:{port.containerPort}
-                                        {port.name && <span className="text-muted-foreground font-normal">({port.name})</span>}
-                                      </DialogTitle>
-                                    </DialogHeader>
-                                    <div className="flex-1 overflow-hidden bg-background">
-                                      <iframe
-                                        src={withSubPath(`/api/v1/namespaces/${namespace}/pods/${name}:${port.containerPort}/proxy/`)}
-                                        className="w-full h-full border-0 block"
-                                        title={`Proxy ${port.containerPort}`}
-                                        style={{ minHeight: 0 }}
-                                      />
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                                {index < array.length - 1 && ', '}
-                              </span>
-                            ))}
-                          {(!pod.spec?.containers ||
-                            pod.spec.containers.length === 0 ||
-                            pod.spec.containers.every(
-                              (c) => !c.ports || c.ports.length === 0
-                            )) && <span>No ports defined</span>}
+                        <div>
+                          <span className="text-muted-foreground text-xs">Volumes</span>
+                          <p className="font-medium">{pod.spec?.volumes?.length || 0}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Containers</span>
+                          <p className="font-medium">{pod.spec?.containers?.length || 0}</p>
+                        </div>
+                        {getPodErrorMessage(pod) && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground text-xs">Error</span>
+                            <p className="text-red-500 text-xs font-medium">{getPodErrorMessage(pod)}</p>
+                          </div>
+                        )}
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground text-xs">UID</span>
+                          <p className="font-mono text-xs text-muted-foreground">{pod.metadata?.uid}</p>
                         </div>
                       </div>
-                    </div>
-                    <LabelsAnno
-                      labels={pod.metadata?.labels || {}}
-                      annotations={pod.metadata?.annotations || {}}
-                    />
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                {pod.spec?.initContainers &&
-                  pod.spec.initContainers.length > 0 && (
+                  {/* Init Containers */}
+                  {pod.spec?.initContainers && pod.spec.initContainers.length > 0 && (
                     <Card>
-                      <CardHeader>
-                        <CardTitle>
-                          Init Containers (
-                          {pod?.spec?.initContainers?.length || 0})
+                      <CardHeader className="pb-2 pt-4 px-4">
+                        <CardTitle className="text-sm font-semibold">
+                          Init Containers ({pod.spec.initContainers.length})
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-6">
-                          <div className="space-y-4">
-                            {pod?.spec?.initContainers?.map((container) => (
-                              <ContainerTable
-                                key={container.name}
-                                container={container}
-                                init
-                              />
-                            ))}
-                          </div>
+                      <CardContent className="px-4 pb-4">
+                        <div className="space-y-4">
+                          {pod.spec.initContainers.map((container) => (
+                            <ContainerTable key={container.name} container={container} init />
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
                   )}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      Containers ({pod?.spec?.containers?.length || 0})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
+
+                  {/* Containers */}
+                  <Card>
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <CardTitle className="text-sm font-semibold">
+                        Containers ({pod.spec?.containers?.length || 0})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
                       <div className="space-y-4">
-                        {pod?.spec?.containers?.map((container) => (
-                          <ContainerTable
-                            key={container.name}
-                            container={container}
-                          />
+                        {pod.spec?.containers?.map((container) => (
+                          <ContainerTable key={container.name} container={container} />
                         ))}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                {/* Pod Conditions */}
-                {pod.status?.conditions && pod.status.conditions.length > 0 && (
+                  {/* Resource Topology Link */}
+                  <Card className="overflow-hidden">
+                    <CardContent className="py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm">
+                        <IconServer2 className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">Resource Topology</span>
+                        <span className="text-xs text-muted-foreground">View related resources and connections</span>
+                      </div>
+                      <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs"
+                        onClick={() => { setSearchParams((prev) => { prev.set('tab', 'Related'); return prev }, { replace: true }) }}
+                      >
+                        View Topology
+                        <IconExternalLink className="w-3 h-3" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Pod Conditions */}
+                  {pod.status?.conditions && pod.status.conditions.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2 pt-4 px-4">
+                        <CardTitle className="text-sm font-semibold">Conditions</CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4">
+                        <div className="space-y-2">
+                          {pod.status.conditions.map((condition, index) => (
+                            <div key={index} className="flex items-center gap-3 p-2 border rounded">
+                              <Badge variant={condition.status === 'True' ? 'default' : 'secondary'}>
+                                {condition.type}
+                              </Badge>
+                              <span className="text-sm">{condition.message}</span>
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                {formatDate(condition.lastTransitionTime || '')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* ── Right Sidebar ── */}
+                <div className="space-y-4">
+                  <SidebarEvents resource="pods" name={name} namespace={namespace} />
+                  <SidebarRelatedResources resource="pods" name={name} namespace={namespace} />
+                  <SidebarLabels labels={pod.metadata?.labels || {}} />
+                  <SidebarAnnotations annotations={pod.metadata?.annotations || {}} />
+                </div>
+              </div>
+            ),
+          },
+          {
+            value: 'containers',
+            label: (
+              <>
+                Containers{' '}
+                <Badge variant="secondary">{pod.spec?.containers?.length || 0}</Badge>
+              </>
+            ),
+            content: (
+              <div className="space-y-4">
+                {pod.spec?.initContainers && pod.spec.initContainers.length > 0 && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Conditions</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle>Init Containers ({pod.spec.initContainers.length})</CardTitle></CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        {pod.status.conditions.map((condition, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-3 p-2 border rounded"
-                          >
-                            <Badge
-                              variant={
-                                condition.status === 'True'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                            >
-                              {condition.type}
-                            </Badge>
-                            <span className="text-sm">{condition.message}</span>
-                            <span className="text-xs text-muted-foreground ml-auto">
-                              {formatDate(condition.lastTransitionTime || '')}
-                            </span>
-                          </div>
+                      <div className="space-y-4">
+                        {pod.spec.initContainers.map((container) => (
+                          <ContainerTable key={container.name} container={container} init />
                         ))}
                       </div>
                     </CardContent>
                   </Card>
                 )}
+                <Card>
+                  <CardHeader><CardTitle>Containers ({pod.spec?.containers?.length || 0})</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {pod.spec?.containers?.map((container) => (
+                        <ContainerTable key={container.name} container={container} />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             ),
           },
@@ -598,6 +579,16 @@ export function PodDetail(props: { namespace: string; name: string }) {
             ),
           },
           {
+            value: 'Related',
+            label: 'Related',
+            content: (
+              <div className="space-y-6">
+                <ResourceTopology resource="pods" name={name} namespace={namespace} />
+                <RelatedResourcesTable resource={'pods'} name={name} namespace={namespace} />
+              </div>
+            ),
+          },
+          {
             value: 'files',
             label: 'Files',
             content: (
@@ -610,62 +601,30 @@ export function PodDetail(props: { namespace: string; name: string }) {
             ),
           },
           {
-            value: 'Related',
-            label: 'Related',
-            content: (
-              <div className="space-y-6">
-                <ResourceTopology
-                  resource="pods"
-                  name={name}
-                  namespace={namespace}
-                />
-                <RelatedResourcesTable
-                  resource={'pods'}
-                  name={name}
-                  namespace={namespace}
-                />
-              </div>
-            ),
-          },
-          {
             value: 'volumes',
             label: (
               <>
                 Volumes
-                {pod.spec?.volumes && (
-                  <Badge variant="secondary">{pod.spec.volumes.length}</Badge>
-                )}
+                {pod.spec?.volumes && <Badge variant="secondary">{pod.spec.volumes.length}</Badge>}
               </>
             ),
             content: (
               <div className="space-y-6">
-                <VolumeTable
-                  namespace={namespace}
-                  volumes={pod.spec?.volumes}
-                  containers={pod.spec?.containers}
-                  isLoading={isLoading}
-                />
+                <VolumeTable namespace={namespace} volumes={pod.spec?.volumes} containers={pod.spec?.containers} isLoading={isLoading} />
               </div>
             ),
           },
           {
             value: 'events',
             label: 'Events',
-            content: (
-              <EventTable resource="pods" name={name} namespace={namespace} />
-            ),
+            content: <EventTable resource="pods" name={name} namespace={namespace} />,
           },
           {
             value: 'monitor',
             label: 'Monitor',
             content: (
               <div className="space-y-6">
-                <PodMonitoring
-                  namespace={namespace}
-                  podName={name}
-                  containers={pod.spec?.containers}
-                  initContainers={pod.spec?.initContainers}
-                />
+                <PodMonitoring namespace={namespace} podName={name} containers={pod.spec?.containers} initContainers={pod.spec?.initContainers} />
               </div>
             ),
           },
@@ -683,18 +642,14 @@ export function PodDetail(props: { namespace: string; name: string }) {
         <DialogContent className="!max-w-3xl max-h-[90vh] overflow-y-auto sm:!max-w-3xl">
           <DialogHeader>
             <DialogTitle>{t('pods.resizeResourcesTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('pods.resizeResourcesDescription')}
-            </DialogDescription>
+            <DialogDescription>{t('pods.resizeResourcesDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('pods.container')}</Label>
               <ContainerSelector
                 containers={(pod?.spec?.containers || []).map((item) => ({
-                  name: item.name,
-                  image: item.image || '',
-                  init: false,
+                  name: item.name, image: item.image || '', init: false,
                 }))}
                 selectedContainer={selectedContainerName}
                 onContainerChange={setSelectedContainerName}
@@ -706,30 +661,16 @@ export function PodDetail(props: { namespace: string; name: string }) {
               <ResourceEditor
                 container={resizeContainer}
                 onUpdate={(updates) =>
-                  setResizeContainer((prev) =>
-                    prev ? { ...prev, ...updates } : prev
-                  )
+                  setResizeContainer((prev) => prev ? { ...prev, ...updates } : prev)
                 }
               />
             ) : (
-              <div className="text-sm text-muted-foreground">
-                {t('pods.selectContainer')}
-              </div>
+              <div className="text-sm text-muted-foreground">{t('pods.selectContainer')}</div>
             )}
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsResizeDialogOpen(false)}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              onClick={handleResizeSave}
-              disabled={!resizeContainer || isResizing}
-            >
-              {t('common.save')}
-            </Button>
+            <Button variant="outline" onClick={() => setIsResizeDialogOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleResizeSave} disabled={!resizeContainer || isResizing}>{t('common.save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -740,28 +681,19 @@ export function PodDetail(props: { namespace: string; name: string }) {
 const isVersionAtLeast = (version: string | undefined, target: string) => {
   const parsed = parseVersion(version)
   const targetParsed = parseVersion(target)
-  if (!parsed || !targetParsed) {
-    return false
-  }
+  if (!parsed || !targetParsed) return false
   for (let i = 0; i < 3; i += 1) {
-    if (parsed[i] > targetParsed[i]) {
-      return true
-    }
-    if (parsed[i] < targetParsed[i]) {
-      return false
-    }
+    if (parsed[i] > targetParsed[i]) return true
+    if (parsed[i] < targetParsed[i]) return false
   }
   return true
 }
 
 const parseVersion = (version: string | undefined) => {
-  if (!version) {
-    return null
-  }
+  if (!version) return null
   const cleaned = version.trim().replace(/^v/, '')
   const match = cleaned.match(/^(\d+)\.(\d+)\.(\d+)/)
-  if (!match) {
-    return null
-  }
+  if (!match) return null
   return [Number(match[1]), Number(match[2]), Number(match[3])]
 }
+

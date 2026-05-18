@@ -29,7 +29,7 @@ export function SettingsPage() {
   usePageTitle('Settings')
 
   return (
-    <div className="space-y-2 animate-page-enter">
+    <div className="space-y-2 animate-page-enter max-w-[1400px] mx-auto">
       <div className="mb-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -131,3 +131,4 @@ export function SettingsPage() {
     </div>
   )
 }
+

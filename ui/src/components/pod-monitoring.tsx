@@ -19,7 +19,7 @@ import { usePodMetrics, useWorkloadMetrics } from '@/lib/api'
 import { toSimpleContainer } from '@/lib/k8s'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -228,22 +228,20 @@ export function PodMonitoring({
             <div className="flex items-center rounded-lg border border-border/60 overflow-hidden text-xs">
               <button
                 onClick={() => setMode('workload')}
-                className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5 ${
-                  mode === 'workload'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted/60'
-                }`}
+                className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5 ${mode === 'workload'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted/60'
+                  }`}
               >
                 <Activity className="size-3" />
                 All Pods
               </button>
               <button
                 onClick={() => setMode('pod')}
-                className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5 ${
-                  mode === 'pod'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted/60'
-                }`}
+                className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5 ${mode === 'pod'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted/60'
+                  }`}
               >
                 <Zap className="size-3" />
                 Single Pod
@@ -385,6 +383,8 @@ export function PodMonitoring({
           isLoading={isLoading}
           syncId="workload-monitor"
         />
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <NetworkUsageChart
           networkIn={activeData?.networkIn || []}
           networkOut={activeData?.networkOut || []}

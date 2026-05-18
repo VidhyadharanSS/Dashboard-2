@@ -4,12 +4,14 @@ import { formatHex } from 'culori'
 import * as yaml from 'js-yaml'
 import { editor as monacoEditor } from 'monaco-editor'
 import { useTranslation } from 'react-i18next'
-import { IconRotate2 } from '@tabler/icons-react'
+import { IconRotate2, IconAlertTriangle } from '@tabler/icons-react'
 
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -71,6 +73,9 @@ export function YamlDiffViewer({
   }
   const editorRef = useRef<monacoEditor.IStandaloneDiffEditor | null>(null)
   const [diffMode, setDiffMode] = useState<DiffMode>('previous-vs-modified')
+  const [rollbackConfirmOpen, setRollbackConfirmOpen] = useState(false)
+  const [pendingRollbackYaml, setPendingRollbackYaml] = useState<string | null>(null)
+  const [pendingRollbackLabel, setPendingRollbackLabel] = useState<string>('')
 
   const handleEditorDidMount = (editor: monacoEditor.IStandaloneDiffEditor) => {
     editorRef.current = editor
@@ -127,10 +132,20 @@ export function YamlDiffViewer({
 
   const { original: leftContent, modified: rightContent } = getDiffContent()
 
-  // Handle rollback button clicks
-  const handleRollbackClick = (yamlContent: string) => {
+  // Handle rollback button clicks — open confirmation dialog
+  const handleRollbackClick = (yamlContent: string, label: string) => {
     if (onRollback) {
-      onRollback(yamlContent)
+      setPendingRollbackYaml(yamlContent)
+      setPendingRollbackLabel(label)
+      setRollbackConfirmOpen(true)
+    }
+  }
+
+  const confirmRollback = () => {
+    if (onRollback && pendingRollbackYaml) {
+      onRollback(pendingRollbackYaml)
+      setRollbackConfirmOpen(false)
+      setPendingRollbackYaml(null)
     }
   }
 
@@ -145,16 +160,12 @@ export function YamlDiffViewer({
                 <>
                   {diffMode === 'current-vs-modified' && (
                     <Button
-                      onClick={() => handleRollbackClick(modified)}
+                      onClick={() => handleRollbackClick(modified, 'modified version')}
                       disabled={isRollingBack}
                       variant="default"
                       size="sm"
                     >
-                      {isRollingBack ? (
-                        <IconRotate2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <IconRotate2 className="w-4 h-4 mr-2" />
-                      )}
+                      <IconRotate2 className={`w-4 h-4 mr-2 ${isRollingBack ? 'animate-spin' : ''}`} />
                       {t('resourceHistory.rollback.modified')}
                     </Button>
                   )}
@@ -162,29 +173,21 @@ export function YamlDiffViewer({
                   {diffMode === 'previous-vs-modified' && (
                     <>
                       <Button
-                        onClick={() => handleRollbackClick(original)}
+                        onClick={() => handleRollbackClick(original, 'previous version')}
                         disabled={isRollingBack}
                         variant="default"
                         size="sm"
                       >
-                        {isRollingBack ? (
-                          <IconRotate2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <IconRotate2 className="w-4 h-4 mr-2" />
-                        )}
+                        <IconRotate2 className={`w-4 h-4 mr-2 ${isRollingBack ? 'animate-spin' : ''}`} />
                         {t('resourceHistory.rollback.previous')}
                       </Button>
                       <Button
-                        onClick={() => handleRollbackClick(modified)}
+                        onClick={() => handleRollbackClick(modified, 'modified version')}
                         disabled={isRollingBack}
                         variant="secondary"
                         size="sm"
                       >
-                        {isRollingBack ? (
-                          <IconRotate2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <IconRotate2 className="w-4 h-4 mr-2" />
-                        )}
+                        <IconRotate2 className={`w-4 h-4 mr-2 ${isRollingBack ? 'animate-spin' : ''}`} />
                         {t('resourceHistory.rollback.modified')}
                       </Button>
                     </>
@@ -261,6 +264,43 @@ export function YamlDiffViewer({
           />
         </div>
       </DialogContent>
+
+      {/* Rollback Confirmation Dialog */}
+      <Dialog open={rollbackConfirmOpen} onOpenChange={(open) => {
+        if (!open) { setRollbackConfirmOpen(false); setPendingRollbackYaml(null) }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IconAlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Rollback
+            </DialogTitle>
+            <DialogDescription>
+              You are about to rollback this resource to the <strong className="text-foreground">{pendingRollbackLabel}</strong>.
+              This will apply the selected YAML configuration to the cluster, replacing the current state.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3">
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              ⚠ This action will modify the live resource in your cluster. Ensure you have reviewed the diff carefully before proceeding.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setRollbackConfirmOpen(false); setPendingRollbackYaml(null) }} disabled={isRollingBack}>
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              disabled={isRollingBack}
+              onClick={confirmRollback}
+              className="gap-1.5"
+            >
+              <IconRotate2 className={`h-4 w-4 ${isRollingBack ? 'animate-spin' : ''}`} />
+              {isRollingBack ? 'Rolling back...' : 'Confirm Rollback'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

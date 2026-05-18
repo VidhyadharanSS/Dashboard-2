@@ -28,13 +28,21 @@ export function NodeLabelSelector({ onNodeNamesChange, onLabelsChange }: NodeLab
             setIsLoading(true)
             setIsForbidden(false)
             try {
-                const response = await fetchResources<{ items: Node[] }>('nodes')
-                setNodes(response.items || [])
+                const response = await fetchResources('nodes')
+                // Safely extract items array from any response shape
+                if (Array.isArray(response)) {
+                    setNodes(response)
+                } else if (response && typeof response === 'object' && Array.isArray((response as any).items)) {
+                    setNodes((response as any).items)
+                } else {
+                    setNodes([])
+                }
             } catch (error: any) {
                 console.error('Failed to fetch nodes for label selector:', error)
                 if (error.status === 403) {
                     setIsForbidden(true)
                 }
+                setNodes([])
             } finally {
                 setIsLoading(false)
             }
@@ -43,16 +51,22 @@ export function NodeLabelSelector({ onNodeNamesChange, onLabelsChange }: NodeLab
     }, [])
 
     const labelOptions = useMemo(() => {
+        const safeNodes = Array.isArray(nodes) ? nodes : []
         const labelMap = new Map<string, Set<string>>()
-        nodes.forEach((node) => {
-            const labels = node.metadata?.labels || {}
-            Object.entries(labels).forEach(([key, value]) => {
-                if (!labelMap.has(key)) {
-                    labelMap.set(key, new Set())
+        for (let i = 0; i < safeNodes.length; i++) {
+            const node = safeNodes[i]
+            const labels = node?.metadata?.labels
+            if (labels && typeof labels === 'object' && !Array.isArray(labels)) {
+                const entries = Object.entries(labels)
+                for (let j = 0; j < entries.length; j++) {
+                    const [key, value] = entries[j]
+                    if (!labelMap.has(key)) {
+                        labelMap.set(key, new Set())
+                    }
+                    labelMap.get(key)!.add(value)
                 }
-                labelMap.get(key)!.add(value)
-            })
-        })
+            }
+        }
 
         const options: { value: string; label: string }[] = []
         labelMap.forEach((values, key) => {
@@ -70,14 +84,15 @@ export function NodeLabelSelector({ onNodeNamesChange, onLabelsChange }: NodeLab
 
         if (onNodeNamesChange) {
             // Find nodes that match ANY of the selected labels (Union)
-            const matchingNodeNames = nodes
+            const safeNodes = Array.isArray(nodes) ? nodes : []
+            const matchingNodeNames = safeNodes
                 .filter((node) => {
                     return labels.some((label) => {
                         const [key, val] = label.split('=')
-                        return node.metadata?.labels?.[key] === val
+                        return node?.metadata?.labels?.[key] === val
                     })
                 })
-                .map((node) => node.metadata?.name || '')
+                .map((node) => node?.metadata?.name || '')
                 .filter(Boolean)
 
             onNodeNamesChange(matchingNodeNames)

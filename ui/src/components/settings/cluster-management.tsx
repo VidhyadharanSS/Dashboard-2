@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { IconEdit, IconPlus, IconServer, IconTrash } from '@tabler/icons-react'
+import { IconEdit, IconInfoCircle, IconPlus, IconServer, IconTrash } from '@tabler/icons-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +26,7 @@ import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialo
 
 import { Action, ActionTable } from '../action-table'
 import { ClusterDialog } from './cluster-dialog'
+import { ClusterInfoPanel } from './cluster-info-panel'
 
 export function ClusterManagement() {
   const { t } = useTranslation()
@@ -36,6 +37,7 @@ export function ClusterManagement() {
   const [showClusterDialog, setShowClusterDialog] = useState(false)
   const [editingCluster, setEditingCluster] = useState<Cluster | null>(null)
   const [deletingCluster, setDeletingCluster] = useState<Cluster | null>(null)
+  const [viewingCluster, setViewingCluster] = useState<Cluster | null>(null)
 
   const getClusterTypeBadge = useCallback(
     (cluster: Cluster) => {
@@ -43,7 +45,7 @@ export function ClusterManagement() {
         return (
           <Badge
             variant="outline"
-            className="bg-blue-50 text-blue-700 border-blue-200"
+            className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
           >
             {t('clusterManagement.type.inCluster', 'In-Cluster')}
           </Badge>
@@ -52,7 +54,7 @@ export function ClusterManagement() {
       return (
         <Badge
           variant="outline"
-          className="bg-gray-50 text-gray-700 border-gray-200"
+          className="bg-secondary text-secondary-foreground border-border"
         >
           {t('clusterManagement.type.external', 'External')}
         </Badge>
@@ -149,6 +151,17 @@ export function ClusterManagement() {
       {
         label: (
           <>
+            <IconInfoCircle className="h-4 w-4" />
+            {t('common.info', 'Info')}
+          </>
+        ),
+        onClick: (cluster) => {
+          setViewingCluster(cluster)
+        },
+      },
+      {
+        label: (
+          <>
             <IconEdit className="h-4 w-4" />
             {t('common.edit', 'Edit')}
           </>
@@ -186,10 +199,10 @@ export function ClusterManagement() {
     onError: (error: Error) => {
       toast.error(
         error.message ||
-          t(
-            'clusterManagement.messages.createError',
-            'Failed to create cluster'
-          )
+        t(
+          'clusterManagement.messages.createError',
+          'Failed to create cluster'
+        )
       )
     },
   })
@@ -209,10 +222,10 @@ export function ClusterManagement() {
     onError: (error: Error) => {
       toast.error(
         error.message ||
-          t(
-            'clusterManagement.messages.updateError',
-            'Failed to update cluster'
-          )
+        t(
+          'clusterManagement.messages.updateError',
+          'Failed to update cluster'
+        )
       )
     },
   })
@@ -230,10 +243,10 @@ export function ClusterManagement() {
     onError: (error: Error) => {
       toast.error(
         error.message ||
-          t(
-            'clusterManagement.messages.deleteError',
-            'Failed to delete cluster'
-          )
+        t(
+          'clusterManagement.messages.deleteError',
+          'Failed to delete cluster'
+        )
       )
     },
   })
@@ -343,6 +356,14 @@ export function ClusterManagement() {
           "This action will only remove the current cluster's configuration in kite and will not delete any cluster resources."
         )}
       />
+
+      {/* Cluster Info Panel */}
+      <ClusterInfoPanel
+        cluster={viewingCluster}
+        open={!!viewingCluster}
+        onOpenChange={(open) => { if (!open) setViewingCluster(null) }}
+      />
     </div>
   )
 }
+

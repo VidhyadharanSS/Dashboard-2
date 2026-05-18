@@ -42,6 +42,7 @@ type UserSession struct {
 	CreatedAt time.Time `json:"createdAt"`
 	LastUsedAt time.Time `json:"lastUsedAt" gorm:"index"`
 	ExpiresAt  time.Time `json:"expiresAt" gorm:"index"`
+	User      User      `json:"-" gorm:"foreignKey:UserID"`
 }
 
 func (u *User) Key() string {

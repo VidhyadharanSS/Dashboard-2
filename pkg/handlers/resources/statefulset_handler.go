@@ -2,13 +2,17 @@ package resources
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/samber/lo"
 	"github.com/zxh326/kite/pkg/cluster"
 	"github.com/zxh326/kite/pkg/logger"
 	"github.com/zxh326/kite/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -24,6 +28,46 @@ func NewStatefulSetHandler() *StatefulSetHandler {
 			true,
 		),
 	}
+}
+
+// List overrides the generic List to preserve status fields even in reduce mode.
+func (h *StatefulSetHandler) List(c *gin.Context) {
+	objectList, err := h.list(c)
+	if err != nil {
+		return
+	}
+
+	if c.Query("reduce") == "true" {
+		for i := range objectList.Items {
+			ss := &objectList.Items[i]
+			preservedStatus := ss.Status
+			preservedReplicas := ss.Spec.Replicas
+			preservedSelector := ss.Spec.Selector
+			preservedContainers := lo.Map(ss.Spec.Template.Spec.Containers, func(c corev1.Container, _ int) corev1.Container {
+				return corev1.Container{Name: c.Name, Image: c.Image}
+			})
+
+			ss.ObjectMeta = metav1.ObjectMeta{
+				Name:              ss.Name,
+				Namespace:         ss.Namespace,
+				UID:               ss.UID,
+				CreationTimestamp: ss.CreationTimestamp,
+				Labels:            ss.Labels,
+			}
+			ss.Spec = appsv1.StatefulSetSpec{
+				Replicas: preservedReplicas,
+				Selector: preservedSelector,
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: preservedContainers,
+					},
+				},
+			}
+			ss.Status = preservedStatus
+		}
+	}
+
+	c.JSON(http.StatusOK, objectList)
 }
 
 func (h *StatefulSetHandler) Restart(c *gin.Context, namespace, name string) error {

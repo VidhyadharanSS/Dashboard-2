@@ -93,8 +93,8 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 	authGroup := r.Group("/api/auth")
 	{
 		authGroup.GET("/providers", authHandler.GetProviders)
-		authGroup.POST("/login/password", authHandler.PasswordLogin)
-		authGroup.GET("/login", authHandler.Login)
+		authGroup.POST("/login/password", middleware.LoginRateLimit(), authHandler.PasswordLogin)
+		authGroup.GET("/login", middleware.LoginRateLimit(), authHandler.Login)
 		authGroup.GET("/callback", authHandler.Callback)
 		authGroup.POST("/logout", authHandler.Logout)
 		authGroup.POST("/refresh", authHandler.RefreshToken)
@@ -119,15 +119,20 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 	adminAPI := r.Group("/api/v1/admin")
 	// Initialize the setup API without authentication.
 	// Once users are configured, this API cannot be used.
-	adminAPI.POST("/users/create_super_user", handlers.CreateSuperUser)
+	adminAPI.POST("/users/create_super_user", middleware.LoginRateLimit(), handlers.CreateSuperUser)
 	adminAPI.POST("/clusters/import", cm.ImportClustersFromKubeconfig)
 	adminAPI.Use(authHandler.RequireAuth(), authHandler.RequireAdmin())
 	{
 		adminAPI.GET("/audit-logs", handlers.ListAuditLogs)
 		adminAPI.GET("/audit-logs/export", handlers.ExportAuditLogs)
 		adminAPI.GET("/audit-logs/retention", handlers.GetAuditRetentionInfo)
+		adminAPI.GET("/audit-logs/filters", handlers.GetAuditFilterOptions)
 		adminAPI.DELETE("/audit-logs/purge", handlers.PurgeOldAuditLogs)
 		adminAPI.GET("/audit-logs/:id", handlers.GetAuditLogDetailAdmin)
+		// Authentication settings (password login toggle, etc.)
+		adminAPI.GET("/auth-settings", authHandler.GetAuthSettings)
+		adminAPI.PUT("/auth-settings", authHandler.UpdateAuthSettings)
+
 		oauthProviderAPI := adminAPI.Group("/oauth-providers")
 		{
 			oauthProviderAPI.GET("/", authHandler.ListOAuthProviders)
@@ -185,13 +190,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 			apiKeyAPI.POST("/", handlers.CreateAPIKey)
 			apiKeyAPI.DELETE("/:id", handlers.DeleteAPIKey)
 		}
-
-		templateAPI := adminAPI.Group("/templates")
-		{
-			templateAPI.POST("/", handlers.CreateTemplate)
-			templateAPI.PUT("/:id", handlers.UpdateTemplate)
-			templateAPI.DELETE("/:id", handlers.DeleteTemplate)
-		}
+		// template CRUD routes removed — workload creation via templates is disabled (security hardening)
 	}
 
 	// API routes group (protected)
@@ -235,7 +234,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 		api.GET("/audit-logs/resource/:resourceType/:namespace/:name", handlers.GetAuditResourceActivity)
 
 		api.GET("/image/tags", handlers.GetImageTags)
-		api.GET("/templates", handlers.ListTemplates)
+		// templates list endpoint removed — workload creation via templates is disabled
 
 		proxyHandler := handlers.NewProxyHandler()
 		proxyHandler.RegisterRoutes(api)
@@ -248,13 +247,20 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
-	go func() {
-		pprofAddr := "localhost:6060"
-		if err := http.ListenAndServe(pprofAddr, nil); err != nil {
-			log.Printf("Warning: pprof server failed to start on %s: %v", pprofAddr, err)
-		}
-	}()
 	common.LoadEnvs()
+
+	// Only enable pprof in debug mode (klog -v=1 or higher) to avoid
+	// exposing profiling data in production.  Even on localhost, pprof
+	// can leak sensitive heap contents.
+	if klog.V(1).Enabled() {
+		go func() {
+			pprofAddr := "localhost:6060"
+			klog.Infof("pprof debug server starting on %s", pprofAddr)
+			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+				log.Printf("Warning: pprof server failed to start on %s: %v", pprofAddr, err)
+			}
+		}()
+	}
 
 	// Initialize Logging System
 	if err := logger.Init(common.LogDir, common.LogMaxSizeMB); err != nil {
@@ -274,6 +280,7 @@ func main() {
 	}
 	r := gin.New()
 	r.Use(middleware.AccessLog())
+	r.Use(middleware.IdentityHint())
 	r.Use(middleware.Metrics())
 	if !common.DisableGZIP {
 		klog.Info("GZIP compression is enabled")
@@ -298,7 +305,7 @@ func main() {
 	r.Use(middleware.SecurityHeaders())
 	model.InitDB()
 	rbac.InitRBAC()
-	handlers.InitTemplates()
+	// handlers.InitTemplates() removed — template seeding disabled (security hardening)
 	internal.LoadConfigFromEnv()
 
 	cm, err := cluster.NewClusterManager()
@@ -344,3 +351,4 @@ func main() {
 		klog.Fatalf("Failed to shutdown server: %v", err)
 	}
 }
+

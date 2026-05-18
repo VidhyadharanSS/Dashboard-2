@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/tooltip'
 import { ResourceTable } from '@/components/resource-table'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 
 export function NamespaceListPage() {
   const { t } = useTranslation()
@@ -40,22 +39,20 @@ export function NamespaceListPage() {
           return (
             <Badge
               variant="outline"
-              className={`px-1.5 ${
-                phase === 'Active'
+              className={`px-1.5 ${phase === 'Active'
                   ? 'border-green-500/40 text-green-600 dark:text-green-400'
                   : phase === 'Terminating'
                     ? 'border-red-500/40 text-red-500'
                     : 'text-muted-foreground'
-              }`}
+                }`}
             >
               <span
-                className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
-                  phase === 'Active'
+                className={`h-1.5 w-1.5 rounded-full mr-1.5 ${phase === 'Active'
                     ? 'bg-green-500'
                     : phase === 'Terminating'
                       ? 'bg-red-500'
                       : 'bg-muted-foreground'
-                }`}
+                  }`}
               />
               {phase}
             </Badge>
@@ -107,15 +104,11 @@ export function NamespaceListPage() {
         header: t('common.actions'),
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <QuickYamlDialog
-              resourceType="namespaces"
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
             <DescribeDialog
               resourceType="namespaces"
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         ),

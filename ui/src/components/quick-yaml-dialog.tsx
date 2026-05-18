@@ -39,27 +39,42 @@ export function QuickYamlDialog({
 
     const yamlContent = data ? yaml.dump(data, { indent: 2 }) : ''
 
+    // Icon-only mode: Tooltip wraps outside Dialog so that DialogTrigger's
+    // asChild can forward ref + click directly onto the <Button> DOM element.
+    // Previously there was a nested DialogTrigger that caused double-toggle (open+close).
+    if (!customTrigger && !triggerAsText) {
+        return (
+            <Tooltip>
+                <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                    <TooltipTrigger asChild>
+                        <DialogTrigger asChild>
+                            <Button variant={triggerVariant} size={triggerSize} className={className}>
+                                <IconFileCode className="w-4 h-4" />
+                            </Button>
+                        </DialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>View YAML</TooltipContent>
+                    <DialogContent className="!max-w-dvw">
+                        <TextViewer
+                            title={`${resourceType}/${name} ${namespace ? `-n ${namespace}` : ''} YAML`}
+                            value={isLoading ? 'Loading...' : yamlContent}
+                        />
+                    </DialogContent>
+                </Dialog>
+            </Tooltip>
+        )
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 {customTrigger ? (
                     customTrigger
-                ) : triggerAsText ? (
+                ) : (
                     <Button variant={triggerVariant} size={triggerSize} className={cn("gap-2", className)}>
                         <IconFileCode className="w-4 h-4" />
                         View YAML
                     </Button>
-                ) : (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <DialogTrigger asChild>
-                                <Button variant={triggerVariant} size={triggerSize} className={className}>
-                                    <IconFileCode className="w-4 h-4" />
-                                </Button>
-                            </DialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>View YAML</TooltipContent>
-                    </Tooltip>
                 )}
             </DialogTrigger>
             <DialogContent className="!max-w-dvw">

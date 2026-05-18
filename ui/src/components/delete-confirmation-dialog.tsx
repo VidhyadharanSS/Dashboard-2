@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -39,6 +40,8 @@ export function DeleteConfirmationDialog({
   showAdditionalOptions = false,
 }: DeleteConfirmationDialogProps) {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const isAdmin = user?.isAdmin?.() ?? false
   const [confirmationInput, setConfirmationInput] = useState('')
   const [forceDelete, setForceDelete] = useState(false)
   const [wait, setWait] = useState(true)
@@ -52,12 +55,15 @@ export function DeleteConfirmationDialog({
   }
 
   const handleConfirm = () => {
-    if (confirmationInput === resourceName) {
+    // Admins can confirm without typing the resource name
+    if (isAdmin || confirmationInput === resourceName) {
       onConfirm(forceDelete, wait)
     }
   }
 
-  const isConfirmDisabled = confirmationInput !== resourceName || isDeleting
+  const isConfirmDisabled = isAdmin
+    ? isDeleting
+    : confirmationInput !== resourceName || isDeleting
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
@@ -110,20 +116,29 @@ export function DeleteConfirmationDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirmation">
-              {t('deleteConfirmation.typeToConfirm')}{' '}
-              <span className=" font-semibold">{resourceName}</span>{' '}
-              {t('deleteConfirmation.toConfirm')}
-            </Label>
-            <Input
-              id="confirmation"
-              value={confirmationInput}
-              onChange={(e) => setConfirmationInput(e.target.value)}
-              placeholder={resourceName}
-              autoComplete="off"
-            />
-          </div>
+          {isAdmin ? (
+            <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                As an <span className="font-semibold text-foreground">admin</span>, you can confirm directly without typing the resource name.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="confirmation">
+                {t('deleteConfirmation.typeToConfirm')}{' '}
+                <span className="font-semibold">{resourceName}</span>{' '}
+                {t('deleteConfirmation.toConfirm')}
+              </Label>
+              <Input
+                id="confirmation"
+                value={confirmationInput}
+                onChange={(e) => setConfirmationInput(e.target.value)}
+                placeholder={resourceName}
+                autoComplete="off"
+              />
+            </div>
+          )}
           {showAdditionalOptions && (
             <>
               <div className="flex items-center space-x-2">

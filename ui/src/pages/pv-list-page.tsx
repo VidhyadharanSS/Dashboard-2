@@ -14,7 +14,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
 
 function fallbackCopy(text: string) {
@@ -79,8 +78,7 @@ export function PVListPage() {
           return (
             <Badge
               variant="outline"
-              className={`px-1.5 ${
-                phase === 'Bound'
+              className={`px-1.5 ${phase === 'Bound'
                   ? 'border-green-500/40 text-green-600 dark:text-green-400'
                   : phase === 'Available'
                     ? 'border-blue-500/40 text-blue-600 dark:text-blue-400'
@@ -89,14 +87,13 @@ export function PVListPage() {
                       : phase === 'Failed'
                         ? 'border-red-500/40 text-red-500'
                         : ''
-              }`}
+                }`}
             >
-              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${
-                phase === 'Bound' ? 'bg-green-500' :
-                phase === 'Available' ? 'bg-blue-500' :
-                phase === 'Released' ? 'bg-amber-500' :
-                phase === 'Failed' ? 'bg-red-500' : 'bg-muted-foreground'
-              }`} />
+              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${phase === 'Bound' ? 'bg-green-500' :
+                  phase === 'Available' ? 'bg-blue-500' :
+                    phase === 'Released' ? 'bg-amber-500' :
+                      phase === 'Failed' ? 'bg-red-500' : 'bg-muted-foreground'
+                }`} />
               {phase}
             </Badge>
           )
@@ -152,11 +149,10 @@ export function PVListPage() {
           return (
             <Badge
               variant="outline"
-              className={`text-xs ${
-                policy === 'Delete' ? 'border-red-500/30 text-red-600 dark:text-red-400' :
-                policy === 'Retain' ? 'border-blue-500/30 text-blue-600 dark:text-blue-400' :
-                ''
-              }`}
+              className={`text-xs ${policy === 'Delete' ? 'border-red-500/30 text-red-600 dark:text-red-400' :
+                  policy === 'Retain' ? 'border-blue-500/30 text-blue-600 dark:text-blue-400' :
+                    ''
+                }`}
             >
               {policy}
             </Badge>
@@ -199,15 +195,11 @@ export function PVListPage() {
         header: t('common.actions'),
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <QuickYamlDialog
-              resourceType="persistentvolumes"
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
             <DescribeDialog
               resourceType="persistentvolumes"
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         ),

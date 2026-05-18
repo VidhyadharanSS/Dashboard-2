@@ -496,9 +496,11 @@ export interface ResourceHistory {
   previousYaml: string
   success: boolean
   errorMessage: string
+  sourceIP?: string
   operatorId: number
   operator: {
     username: string
+    email?: string
     provider: string
   }
   createdAt: string

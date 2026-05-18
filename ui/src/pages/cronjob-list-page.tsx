@@ -20,8 +20,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
+import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
+import { WorkloadLabelSelector } from '@/components/selector/workload-label-selector'
+import { WorkloadQuerySelector } from '@/components/selector/workload-query-selector'
+import { useSessionState } from '@/hooks/use-session-state'
 
 function fallbackCopy(text: string) {
   try {
@@ -43,6 +46,10 @@ function fallbackCopy(text: string) {
 
 export function CronJobListPage() {
   const { t } = useTranslation()
+  const [selectedLabels, setSelectedLabels] = useSessionState<string>('cronjobs-selectedLabels', '')
+  const [querySelector, setQuerySelector] = useSessionState<string>('cronjobs-querySelector', '')
+  const effectiveLabelSelector = querySelector || selectedLabels
+
   const columnHelper = createColumnHelper<CronJob>()
 
   const handleToggleSuspend = useCallback(async (cronjob: CronJob) => {
@@ -128,15 +135,13 @@ export function CronJobListPage() {
           return (
             <Badge
               variant="outline"
-              className={`px-1.5 ${
-                isSuspended
+              className={`px-1.5 ${isSuspended
                   ? 'border-amber-500/40 text-amber-600 dark:text-amber-400'
                   : 'border-green-500/40 text-green-600 dark:text-green-400'
-              }`}
+                }`}
             >
-              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${
-                isSuspended ? 'bg-amber-500' : 'bg-green-500'
-              }`} />
+              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${isSuspended ? 'bg-amber-500' : 'bg-green-500'
+                }`} />
               {isSuspended ? 'Suspended' : 'Active'}
             </Badge>
           )
@@ -234,17 +239,12 @@ export function CronJobListPage() {
                 {row.original.spec?.suspend ? 'Resume' : 'Suspend'}
               </TooltipContent>
             </Tooltip>
-            <QuickYamlDialog
-              resourceType="cronjobs"
-              namespace={row.original.metadata?.namespace}
-              name={row.original.metadata?.name || ''}
-              triggerVariant="ghost"
-              triggerSize="icon"
-            />
             <DescribeDialog
               resourceType="cronjobs"
               namespace={row.original.metadata?.namespace}
               name={row.original.metadata?.name || ''}
+              compact
+              triggerVariant="ghost"
             />
           </div>
         ),
@@ -261,12 +261,40 @@ export function CronJobListPage() {
     return name.includes(lowerQuery) || namespace.includes(lowerQuery) || schedule.includes(lowerQuery)
   }, [])
 
+  const filterToolbar = (
+    <FilterBar>
+      <FilterGroup label="Label Filter">
+        <WorkloadLabelSelector
+          resourceType="cronjobs"
+          onLabelsChange={(labels) => {
+            setSelectedLabels(labels)
+            if (labels) setQuerySelector('')
+          }}
+          placeholder="Filter by Label"
+        />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border mx-1" />
+      <FilterGroup label="Query Selector">
+        <WorkloadQuerySelector
+          resourceType="cronjobs"
+          onSelectorChange={(sel) => {
+            setQuerySelector(sel)
+            if (sel) setSelectedLabels('')
+          }}
+        />
+      </FilterGroup>
+    </FilterBar>
+  )
+
   return (
     <ResourceTable
       resourceName="CronJobs"
       resourceType="cronjobs"
       columns={columns}
       searchQueryFilter={cronJobSearchFilter}
+      extraToolbars={[filterToolbar]}
+      labelSelector={effectiveLabelSelector}
+      enableMultiNamespace
     />
   )
 }

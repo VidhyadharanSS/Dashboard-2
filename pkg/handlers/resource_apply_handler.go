@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,14 +14,29 @@ import (
 	"github.com/zxh326/kite/pkg/logger"
 	"github.com/zxh326/kite/pkg/model"
 	"github.com/zxh326/kite/pkg/rbac"
+	"k8s.io/apimachinery/pkg/api/meta"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	syaml "sigs.k8s.io/yaml"
+)
+
+// restMapperCache caches REST mappers per cluster to avoid repeated Discovery API calls.
+type restMapperCacheEntry struct {
+	mapper    meta.RESTMapper
+	expiresAt time.Time
+}
+
+var (
+	restMapperCacheMu    sync.Mutex
+	restMapperCacheStore = map[string]*restMapperCacheEntry{}
+	restMapperCacheTTL   = 5 * time.Minute
 )
 
 type ResourceApplyHandler struct{}
@@ -44,6 +60,8 @@ type ApplyResult struct {
 	Error       string `json:"error,omitempty"`
 	Action      string `json:"action,omitempty"` // "create" or "update" — what was done
 }
+
+const applyFieldOwner = "kite-resource-apply"
 
 // ValidateYAML parses a multi-document YAML without applying, returning identified objects
 // POST /resources/validate
@@ -72,11 +90,26 @@ func (h *ResourceApplyHandler) ValidateYAML(c *gin.Context) {
 
 	infos := make([]objectInfo, 0, len(objects))
 	for i, obj := range objects {
+		// Check for parse errors embedded in placeholder
+		if parseErrMsg, ok := obj.GetAnnotations()["_parseError"]; ok {
+			infos = append(infos, objectInfo{
+				Index: i + 1,
+				Valid: false,
+				Error: "Parse error: " + parseErrMsg,
+			})
+			continue
+		}
+
+		displayName := obj.GetName()
+		if displayName == "" && obj.GetGenerateName() != "" {
+			displayName = obj.GetGenerateName() + "*"
+		}
+
 		info := objectInfo{
 			Index:      i + 1,
 			Kind:       obj.GetKind(),
 			APIVersion: obj.GetAPIVersion(),
-			Name:       obj.GetName(),
+			Name:       displayName,
 			Namespace:  obj.GetNamespace(),
 			Valid:      true,
 		}
@@ -89,8 +122,8 @@ func (h *ResourceApplyHandler) ValidateYAML(c *gin.Context) {
 		if info.APIVersion == "" {
 			issues = append(issues, "missing apiVersion")
 		}
-		if info.Name == "" {
-			issues = append(issues, "missing metadata.name")
+		if obj.GetName() == "" && obj.GetGenerateName() == "" {
+			issues = append(issues, "missing metadata.name or metadata.generateName")
 		}
 		if len(issues) > 0 {
 			info.Valid = false
@@ -169,6 +202,11 @@ func (h *ResourceApplyHandler) ApplyResource(c *gin.Context) {
 	ctx := c.Request.Context()
 	successCount := 0
 	failCount := 0
+	mapper, err := buildRESTMapper(cs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build Kubernetes REST mapper: " + err.Error()})
+		return
+	}
 
 	for idx, obj := range objects {
 		result := ApplyResult{
@@ -196,76 +234,134 @@ func (h *ResourceApplyHandler) ApplyResource(c *gin.Context) {
 			results = append(results, result)
 			continue
 		}
-		if obj.GetName() == "" {
+		if obj.GetName() == "" && obj.GetGenerateName() == "" {
 			result.Status = "failed"
-			result.Error = "Missing metadata.name — every resource object must have a name"
+			result.Error = "Missing metadata.name or metadata.generateName — every resource object must be identifiable"
 			failCount++
 			results = append(results, result)
 			continue
 		}
 
-		// RBAC Check — determine verb based on whether resource already exists
-		resource := strings.ToLower(obj.GetKind()) + "s"
+		// Enforce permitted-field policy for workload kinds (security hardening)
+		if fieldErr := validateWorkloadFields(obj); fieldErr != "" {
+			result.Status = "failed"
+			result.Error = fieldErr
+			failCount++
+			results = append(results, result)
+			continue
+		}
+
+		mapping, mappingErr := resolveRESTMapping(mapper, obj)
+		if mappingErr != nil {
+			result.Status = "failed"
+			result.Error = "Failed to resolve resource mapping: " + mappingErr.Error()
+			failCount++
+			results = append(results, result)
+			continue
+		}
+
+		resource := mapping.Resource.Resource
+		isNamespaced := mapping.Scope.Name() == meta.RESTScopeNameNamespace
 		ns := obj.GetNamespace()
-		if ns == "" {
-			ns = "_all"
-		}
-
-		// First check create permission (needed for new resources)
-		if !rbac.CanAccess(user, resource, "create", cs.Name, ns) &&
-			!rbac.CanAccess(user, resource, "update", cs.Name, ns) {
-			result.Status = "failed"
-			result.Error = rbac.NoAccess(user.Key(), string(common.VerbCreate), resource, ns, cs.Name)
-			failCount++
-			results = append(results, result)
-			continue
-		}
-
-		// Check if resource already exists
-		existingObj := &unstructured.Unstructured{}
-		existingObj.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-		getErr := cs.K8sClient.Get(ctx, client.ObjectKey{
-			Name:      obj.GetName(),
-			Namespace: obj.GetNamespace(),
-		}, existingObj)
-
-		var opStatus string
-		var opErr error
-
-		if apierrors.IsNotFound(getErr) {
-			// Resource does not exist — CREATE
-			result.Action = "create"
-			if req.DryRun {
-				opStatus = "created (dry-run)"
-			} else {
-				opErr = cs.K8sClient.Create(ctx, obj)
-				opStatus = "created"
-			}
-		} else if getErr == nil {
-			// Resource exists — UPDATE
-			result.Action = "update"
-			if !rbac.CanAccess(user, resource, "update", cs.Name, ns) {
+		if isNamespaced {
+			if ns == "" {
 				result.Status = "failed"
-				result.Error = rbac.NoAccess(user.Key(), string(common.VerbUpdate), resource, ns, cs.Name)
+				result.Error = fmt.Sprintf("Missing metadata.namespace for namespaced resource %s", obj.GetKind())
 				failCount++
 				results = append(results, result)
 				continue
 			}
+		} else {
+			ns = "_all"
+			obj.SetNamespace("")
+			result.Namespace = ""
+		}
+
+		// Resources with generateName are always created (never updated)
+		var existingObj *unstructured.Unstructured
+		var getErr error
+		var opStatus string
+		var opErr error
+		var historyAction string
+
+		if obj.GetName() == "" && obj.GetGenerateName() != "" {
+			if !rbac.CanAccess(user, resource, "create", cs.Name, ns) {
+				result.Status = "failed"
+				result.Error = rbac.NoAccess(user.Key(), string(common.VerbCreate), resource, ns, cs.Name)
+				failCount++
+				results = append(results, result)
+				continue
+			}
+			result.Action = "create"
+			historyAction = "create"
 			if req.DryRun {
-				opStatus = "updated (dry-run)"
+				opErr = cs.K8sClient.Create(ctx, obj, client.DryRunAll)
+				opStatus = "created (dry-run)"
 			} else {
-				obj.SetResourceVersion(existingObj.GetResourceVersion())
-				opErr = cs.K8sClient.Update(ctx, obj)
-				opStatus = "updated"
+				opErr = cs.K8sClient.Create(ctx, obj)
+				opStatus = "created"
+				if opErr == nil {
+					result.Name = obj.GetName()
+				}
 			}
 		} else {
-			opErr = getErr
-			opStatus = "failed"
+			existingObj = &unstructured.Unstructured{}
+			existingObj.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
+			getErr = cs.K8sClient.Get(ctx, client.ObjectKey{
+				Name:      obj.GetName(),
+				Namespace: obj.GetNamespace(),
+			}, existingObj)
+
+			if apierrors.IsNotFound(getErr) {
+				if !rbac.CanAccess(user, resource, "create", cs.Name, ns) {
+					result.Status = "failed"
+					result.Error = rbac.NoAccess(user.Key(), string(common.VerbCreate), resource, ns, cs.Name)
+					failCount++
+					results = append(results, result)
+					continue
+				}
+				result.Action = "create"
+				historyAction = "create"
+				if req.DryRun {
+					opErr = cs.K8sClient.Create(ctx, obj, client.DryRunAll)
+					opStatus = "created (dry-run)"
+				} else {
+					opErr = cs.K8sClient.Create(ctx, obj)
+					opStatus = "created"
+				}
+			} else if getErr == nil {
+				result.Action = "update"
+				historyAction = "update"
+				if !rbac.CanAccess(user, resource, "update", cs.Name, ns) {
+					result.Status = "failed"
+					result.Error = rbac.NoAccess(user.Key(), string(common.VerbUpdate), resource, ns, cs.Name)
+					failCount++
+					results = append(results, result)
+					continue
+				}
+				patchOpts := []client.PatchOption{
+					client.FieldOwner(applyFieldOwner),
+					client.ForceOwnership,
+				}
+				if req.DryRun {
+					patchOpts = append(patchOpts, client.DryRunAll)
+					opStatus = "updated (dry-run)"
+				} else {
+					opStatus = "updated"
+				}
+				opErr = cs.K8sClient.Patch(ctx, obj, client.Apply, patchOpts...)
+			} else {
+				opErr = getErr
+				opStatus = "failed"
+			}
 		}
 
 		// Record per-object history and audit
 		if !req.DryRun {
-			h.logHistory(cs.Name, user.ID, obj, existingObj, opErr)
+			if existingObj == nil {
+				existingObj = &unstructured.Unstructured{}
+			}
+			h.logHistory(cs.Name, user.ID, c.ClientIP(), resource, historyAction, obj, existingObj, opErr)
 		}
 
 		result.Status = opStatus
@@ -300,10 +396,24 @@ func (h *ResourceApplyHandler) ApplyResource(c *gin.Context) {
 }
 
 // logHistory records per-object database history with individual YAML (not the entire raw input).
-func (h *ResourceApplyHandler) logHistory(clusterName string, userID uint, obj, existing *unstructured.Unstructured, err error) {
+func (h *ResourceApplyHandler) logHistory(clusterName string, userID uint, sourceIP, resourceType, action string, obj, existing *unstructured.Unstructured, err error) {
+	if model.DB == nil {
+		return
+	}
+
 	// Marshal the individual object YAML (not the entire multi-doc input)
 	objClone := obj.DeepCopy()
 	objClone.SetManagedFields(nil)
+	// Remove _parseError annotation if it leaked through
+	annotations := objClone.GetAnnotations()
+	if annotations != nil {
+		delete(annotations, "_parseError")
+		if len(annotations) == 0 {
+			objClone.SetAnnotations(nil)
+		} else {
+			objClone.SetAnnotations(annotations)
+		}
+	}
 	objYAML, _ := syaml.Marshal(objClone)
 
 	previousYAML := []byte{}
@@ -318,16 +428,188 @@ func (h *ResourceApplyHandler) logHistory(clusterName string, userID uint, obj, 
 		errMessage = err.Error()
 	}
 
+	// Use name or generateName for the record
+	resourceName := obj.GetName()
+	if resourceName == "" {
+		resourceName = obj.GetGenerateName() + "*"
+	}
+
 	model.DB.Create(&model.ResourceHistory{
 		ClusterName:   clusterName,
-		ResourceType:  strings.ToLower(obj.GetKind()) + "s",
-		ResourceName:  obj.GetName(),
+		ResourceType:  resourceType,
+		ResourceName:  resourceName,
 		Namespace:     obj.GetNamespace(),
-		OperationType: "apply",
+		OperationType: action,
 		ResourceYAML:  string(objYAML),
 		PreviousYAML:  string(previousYAML),
 		OperatorID:    userID,
+		SourceIP:      sourceIP,
 		Success:       err == nil,
 		ErrorMessage:  errMessage,
 	})
+}
+
+func buildRESTMapper(cs *cluster.ClientSet) (meta.RESTMapper, error) {
+	clusterKey := cs.Name
+	now := time.Now()
+
+	restMapperCacheMu.Lock()
+	if entry, ok := restMapperCacheStore[clusterKey]; ok && now.Before(entry.expiresAt) {
+		restMapperCacheMu.Unlock()
+		return entry.mapper, nil
+	}
+	restMapperCacheMu.Unlock()
+
+	resources, err := restmapper.GetAPIGroupResources(cs.K8sClient.ClientSet.Discovery())
+	if err != nil {
+		return nil, err
+	}
+	mapper := restmapper.NewDiscoveryRESTMapper(resources)
+
+	restMapperCacheMu.Lock()
+	restMapperCacheStore[clusterKey] = &restMapperCacheEntry{
+		mapper:    mapper,
+		expiresAt: now.Add(restMapperCacheTTL),
+	}
+	restMapperCacheMu.Unlock()
+
+	return mapper, nil
+}
+
+func resolveRESTMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) (*meta.RESTMapping, error) {
+	gv, err := schema.ParseGroupVersion(obj.GetAPIVersion())
+	if err != nil {
+		return nil, err
+	}
+	return mapper.RESTMapping(obj.GroupVersionKind().GroupKind(), gv.Version)
+}
+
+// validateWorkloadFields enforces the permitted-field policy for Deployment,
+// StatefulSet, and DaemonSet objects submitted via the YAML apply endpoint.
+// It returns an empty string when the object is allowed, or a human-readable
+// rejection reason when a forbidden field is found.
+//
+// Permitted fields are listed in SECURITY_AUDIT_REPORT.md §"Permitted YAML Fields".
+// Anything not on the allow-list that could influence security posture is rejected.
+func validateWorkloadFields(obj *unstructured.Unstructured) string {
+	kind := obj.GetKind()
+	if kind != "Deployment" && kind != "StatefulSet" && kind != "DaemonSet" {
+		return ""
+	}
+
+	spec := obj.Object["spec"]
+	specMap, ok := spec.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	// --- Top-level spec: block selector mutation (immutable, security boundary) ---
+	if _, has := specMap["selector"]; has {
+		return fmt.Sprintf("%s: spec.selector is immutable and must not be included in updates", kind)
+	}
+
+	// --- spec.template.spec checks ---
+	templateSpec, _, _ := unstructured.NestedMap(obj.Object, "spec", "template", "spec")
+
+	// Block pod-level securityContext
+	if _, has := templateSpec["securityContext"]; has {
+		return fmt.Sprintf("%s: spec.template.spec.securityContext is forbidden (security hardening)", kind)
+	}
+
+	// Block imagePullSecrets (prevents secret-based credential injection)
+	if _, has := templateSpec["imagePullSecrets"]; has {
+		return fmt.Sprintf("%s: spec.template.spec.imagePullSecrets is forbidden (use cluster-level pull secrets)", kind)
+	}
+
+	// Block volumes with hostPath or secret types
+	volumes, _, _ := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "volumes")
+	for _, v := range volumes {
+		volMap, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		volName, _ := volMap["name"].(string)
+		if _, has := volMap["hostPath"]; has {
+			return fmt.Sprintf("%s: volume %q uses hostPath which is forbidden (security hardening)", kind, volName)
+		}
+		if _, has := volMap["secret"]; has {
+			return fmt.Sprintf("%s: volume %q mounts a Secret which is forbidden (security hardening)", kind, volName)
+		}
+	}
+
+	// --- Per-container checks ---
+	containers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "containers")
+	initContainers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "initContainers")
+	allContainers := append(containers, initContainers...)
+
+	for _, c := range allContainers {
+		cMap, ok := c.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		cName, _ := cMap["name"].(string)
+
+		if _, has := cMap["command"]; has {
+			return fmt.Sprintf("%s: container %q sets command which is forbidden (must be baked into the image)", kind, cName)
+		}
+		if _, has := cMap["args"]; has {
+			return fmt.Sprintf("%s: container %q sets args which is forbidden (must be baked into the image)", kind, cName)
+		}
+		if _, has := cMap["securityContext"]; has {
+			return fmt.Sprintf("%s: container %q sets securityContext which is forbidden (security hardening)", kind, cName)
+		}
+
+		// Block env entries that reference secrets (secretKeyRef / secretRef)
+		if envList, ok := cMap["env"].([]interface{}); ok {
+			for _, e := range envList {
+				envEntry, ok := e.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				envName, _ := envEntry["name"].(string)
+				if vf, ok := envEntry["valueFrom"].(map[string]interface{}); ok {
+					if _, hasSecretRef := vf["secretKeyRef"]; hasSecretRef {
+						return fmt.Sprintf("%s: container %q env %q uses secretKeyRef which is forbidden", kind, cName, envName)
+					}
+				}
+			}
+		}
+		if envFromList, ok := cMap["envFrom"].([]interface{}); ok {
+			for _, ef := range envFromList {
+				efMap, ok := ef.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if _, has := efMap["secretRef"]; has {
+					return fmt.Sprintf("%s: container %q uses envFrom secretRef which is forbidden", kind, cName)
+				}
+			}
+		}
+
+		// Block volumeMounts that mount paths that look like secret volumes
+		// (fine-grained: blocked at the volume declaration level above, but defence-in-depth)
+		if vmList, ok := cMap["volumeMounts"].([]interface{}); ok {
+			for _, vm := range vmList {
+				vmMap, ok := vm.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				mountPath, _ := vmMap["mountPath"].(string)
+				// Block mounts to sensitive host paths
+				sensitiveHostPaths := []string{"/etc", "/proc", "/sys", "/var/run", "/run", "/root", "/home"}
+				for _, p := range sensitiveHostPaths {
+					if strings.HasPrefix(mountPath, p) {
+						return fmt.Sprintf("%s: container %q mounts a sensitive host path %q which is forbidden", kind, cName, mountPath)
+					}
+				}
+			}
+		}
+	}
+
+	// --- Block status mutations (status is server-managed) ---
+	if _, has := obj.Object["status"]; has {
+		return fmt.Sprintf("%s: status field must not be included in apply requests (server-managed)", kind)
+	}
+
+	return ""
 }

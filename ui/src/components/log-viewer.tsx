@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Editor, { OnMount } from '@monaco-editor/react'
 import {
   IconClearAll,
+  IconCopy,
   IconDownload,
-  IconMaximize,
-  IconMinimize,
+  IconFileExport,
   IconPalette,
   IconSearch,
   IconSettings,
@@ -14,6 +14,7 @@ import {
 import { Container, Pod } from 'kubernetes-types/core/v1'
 import type { editor } from 'monaco-editor'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { TERMINAL_THEMES, TerminalTheme } from '@/types/themes'
 import {
@@ -120,7 +121,7 @@ export function LogViewer({
   const [previous, setPrevious] = useState(false)
   const [filterTerm, setFilterTerm] = useState('')
   const [showScrollToBottom, setShowScrollToBottom] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  
 
   const [wordWrap, setWordWrap] = useState<boolean>(() => {
     const saved = localStorage.getItem('log-viewer-word-wrap')
@@ -313,6 +314,21 @@ export function LogViewer({
     return count
   }, [filtered, filterTerm])
 
+  const fallbackCopyToClipboard = useCallback((text: string) => {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    textarea.style.top = '-9999px'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+    const success = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return success
+  }, [])
+
   const exportSelection = useCallback(() => {
     if (!editorRef.current) return
     const selection = editorRef.current.getSelection()
@@ -329,9 +345,40 @@ export function LogViewer({
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
+      } else {
+        toast.info('No text selected — highlight text in the editor first')
       }
+    } else {
+      toast.info('No text selected — highlight text in the editor first')
     }
   }, [])
+
+  const copyLogs = useCallback(async () => {
+    if (!editorRef.current) return
+    const model = editorRef.current.getModel()
+    if (!model) return
+    const selection = editorRef.current.getSelection()
+    let text = ''
+    if (selection && !selection.isEmpty()) {
+      text = model.getValueInRange(selection)
+    } else {
+      text = model.getValue()
+    }
+    if (!text) {
+      toast.info('Nothing to copy')
+      return
+    }
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        fallbackCopyToClipboard(text)
+      }
+      toast.success(selection && !selection.isEmpty() ? 'Selection copied' : 'Logs copied to clipboard')
+    } catch {
+      toast.error('Failed to copy — try selecting text and using Ctrl+C')
+    }
+  }, [fallbackCopyToClipboard])
 
   // Update editor content when filtered logs change
   useEffect(() => {
@@ -503,10 +550,6 @@ export function LogViewer({
     }
   }, [])
 
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen((prev) => !prev)
-  }, [])
-
   const toggleWordWrap = useCallback(() => {
     setWordWrap((prev) => {
       localStorage.setItem('log-viewer-word-wrap', `${!prev}`)
@@ -530,9 +573,6 @@ export function LogViewer({
         e.preventDefault()
         searchInputRef.current?.focus()
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        toggleFullscreen()
-      }
       if (e.altKey && (e.key === 'z' || e.key === 'Z' || e.key === 'Ω')) {
         e.preventDefault()
         toggleWordWrap()
@@ -555,8 +595,6 @@ export function LogViewer({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [
     filterTerm,
-    isFullscreen,
-    toggleFullscreen,
     fontSize,
     handleFontSizeChange,
     toggleWordWrap,
@@ -565,7 +603,7 @@ export function LogViewer({
 
   return (
     <div
-      className={`flex flex-col bg-background border border-border rounded-md overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[100] border-none rounded-none' : 'h-[calc(100dvh-180px)]'
+      className={`flex flex-col bg-background border border-border rounded-md overflow-hidden ${'h-[calc(100dvh-180px)]'
         } ${wordWrap ? 'whitespace-pre-wrap' : 'whitespace-pre'}`}
     >
       <style>
@@ -578,226 +616,255 @@ export function LogViewer({
         `}
       </style>
 
-      {/* Sleek Toolbar Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-muted/30 border-b border-border">
-        {/* Left Section */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm">Logs</span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {logCount} lines
+      {/* Toolbar Header */}
+      <div className="flex flex-col border-b border-border">
+        {/* Primary toolbar row */}
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-muted/30">
+          {/* Left: Title + Status */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="font-semibold text-sm">Logs</span>
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {logCount} lines
+              </span>
               {filterTerm.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20">
+                <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20">
                   {matchCount} match{matchCount !== 1 ? 'es' : ''}
                 </Badge>
               )}
-            </span>
-          </div>
-
-          {/* Restored Connection & Loading Indicators */}
-          <div className="flex items-center gap-2">
-            <ConnectionIndicator
-              isConnected={isConnected}
-              onReconnect={refetch}
-            />
-            <NetworkSpeedIndicator
-              downloadSpeed={downloadSpeed}
-              uploadSpeed={0}
-            />
-            {isLoading && <span className="text-[10px] text-muted-foreground animate-pulse">Loading...</span>}
-            {isReconnecting && <span className="text-[10px] text-blue-500 animate-pulse">Reconnecting...</span>}
-          </div>
-
-          <Button
-            variant={timestamps ? "secondary" : "outline"}
-            size="sm"
-            className="h-8 px-3 text-xs"
-            onClick={() => setTimestamps(!timestamps)}
-          >
-            Time
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-3 text-xs gap-1.5"
-            onClick={exportSelection}
-            title="Export Selected Region"
-          >
-            <IconDownload size={14} />
-            <span className="hidden sm:inline">Export Selection</span>
-          </Button>
-
-          {/* Inline Search */}
-{/* Search / filter */}
-          <div className="relative group flex items-center gap-1">
-            <div className="relative flex items-center">
-              <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                placeholder={regexFilter ? "Regex filter..." : "Filter logs..."}
-                value={filterTerm}
-                onChange={(e) => setFilterTerm(e.target.value)}
-                className={`h-8 w-[140px] lg:w-[220px] pl-8 pr-3 text-xs bg-background/50 focus-visible:ring-1 focus-visible:ring-primary shadow-sm ${regexError ? 'border-destructive ring-1 ring-destructive/30' : ''}`}
-              />
             </div>
-            <Button
-              variant={regexFilter ? "default" : "outline"}
-              size="sm"
-              className="h-8 px-2 text-[10px] font-mono font-bold"
-              onClick={() => setRegexFilter(r => !r)}
-              title={regexFilter ? 'Regex mode ON — click to switch to plain text' : 'Plain text mode — click to enable regex'}
-            >
-              .*
-            </Button>
-            {regexError && (
-              <span className="text-[9px] text-destructive max-w-[120px] truncate" title={regexError}>
-                Bad regex
-              </span>
-            )}
-          </div>          {/* Log Level Stats */}
-          <div className="flex items-center gap-1.5 h-8">
-            {logStats.errors > 0 && (
-              <button
-                onClick={() => { setErrorOnly(true) }}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 transition-colors"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                {logStats.errors} ERR
-              </button>
-            )}
-            {logStats.warns > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                {logStats.warns} WARN
-              </span>
-            )}
-            {logStats.infos > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                {logStats.infos} INFO
-              </span>
-            )}
-          </div>
 
-          {/* Error Mode Toggle */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-md border bg-rose-500/5 border-rose-500/20 h-8">
-            <Label htmlFor="error-mode" className="text-[10px] font-bold text-rose-600 uppercase cursor-pointer">Error Mode</Label>
-            <Switch
-              id="error-mode"
-              checked={errorOnly}
-              onCheckedChange={setErrorOnly}
-              className="scale-75 data-[state=checked]:bg-rose-500"
-            />
-            {errorCount > 0 && (
-              <Badge variant="destructive" className="h-4 px-1 min-w-[16px] flex items-center justify-center text-[9px] animate-pulse">
-                {errorCount}
-              </Badge>
-            )}
-          </div>
-        </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <ConnectionIndicator
+                isConnected={isConnected}
+                onReconnect={refetch}
+              />
+              <NetworkSpeedIndicator
+                downloadSpeed={downloadSpeed}
+                uploadSpeed={0}
+              />
+              {isLoading && <span className="text-[10px] text-muted-foreground animate-pulse">Loading...</span>}
+              {isReconnecting && <span className="text-[10px] text-blue-500 animate-pulse">Reconnecting...</span>}
+            </div>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
-          {containers.length > 0 && (
-            <MultiContainerSelector
-              containers={containers}
-              selectedContainers={selectedContainers}
-              onContainersChange={setSelectedContainers}
-            />
-          )}
-
-          {pods && (
-            <PodSelector
-              pods={[...pods].sort((a, b) =>
-                (a.metadata?.creationTimestamp || 0) >
-                  (b.metadata?.creationTimestamp || 0)
-                  ? -1
-                  : 1
-              )}
-              showAllOption={true}
-              selectedPod={selectPodName}
-              onPodChange={(v) => setSelectPodName(v || '_all')}
-            />
-          )}
-
-          <div className="w-px h-4 bg-border mx-1 hidden sm:block" />
-
-          {/* Quick Actions */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 relative text-muted-foreground hover:text-foreground hidden sm:flex"
-                  onClick={cycleTheme}
+            {/* Log Level Stats */}
+            <div className="flex items-center gap-1.5">
+              {logStats.errors > 0 && (
+                <button
+                  onClick={() => setErrorOnly(true)}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 transition-colors"
                 >
-                  <IconPalette className="h-4 w-4" />
-                  <div
-                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-border"
-                    style={{ backgroundColor: TERMINAL_THEMES[logTheme].background }}
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Cycle Theme</TooltipContent>
-            </Tooltip>
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  {logStats.errors} ERR
+                </button>
+              )}
+              {logStats.warns > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  {logStats.warns} WARN
+                </span>
+              )}
+              {logStats.infos > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  {logStats.infos} INFO
+                </span>
+              )}
+            </div>
+          </div>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                  <IconSettings className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" align="end">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="tail-lines">Tail Lines</Label>
-                    <Select value={tailLines.toString()} onValueChange={(v) => handleTailLinesChange(Number(v))}>
-                      <SelectTrigger className="w-[120px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                        <SelectItem value="200">200</SelectItem>
-                        <SelectItem value="500">500</SelectItem>
-                        <SelectItem value="1000">1000</SelectItem>
-                        <SelectItem value="-1">All</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+          {/* Right: Selectors + Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {containers.length > 0 && (
+              <MultiContainerSelector
+                containers={containers}
+                selectedContainers={selectedContainers}
+                onContainersChange={setSelectedContainers}
+              />
+            )}
 
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="timestamps-pop">Show Timestamps</Label>
-                    <Switch id="timestamps-pop" checked={timestamps} onCheckedChange={setTimestamps} />
-                  </div>
+            {pods && (
+              <PodSelector
+                pods={[...pods].sort((a, b) =>
+                  (a.metadata?.creationTimestamp || 0) >
+                    (b.metadata?.creationTimestamp || 0)
+                    ? -1
+                    : 1
+                )}
+                showAllOption={true}
+                selectedPod={selectPodName}
+                onPodChange={(v) => setSelectPodName(v || '_all')}
+              />
+            )}
 
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="previous-pop">Previous Container</Label>
-                    <Switch id="previous-pop" checked={previous} onCheckedChange={setPrevious} />
-                  </div>
+            <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
 
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="word-wrap-pop">Word Wrap</Label>
-                    <Switch id="word-wrap-pop" checked={wordWrap} onCheckedChange={toggleWordWrap} />
-                  </div>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={timestamps ? "secondary" : "outline"}
+                    size="sm"
+                    className="h-7 px-2.5 text-[11px]"
+                    onClick={() => setTimestamps(!timestamps)}
+                  >
+                    Time
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Toggle Timestamps</TooltipContent>
+              </Tooltip>
 
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-line-numbers">Show Line Numbers</Label>
-                    <Switch id="show-line-numbers" checked={showLineNumbers} onCheckedChange={toggleShowLineNumbers} />
-                  </div>
+              {/* Error Mode Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={errorOnly ? "destructive" : "outline"}
+                    size="sm"
+                    className={`h-7 px-2.5 text-[11px] gap-1 ${errorOnly ? '' : 'text-muted-foreground'}`}
+                    onClick={() => setErrorOnly(e => !e)}
+                  >
+                    Errors
+                    {errorCount > 0 && (
+                      <Badge variant={errorOnly ? "outline" : "destructive"} className="h-4 px-1 min-w-[16px] text-[9px] ml-0.5">
+                        {errorCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{errorOnly ? 'Show all logs' : 'Show errors only'}</TooltipContent>
+              </Tooltip>
 
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="follow-logs">Follow Logs</Label>
-                    <Switch id="follow-logs" checked={followLogs} onCheckedChange={setFollowLogs} />
-                  </div>
+              <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
 
-                  <div className="space-y-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 relative text-muted-foreground hover:text-foreground hidden sm:flex"
+                    onClick={cycleTheme}
+                  >
+                    <IconPalette className="h-3.5 w-3.5" />
+                    <div
+                      className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-border"
+                      style={{ backgroundColor: TERMINAL_THEMES[logTheme].background }}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Cycle Theme</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`h-7 w-7 text-muted-foreground hover:text-foreground ${wordWrap ? 'bg-primary/10 border-primary/30 text-primary' : ''}`}
+                    onClick={toggleWordWrap}
+                  >
+                    <IconTextWrap className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Toggle Word Wrap (Alt+Z)</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={copyLogs}>
+                    <IconCopy className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy Logs</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={clearLogs}>
+                    <IconClearAll className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Clear Logs</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={downloadLogs} disabled={logCount === 0}>
+                    <IconDownload className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Download Logs</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={exportSelection}
+                    title="Export Selected Region"
+                  >
+                    <IconFileExport className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Export Selection</TooltipContent>
+              </Tooltip>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                    <IconSettings className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72" align="end">
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground">Settings</h4>
                     <div className="flex items-center justify-between">
-                      <Label>Log Theme</Label>
+                      <Label htmlFor="tail-lines" className="text-xs">Tail Lines</Label>
+                      <Select value={tailLines.toString()} onValueChange={(v) => handleTailLinesChange(Number(v))}>
+                        <SelectTrigger className="w-[100px] h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                          <SelectItem value="200">200</SelectItem>
+                          <SelectItem value="500">500</SelectItem>
+                          <SelectItem value="1000">1000</SelectItem>
+                          <SelectItem value="-1">All</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="timestamps-pop" className="text-xs">Show Timestamps</Label>
+                      <Switch id="timestamps-pop" checked={timestamps} onCheckedChange={setTimestamps} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="previous-pop" className="text-xs">Previous Container</Label>
+                      <Switch id="previous-pop" checked={previous} onCheckedChange={setPrevious} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="word-wrap-pop" className="text-xs">Word Wrap</Label>
+                      <Switch id="word-wrap-pop" checked={wordWrap} onCheckedChange={toggleWordWrap} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show-line-numbers" className="text-xs">Line Numbers</Label>
+                      <Switch id="show-line-numbers" checked={showLineNumbers} onCheckedChange={toggleShowLineNumbers} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="follow-logs" className="text-xs">Follow Logs</Label>
+                      <Switch id="follow-logs" checked={followLogs} onCheckedChange={setFollowLogs} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Theme</Label>
                       <Select value={logTheme} onValueChange={handleThemeChange}>
-                        <SelectTrigger className="w-[120px] h-8 text-xs">
+                        <SelectTrigger className="w-[100px] h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -809,13 +876,11 @@ export function LogViewer({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label>Font Size</Label>
+                      <Label className="text-xs">Font Size</Label>
                       <Select value={fontSize.toString()} onValueChange={(v) => handleFontSizeChange(Number(v))}>
-                        <SelectTrigger className="w-[120px] h-8 text-xs">
+                        <SelectTrigger className="w-[100px] h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -825,78 +890,74 @@ export function LogViewer({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
 
-                  <div className="space-y-2 pt-2 border-t">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Shortcuts</Label>
-                    <div className="space-y-1 text-[11px] text-muted-foreground font-mono">
-                      <div className="flex justify-between"><span>Search</span><kbd>Ctrl+F</kbd></div>
-                      <div className="flex justify-between"><span>Fullscreen</span><kbd>Ctrl+Enter</kbd></div>
-                      <div className="flex justify-between"><span>Word Wrap</span><kbd>Alt+Z</kbd></div>
-                      <div className="flex justify-between"><span>Zoom In/Out</span><kbd>Ctrl +/-</kbd></div>
+                    <div className="pt-2 border-t space-y-1">
+                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Shortcuts</Label>
+                      <div className="space-y-0.5 text-[10px] text-muted-foreground font-mono">
+                        <div className="flex justify-between"><span>Search</span><kbd className="bg-muted px-1 rounded">Ctrl+F</kbd></div>
+                        <div className="flex justify-between"><span>Word Wrap</span><kbd className="bg-muted px-1 rounded">Alt+Z</kbd></div>
+                        <div className="flex justify-between"><span>Zoom</span><kbd className="bg-muted px-1 rounded">Ctrl +/-</kbd></div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+                </PopoverContent>
+              </Popover>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={`h-8 w-8 text-muted-foreground hover:text-foreground ${wordWrap ? 'bg-primary/10 border-primary/30 text-primary' : ''}`}
-                  onClick={toggleWordWrap}
-                >
-                  <IconTextWrap className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Toggle Word Wrap</TooltipContent>
-            </Tooltip>
+              {onClose && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={onClose}>
+                      <IconX className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Close</TooltipContent>
+                </Tooltip>
+              )}
+            </TooltipProvider>
+          </div>
+        </div>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={clearLogs}>
-                  <IconClearAll className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Clear Logs</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={downloadLogs} disabled={logCount === 0}>
-                  <IconDownload className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Download Logs</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hidden sm:flex" onClick={toggleFullscreen}>
-                  {isFullscreen ? <IconMinimize className="h-4 w-4" /> : <IconMaximize className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</TooltipContent>
-            </Tooltip>
-
-            {onClose && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={onClose}>
-                    <IconX className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Close</TooltipContent>
-              </Tooltip>
-            )}
-          </TooltipProvider>
+        {/* Search / filter bar */}
+        <div className="flex items-center gap-2 px-3 py-1 bg-muted/10">
+          <div className="relative flex items-center flex-1 max-w-md">
+            <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              ref={searchInputRef}
+              placeholder={regexFilter ? "Regex filter..." : "Filter logs..."}
+              value={filterTerm}
+              onChange={(e) => setFilterTerm(e.target.value)}
+              className={`h-7 pl-8 pr-3 text-xs bg-background/50 focus-visible:ring-1 focus-visible:ring-primary shadow-sm ${regexError ? 'border-destructive ring-1 ring-destructive/30' : ''}`}
+            />
+          </div>
+          <Button
+            variant={regexFilter ? "default" : "outline"}
+            size="sm"
+            className="h-7 px-2 text-[10px] font-mono font-bold"
+            onClick={() => setRegexFilter(r => !r)}
+            title={regexFilter ? 'Regex mode ON' : 'Click to enable regex'}
+          >
+            .*
+          </Button>
+          {regexError && (
+            <span className="text-[9px] text-destructive max-w-[120px] truncate" title={regexError}>
+              Bad regex
+            </span>
+          )}
+          {filterTerm && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => setFilterTerm('')}
+            >
+              <IconX className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Editor Container */}
-      <div className="flex-1 w-full h-full relative" style={{ backgroundColor: TERMINAL_THEMES[logTheme].background }}>
+      <div className="flex-1 min-h-0 w-full relative" style={{ backgroundColor: TERMINAL_THEMES[logTheme].background }}>
         <Editor
           height="100%"
           theme={`log-theme-${logTheme}`}

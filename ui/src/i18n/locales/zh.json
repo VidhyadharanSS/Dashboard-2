@@ -241,8 +241,14 @@
       "generalError": "身份验证过程中发生意外错误。",
       "contactSupport": "请重试或联系支持（如果问题仍然存在）。",
       "invalidCredentials": "用户名或密码无效",
-      "unknownError": "发生未知错误"
-    }
+      "unknownError": "发生未知错误",
+      "sessionExpired": "会话已过期",
+      "sessionExpiredMessage": "您的登录会话已过期或无法验证。请重新登录。",
+      "sessionExpiredHint": "如果问题仍然存在，请确保已启用 Cookie 并尝试清除浏览器缓存。",
+      "providerError": "身份提供商拒绝了登录请求。您可能已取消或拒绝了授权。",
+      "userUpsertFailed": "无法从 {{provider}} 创建或更新您的用户记录。"
+    },
+    "retrying": "正在重新建立会话…"
   },
   "cluster": {
     "loading": "加载集群中...",
@@ -631,3 +637,4 @@
     "claim": "声明"
   }
 }
+

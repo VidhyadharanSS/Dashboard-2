@@ -296,6 +296,11 @@ func (g *GenericProvider) GetUserInfo(accessToken string) (*model.User, error) {
 	if userid, ok := userInfo["userid"]; ok {
 		user.Sub = fmt.Sprintf("%v", userid)
 	}
+	// Zoho uses 'ZUID' as the unique user identifier
+	if zuid, ok := userInfo["ZUID"]; ok {
+		user.Sub = fmt.Sprintf("%v", zuid)
+	}
+
 	if username, ok := userInfo["username"]; ok {
 		user.Username = fmt.Sprintf("%v", username)
 	} else if login, ok := userInfo["login"]; ok {
@@ -311,6 +316,7 @@ func (g *GenericProvider) GetUserInfo(accessToken string) (*model.User, error) {
 		user.Username = fmt.Sprintf("%v", upn)
 	}
 
+	// Email — check standard and Zoho-specific fields
 	if email, ok := userInfo["email"]; ok {
 		emailStr := fmt.Sprintf("%v", email)
 		user.Email = emailStr
@@ -318,13 +324,36 @@ func (g *GenericProvider) GetUserInfo(accessToken string) (*model.User, error) {
 			user.Username = emailStr
 		}
 	}
+	// Zoho uses 'Email' (capital E)
+	if email, ok := userInfo["Email"]; ok && user.Email == "" {
+		emailStr := fmt.Sprintf("%v", email)
+		user.Email = emailStr
+		if user.Username == "" {
+			user.Username = emailStr
+		}
+	}
+
+	// Display name — check standard and Zoho-specific fields
 	if name, ok := userInfo["name"]; ok {
 		user.Name = fmt.Sprintf("%v", name)
 	} else if displayName, ok := userInfo["displayName"]; ok {
 		// Azure AD Graph API uses 'displayName' instead of 'name'
 		user.Name = fmt.Sprintf("%v", displayName)
 	}
-	if nickname, ok := userInfo["nickname"]; ok {
+	// Zoho uses 'Display_Name'
+	if displayName, ok := userInfo["Display_Name"]; ok && user.Name == "" {
+		user.Name = fmt.Sprintf("%v", displayName)
+	}
+	// Zoho also provides First_Name / Last_Name
+	if user.Name == "" {
+		firstName, _ := userInfo["First_Name"]
+		lastName, _ := userInfo["Last_Name"]
+		if firstName != nil || lastName != nil {
+			user.Name = strings.TrimSpace(fmt.Sprintf("%v %v", firstName, lastName))
+		}
+	}
+
+	if nickname, ok := userInfo["nickname"]; ok && user.Name == "" {
 		user.Name = fmt.Sprintf("%v", nickname)
 	}
 	if avatar, ok := userInfo["avatar_url"]; ok {
@@ -428,3 +457,4 @@ func (g *GenericProvider) fetchAzureADGroups(accessToken string) ([]interface{},
 	klog.V(1).Infof("Fetched %d groups from /me/memberOf across %d total memberships", len(groups), totalFetched)
 	return groups, nil
 }
+

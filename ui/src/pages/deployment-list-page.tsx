@@ -3,26 +3,38 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Deployment } from 'kubernetes-types/apps/v1'
 import { Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { IconReload } from '@tabler/icons-react'
+import { IconRotate2, IconAlertTriangle } from '@tabler/icons-react'
 
 import * as api from '@/lib/api'
+import { rollbackDeployment } from '@/lib/api'
 
 import { getDeploymentStatus } from '@/lib/k8s'
 import { formatDate, getAge } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DeploymentStatusIcon } from '@/components/deployment-status-icon'
-import { DeploymentCreateDialog } from '@/components/editors/deployment-create-dialog'
+// DeploymentCreateDialog import removed — workload creation via dashboard is disabled (security hardening)
 import { DescribeDialog } from '@/components/describe-dialog'
-import { QuickYamlDialog } from '@/components/quick-yaml-dialog'
 import { ResourceTable } from '@/components/resource-table'
+import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
+import { WorkloadLabelSelector } from '@/components/selector/workload-label-selector'
+import { WorkloadQuerySelector } from '@/components/selector/workload-query-selector'
+import { useSessionState } from '@/hooks/use-session-state'
 
 function fallbackCopy(text: string) {
   try {
@@ -44,8 +56,13 @@ function fallbackCopy(text: string) {
 
 export function DeploymentListPage() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  // isCreateDialogOpen removed — workload creation via dashboard is disabled (security hardening)
+  const [selectedLabels, setSelectedLabels] = useSessionState<string>('deployments-selectedLabels', '')
+  const [querySelector, setQuerySelector] = useSessionState<string>('deployments-querySelector', '')
+  const [rollbackTarget, setRollbackTarget] = useState<{ ns: string; name: string } | null>(null)
+  const [isRollingBack, setIsRollingBack] = useState(false)
+
+  const effectiveLabelSelector = querySelector || selectedLabels
 
   // Define column helper outside of any hooks
   const columnHelper = createColumnHelper<Deployment>()
@@ -55,6 +72,7 @@ export function DeploymentListPage() {
     () => [
       columnHelper.accessor('metadata.name', {
         header: t('common.name'),
+        meta: { width: '30%' },
         cell: ({ row }) => {
           const containers = row.original.spec?.template?.spec?.containers || []
           const image = containers[0]?.image || ''
@@ -107,6 +125,7 @@ export function DeploymentListPage() {
       columnHelper.accessor((row) => row.status?.readyReplicas ?? 0, {
         id: 'ready',
         header: t('deployments.ready'),
+        meta: { width: '10%' },
         cell: ({ row }) => {
           const status = row.original.status
           const ready = status?.readyReplicas || 0
@@ -121,6 +140,7 @@ export function DeploymentListPage() {
       }),
       columnHelper.accessor('status.conditions', {
         header: t('common.status'),
+        meta: { width: '20%' },
         cell: ({ row }) => {
           const status = getDeploymentStatus(row.original)
 
@@ -147,6 +167,7 @@ export function DeploymentListPage() {
       }),
       columnHelper.accessor('metadata.creationTimestamp', {
         header: t('common.created'),
+        meta: { width: '15%' },
         cell: ({ getValue }) => {
           const dateStr = formatDate(getValue() || '')
           return (
@@ -173,33 +194,22 @@ export function DeploymentListPage() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.stopPropagation()
-                      try {
-                        await api.restartResource('deployments', name, ns!)
-                        toast.success(`Restarted ${name}`)
-                      } catch (err: unknown) {
-                        const msg = err instanceof Error ? err.message : String(err)
-                        toast.error(`Failed to restart: ${msg}`)
-                      }
+                      setRollbackTarget({ ns: ns!, name })
                     }}
                   >
-                    <IconReload className="h-3.5 w-3.5" />
+                    <IconRotate2 className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Restart deployment</TooltipContent>
+                <TooltipContent>Rollback</TooltipContent>
               </Tooltip>
-              <QuickYamlDialog
-                resourceType="deployments"
-                namespace={ns}
-                name={name}
-                triggerVariant="ghost"
-                triggerSize="icon"
-              />
               <DescribeDialog
                 resourceType="deployments"
                 namespace={ns}
                 name={name}
+                compact
+                triggerVariant="ghost"
               />
             </div>
           )
@@ -220,14 +230,7 @@ export function DeploymentListPage() {
     []
   )
 
-  const handleCreateClick = () => {
-    setIsCreateDialogOpen(true)
-  }
-
-  const handleCreateSuccess = (deployment: Deployment, namespace: string) => {
-    // Navigate to the newly created deployment's detail page
-    navigate(`/deployments/${namespace}/${deployment.metadata?.name}`)
-  }
+  // handleCreateClick and handleCreateSuccess removed — workload creation via dashboard is disabled (security hardening)
 
   const handleBatchRestart = useCallback(async (rows: Deployment[]) => {
     const promises = rows.map((row) => {
@@ -235,7 +238,7 @@ export function DeploymentListPage() {
       const namespace = row.metadata?.namespace
       if (!name || !namespace) return Promise.resolve()
 
-      return api.restartResource('deployments', name, namespace)
+      return api.restartResource('deployments', namespace, name)
         .then(() => toast.success(t('deployments.restartSuccess', { name, defaultValue: `Successfully restarted ${name}` })))
         .catch((error) => {
           console.error(`Failed to restart ${name}:`, error)
@@ -251,23 +254,89 @@ export function DeploymentListPage() {
     }
   }, [t])
 
+  const filterToolbar = (
+    <FilterBar>
+      <FilterGroup label="Label Filter">
+        <WorkloadLabelSelector
+          resourceType="deployments"
+          onLabelsChange={(labels) => {
+            setSelectedLabels(labels)
+            if (labels) setQuerySelector('')
+          }}
+          placeholder="Filter by Label"
+        />
+      </FilterGroup>
+      <div className="w-px h-4 bg-border mx-1" />
+      <FilterGroup label="Query Selector">
+        <WorkloadQuerySelector
+          resourceType="deployments"
+          onSelectorChange={(sel) => {
+            setQuerySelector(sel)
+            if (sel) setSelectedLabels('')
+          }}
+        />
+      </FilterGroup>
+    </FilterBar>
+  )
+
   return (
     <>
       <ResourceTable
         resourceName="Deployments"
         columns={columns}
         searchQueryFilter={deploymentSearchFilter}
-        showCreateButton={true}
-        onCreateClick={handleCreateClick}
+        showCreateButton={false}
         onBatchRestart={handleBatchRestart}
-        enableLabelFilter={true}
+        extraToolbars={[filterToolbar]}
+        labelSelector={effectiveLabelSelector}
+        enableMultiNamespace
       />
 
-      <DeploymentCreateDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSuccess={handleCreateSuccess}
-      />
+      {/* DeploymentCreateDialog removed — workload creation via dashboard is disabled (security hardening) */}
+
+      {/* Rollback Confirmation Dialog */}
+      <Dialog open={!!rollbackTarget} onOpenChange={(open) => { if (!open) setRollbackTarget(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IconAlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Rollback
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to rollback <strong className="text-foreground">{rollbackTarget?.name}</strong> in
+              namespace <strong className="text-foreground">{rollbackTarget?.ns}</strong> to its previous revision?
+              This will update the pod template to match the last ReplicaSet configuration.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRollbackTarget(null)} disabled={isRollingBack}>
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              disabled={isRollingBack}
+              onClick={async () => {
+                if (!rollbackTarget) return
+                setIsRollingBack(true)
+                try {
+                  await rollbackDeployment(rollbackTarget.ns, rollbackTarget.name)
+                  toast.success(`Rollback initiated for ${rollbackTarget.name}`)
+                  setRollbackTarget(null)
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : String(err)
+                  toast.error(`Failed to rollback: ${msg}`)
+                } finally {
+                  setIsRollingBack(false)
+                }
+              }}
+              className="gap-1.5"
+            >
+              <IconRotate2 className="h-4 w-4" />
+              {isRollingBack ? 'Rolling back...' : 'Confirm Rollback'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

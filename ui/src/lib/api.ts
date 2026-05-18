@@ -1330,6 +1330,8 @@ export function useRelatedResources(
 export interface InitCheckResponse {
   initialized: boolean
   step: number
+  /** True when OAuth bootstrap is configured via env vars (no password setup needed) */
+  oauthBootstrap?: boolean
 }
 
 // Initialize API function
@@ -1600,6 +1602,38 @@ export const deleteCluster = async (
 }
 
 // OAuth Provider Management
+// --- Authentication Settings ---
+
+export interface AuthSettings {
+  passwordLoginDisabled: boolean
+  passwordLoginEnvLocked: boolean
+}
+
+export const fetchAuthSettings = (): Promise<AuthSettings> => {
+  return fetchAPI<{ settings: AuthSettings }>('/admin/auth-settings').then(
+    (resp) => resp.settings
+  )
+}
+
+export const useAuthSettings = () => {
+  return useQuery({
+    queryKey: ['auth-settings'],
+    queryFn: fetchAuthSettings,
+    staleTime: 10000,
+  })
+}
+
+export const updateAuthSettings = async (
+  settings: Partial<AuthSettings>
+): Promise<{ settings: AuthSettings; message: string }> => {
+  return await apiClient.put<{ settings: AuthSettings; message: string }>(
+    '/admin/auth-settings',
+    settings
+  )
+}
+
+// --- OAuth Providers ---
+
 export interface OAuthProviderCreateRequest {
   name: string
   clientId: string
@@ -2299,6 +2333,27 @@ export const useAccessibleNamespaces = (options?: { enabled?: boolean }) => {
   })
 }
 
+// ─── Audit Filter Options ────────────────────────────────────────────────────
+
+export interface AuditFilterOptions {
+  resourceTypes: string[]
+  namespaces: string[]
+}
+
+export const fetchAuditFilterOptions =
+  async (): Promise<AuditFilterOptions> => {
+    return fetchAPI<AuditFilterOptions>('/admin/audit-logs/filters')
+  }
+
+export const useAuditFilterOptions = (options?: { enabled?: boolean }) => {
+  return useQuery<AuditFilterOptions, Error>({
+    queryKey: ['audit-filter-options'],
+    queryFn: fetchAuditFilterOptions,
+    enabled: options?.enabled ?? true,
+    staleTime: 120000,
+  })
+}
+
 // ─── Audit Log Retention ─────────────────────────────────────────────────────
 
 export interface AuditRetentionInfo {
@@ -2429,17 +2484,19 @@ export const deleteSession = async (id: number): Promise<void> => {
   return apiClient.delete<void>(`/users/sessions/${id}`)
 }
 
-export const useSessions = () => {
+export const useSessions = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['user-sessions'],
     queryFn: fetchSessions,
+    enabled: options?.enabled !== false,
   })
 }
 
-export const useAllSessions = () => {
+export const useAllSessions = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['all-sessions'],
     queryFn: fetchAllSessions,
+    enabled: options?.enabled !== false,
   })
 }
 
@@ -2457,4 +2514,5 @@ export const usePodFiles = (
     staleTime: 10000, // 10 seconds cache
   })
 }
+
 

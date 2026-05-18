@@ -62,8 +62,9 @@ export const NodeStatusIcon = ({
     default:
       return (
         <IconExclamationCircle
-          className={`fill-gray-500 dark:fill-gray-400 ${className}`}
+          className={`fill-muted-foreground ${className}`}
         />
       )
   }
 }
+

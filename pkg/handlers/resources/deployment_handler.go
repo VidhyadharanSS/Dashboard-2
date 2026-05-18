@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/samber/lo"
 	"github.com/zxh326/kite/pkg/cluster"
 	"github.com/zxh326/kite/pkg/logger"
 	"github.com/zxh326/kite/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -28,6 +30,53 @@ func NewDeploymentHandler() *DeploymentHandler {
 			true,
 		),
 	}
+}
+
+// List overrides the generic List to preserve status fields even in reduce mode.
+// The generic reduce strips ALL status/spec, causing the UI to show 0/0 for readyReplicas.
+func (h *DeploymentHandler) List(c *gin.Context) {
+	objectList, err := h.list(c)
+	if err != nil {
+		return
+	}
+
+	if c.Query("reduce") == "true" {
+		for i := range objectList.Items {
+			dep := &objectList.Items[i]
+			// Preserve only the fields the UI needs for the list view:
+			//   - status.readyReplicas, status.replicas, status.availableReplicas,
+			//     status.updatedReplicas, status.conditions (for status icon)
+			//   - spec.replicas (desired count)
+			//   - spec.template.spec.containers[].image (for image column)
+			//   - spec.selector (for related resource lookups)
+			preservedStatus := dep.Status
+			preservedReplicas := dep.Spec.Replicas
+			preservedSelector := dep.Spec.Selector
+			preservedContainers := lo.Map(dep.Spec.Template.Spec.Containers, func(c corev1.Container, _ int) corev1.Container {
+				return corev1.Container{Name: c.Name, Image: c.Image}
+			})
+
+			dep.ObjectMeta = metav1.ObjectMeta{
+				Name:              dep.Name,
+				Namespace:         dep.Namespace,
+				UID:               dep.UID,
+				CreationTimestamp: dep.CreationTimestamp,
+				Labels:            dep.Labels,
+			}
+			dep.Spec = appsv1.DeploymentSpec{
+				Replicas: preservedReplicas,
+				Selector: preservedSelector,
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: preservedContainers,
+					},
+				},
+			}
+			dep.Status = preservedStatus
+		}
+	}
+
+	c.JSON(http.StatusOK, objectList)
 }
 
 func (h *DeploymentHandler) Restart(c *gin.Context, namespace, name string) error {

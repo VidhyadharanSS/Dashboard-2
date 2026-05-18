@@ -7,11 +7,13 @@ import {
   IconCircleCheck,
   IconCircleDot,
   IconCircleX,
+  IconCopy,
   IconEye,
   IconFileCode,
   IconLoader2,
   IconPlayerPlay,
   IconSearch,
+  IconSparkles,
 } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -94,11 +96,41 @@ export function CreateResourceDialog({
     }
   }, [open])
 
+  // Keyboard shortcut: Ctrl+Enter to apply from editor
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        if (view === 'editor' && yamlContent.trim() && !isLoading) {
+          handleApply(false)
+        } else if (view === 'preview' && !isLoading) {
+          handleApply(false)
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
+        e.preventDefault()
+        if (view === 'editor' && yamlContent.trim() && !isLoading) {
+          handleApply(true) // dry run
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, view, yamlContent, isLoading])
+
   // Count objects in the YAML (rough estimate by counting "---" separators and kind: lines)
   const estimatedObjectCount = useMemo(() => {
     if (!yamlContent.trim()) return 0
     const docs = yamlContent.split(/^---$/m).filter((doc) => doc.trim().length > 0)
     return docs.length
+  }, [yamlContent])
+
+  // Detect resource kinds for quick badges
+  const detectedKinds = useMemo(() => {
+    if (!yamlContent.trim()) return []
+    const matches = yamlContent.match(/^kind:\s*(\S+)/gm) || []
+    return [...new Set(matches.map(m => m.replace(/^kind:\s*/, '')))]
   }, [yamlContent])
 
   const handleTemplateChange = (templateName: string) => {
@@ -177,6 +209,14 @@ export function CreateResourceDialog({
     })
   }
 
+  const handleCopyResults = useCallback(() => {
+    const text = applyResults.map(r =>
+      `${r.status.toUpperCase()} ${r.kind}/${r.name}${r.namespace ? ` (ns: ${r.namespace})` : ''}${r.error ? ` — ${r.error}` : ''}`
+    ).join('\n')
+    navigator.clipboard.writeText(text)
+    toast.success('Results copied to clipboard')
+  }, [applyResults])
+
   const validPreviewCount = previewObjects.filter((o) => o.valid).length
   const invalidPreviewCount = previewObjects.filter((o) => !o.valid).length
 
@@ -189,7 +229,7 @@ export function CreateResourceDialog({
             {t('createResource.title', 'Apply Resources')}
             {estimatedObjectCount > 1 && view === 'editor' && (
               <Badge variant="secondary" className="text-[10px] ml-1">
-                ~{estimatedObjectCount} objects detected
+                {estimatedObjectCount} objects
               </Badge>
             )}
           </DialogTitle>
@@ -201,28 +241,53 @@ export function CreateResourceDialog({
         </DialogHeader>
 
         {/* ─── Step indicator ─── */}
-        <div className="flex items-center gap-2 px-1">
-          {(['editor', 'preview', 'results'] as const).map((step, i) => (
-            <div key={step} className="flex items-center gap-2">
-              {i > 0 && <div className={`h-px w-6 ${view === step || (i === 1 && view === 'results') ? 'bg-primary' : 'bg-border'}`} />}
-              <button
-                onClick={() => {
-                  if (step === 'editor') setView('editor')
-                  if (step === 'preview' && previewObjects.length > 0) setView('preview')
-                  if (step === 'results' && applyResults.length > 0) setView('results')
-                }}
-                className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-all ${view === step
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                  }`}
-              >
-                <span className="h-4 w-4 rounded-full border flex items-center justify-center text-[10px]">
-                  {i + 1}
-                </span>
-                {step === 'editor' ? 'Edit' : step === 'preview' ? 'Preview' : 'Results'}
-              </button>
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1">
+            {(['editor', 'preview', 'results'] as const).map((step, i) => {
+              const isActive = view === step
+              const isPast = (['editor', 'preview', 'results'] as const).indexOf(view) > i
+              return (
+                <div key={step} className="flex items-center gap-1">
+                  {i > 0 && <div className={`h-px w-4 ${isPast || isActive ? 'bg-primary' : 'bg-border'}`} />}
+                  <button
+                    onClick={() => {
+                      if (step === 'editor') setView('editor')
+                      if (step === 'preview' && previewObjects.length > 0) setView('preview')
+                      if (step === 'results' && applyResults.length > 0) setView('results')
+                    }}
+                    className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-all ${isActive
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : isPast
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      }`}
+                  >
+                    {isPast ? (
+                      <IconCheck className="h-3 w-3" />
+                    ) : (
+                      <span className="h-4 w-4 rounded-full border flex items-center justify-center text-[10px]">
+                        {i + 1}
+                      </span>
+                    )}
+                    {step === 'editor' ? 'Edit' : step === 'preview' ? 'Preview' : 'Results'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          {/* Detected kinds in editor mode */}
+          {view === 'editor' && detectedKinds.length > 0 && (
+            <div className="flex items-center gap-1 overflow-hidden">
+              {detectedKinds.slice(0, 4).map((kind) => (
+                <Badge key={kind} variant="outline" className="text-[9px] h-4 font-mono shrink-0">
+                  {kind}
+                </Badge>
+              ))}
+              {detectedKinds.length > 4 && (
+                <span className="text-[9px] text-muted-foreground">+{detectedKinds.length - 4}</span>
+              )}
             </div>
-          ))}
+          )}
         </div>
 
         {/* ─── Editor View ─── */}
@@ -263,7 +328,14 @@ export function CreateResourceDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">YAML Configuration</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">YAML Configuration</Label>
+                <span className="text-[10px] text-muted-foreground">
+                  <kbd className="bg-muted px-1 py-0.5 rounded text-[9px] font-mono">Ctrl+Enter</kbd> to apply
+                  {' · '}
+                  <kbd className="bg-muted px-1 py-0.5 rounded text-[9px] font-mono">Ctrl+Shift+Enter</kbd> dry run
+                </span>
+              </div>
               <p className="text-[10px] text-muted-foreground">
                 Supports multi-document YAML — separate resources with <code className="bg-muted px-1 py-0.5 rounded text-[10px]">---</code>
               </p>
@@ -383,9 +455,12 @@ export function CreateResourceDialog({
                 <div className="flex-1">
                   <p className="text-sm font-medium">{applySummary.message}</p>
                   {applySummary.dryRun && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      This was a dry-run — no changes were made to the cluster
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <IconSparkles className="h-3 w-3 text-blue-500" />
+                      <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                        Dry-run — no changes were made to the cluster. Click "Apply for Real" to commit.
+                      </p>
+                    </div>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs shrink-0">
@@ -399,6 +474,21 @@ export function CreateResourceDialog({
                       ✕ {applySummary.failed}
                     </Badge>
                   )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={handleCopyResults}
+                        >
+                          <IconCopy className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy results to clipboard</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             )}
@@ -628,3 +718,4 @@ export function CreateResourceDialog({
     </Dialog>
   )
 }
+

@@ -1,5 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
-import { IconAlertCircle, IconEye, IconLoader } from '@tabler/icons-react'
+import {
+  IconAlertCircle,
+  IconCirclePlus,
+  IconEdit,
+  IconEye,
+  IconLoader,
+  IconTrash,
+  IconUpload,
+} from '@tabler/icons-react'
 import * as yaml from 'js-yaml'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -13,6 +21,13 @@ import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select'
 import { YamlDiffViewer } from './yaml-diff-viewer'
 
 interface ResourceHistoryTableProps<T extends ResourceType> {
@@ -36,6 +51,7 @@ export function ResourceHistoryTable<T extends ResourceType>({
   const [isDiffOpen, setIsDiffOpen] = useState(false)
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false)
   const [isRollingBack, setIsRollingBack] = useState(false)
+  const [operationFilter, setOperationFilter] = useState<string>('all')
 
   const {
     data: historyResponse,
@@ -116,6 +132,29 @@ export function ResourceHistoryTable<T extends ResourceType>({
     }
   }
 
+  const getOperationTypeIcon = (operationType: string) => {
+    switch (operationType.toLowerCase()) {
+      case 'create':
+        return <IconCirclePlus className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+      case 'update':
+        return <IconEdit className="w-3.5 h-3.5 text-blue-500" />
+      case 'delete':
+        return <IconTrash className="w-3.5 h-3.5 text-destructive" />
+      case 'apply':
+        return <IconUpload className="w-3.5 h-3.5 text-violet-500" />
+      default:
+        return null
+    }
+  }
+
+  // Client-side filter by operation type
+  const filteredHistory = useMemo(() => {
+    if (operationFilter === 'all') return history
+    return history.filter(
+      (h) => h.operationType.toLowerCase() === operationFilter.toLowerCase()
+    )
+  }, [history, operationFilter])
+
   const getOperationTypeLabel = useCallback(
     (operationType: string) => {
       switch (operationType.toLowerCase()) {
@@ -173,7 +212,8 @@ export function ResourceHistoryTable<T extends ResourceType>({
         cell: (value: unknown) => {
           const operationType = value as string
           return (
-            <Badge variant={getOperationTypeColor(operationType)}>
+            <Badge variant={getOperationTypeColor(operationType)} className="gap-1.5">
+              {getOperationTypeIcon(operationType)}
               {getOperationTypeLabel(operationType)}
             </Badge>
           )
@@ -256,11 +296,45 @@ export function ResourceHistoryTable<T extends ResourceType>({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>{t('resourceHistory.title')}</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle>{t('resourceHistory.title')}</CardTitle>
+            <Select value={operationFilter} onValueChange={setOperationFilter}>
+              <SelectTrigger className="h-8 w-[140px] text-xs">
+                <SelectValue placeholder="All operations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All operations</SelectItem>
+                <SelectItem value="create">
+                  <span className="flex items-center gap-1.5">
+                    <IconCirclePlus className="w-3.5 h-3.5 text-green-600" />
+                    Create
+                  </span>
+                </SelectItem>
+                <SelectItem value="update">
+                  <span className="flex items-center gap-1.5">
+                    <IconEdit className="w-3.5 h-3.5 text-blue-500" />
+                    Update
+                  </span>
+                </SelectItem>
+                <SelectItem value="apply">
+                  <span className="flex items-center gap-1.5">
+                    <IconUpload className="w-3.5 h-3.5 text-violet-500" />
+                    Apply
+                  </span>
+                </SelectItem>
+                <SelectItem value="delete">
+                  <span className="flex items-center gap-1.5">
+                    <IconTrash className="w-3.5 h-3.5 text-destructive" />
+                    Delete
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <SimpleTable
-            data={history || []}
+            data={filteredHistory || []}
             columns={historyColumns}
             emptyMessage={t('resourceHistory.noHistoryFound')}
             pagination={{
@@ -269,7 +343,7 @@ export function ResourceHistoryTable<T extends ResourceType>({
               showPageInfo: true,
               currentPage,
               onPageChange: setCurrentPage,
-              totalItems: historyPagination?.total ?? history.length,
+              totalItems: historyPagination?.total ?? (filteredHistory?.length ?? 0),
             }}
           />
         </CardContent>

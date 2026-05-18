@@ -38,9 +38,9 @@ export function ContainerTable(props: {
           className={`${isExpanded ? 'border-b' : ''} bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors`}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-2 shrink-0">
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 ) : (
@@ -50,11 +50,11 @@ export function ContainerTable(props: {
                   {container.name}
                 </Badge>
               </div>
-              <span className="text-sm text-muted-foreground font-mono">
+              <span className="text-sm text-muted-foreground font-mono truncate min-w-0">
                 {container.image}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {init && container.restartPolicy === 'Always' && (
                 <Badge variant="secondary" className="text-xs">
                   Sidecar
@@ -144,58 +144,87 @@ export function ContainerTable(props: {
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Resources
                 </Label>
-                <div className="mt-1 min-h-[24px]">
+                <div className="mt-1.5 min-h-[24px]">
                   {container.resources &&
                     (container.resources.requests ||
                       container.resources.limits) ? (
                     <div className="space-y-2">
-                      {container.resources.requests && (
-                        <div>
-                          <div className="text-xs font-medium text-green-600 dark:text-green-400">
-                            Requests
+                      {/* CPU row */}
+                      {(container.resources.requests?.cpu || container.resources.limits?.cpu) && (
+                        <div className="rounded-lg border border-border/40 bg-muted/20 p-2.5">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <div className="h-2 w-2 rounded-full bg-blue-500" />
+                            <span className="text-xs font-semibold">CPU</span>
                           </div>
-                          <div className="text-sm space-y-1">
-                            {container.resources.requests.cpu && (
-                              <div className="flex gap-2">
-                                <span className="text-muted-foreground">
-                                  CPU:
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                            {container.resources.requests?.cpu && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Request</span>
+                                <span className="font-mono font-semibold text-green-600 dark:text-green-400">
+                                  {container.resources.requests.cpu}
                                 </span>
-                                <span>{container.resources.requests.cpu}</span>
                               </div>
                             )}
-                            {container.resources.requests.memory && (
-                              <div className="flex gap-2">
-                                <span className="text-muted-foreground">
-                                  Memory:
-                                </span>
-                                <span>
-                                  {container.resources.requests.memory}
+                            {container.resources.limits?.cpu && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Limit</span>
+                                <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                                  {container.resources.limits.cpu}
                                 </span>
                               </div>
                             )}
                           </div>
                         </div>
                       )}
-                      {container.resources.limits && (
-                        <div>
-                          <div className="text-xs font-medium text-red-600 dark:text-red-400">
-                            Limits
+                      {/* Memory row */}
+                      {(container.resources.requests?.memory || container.resources.limits?.memory) && (
+                        <div className="rounded-lg border border-border/40 bg-muted/20 p-2.5">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <div className="h-2 w-2 rounded-full bg-purple-500" />
+                            <span className="text-xs font-semibold">Memory</span>
                           </div>
-                          <div className="text-sm space-y-1">
-                            {container.resources.limits.cpu && (
-                              <div className="flex gap-2">
-                                <span className="text-muted-foreground">
-                                  CPU:
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                            {container.resources.requests?.memory && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Request</span>
+                                <span className="font-mono font-semibold text-green-600 dark:text-green-400">
+                                  {container.resources.requests.memory}
                                 </span>
-                                <span>{container.resources.limits.cpu}</span>
                               </div>
                             )}
-                            {container.resources.limits.memory && (
-                              <div className="flex gap-2">
-                                <span className="text-muted-foreground">
-                                  Memory:
+                            {container.resources.limits?.memory && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Limit</span>
+                                <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                                  {container.resources.limits.memory}
                                 </span>
-                                <span>{container.resources.limits.memory}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {/* GPU row if present */}
+                      {(container.resources.requests?.['nvidia.com/gpu'] || container.resources.limits?.['nvidia.com/gpu']) && (
+                        <div className="rounded-lg border border-border/40 bg-muted/20 p-2.5">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                            <span className="text-xs font-semibold">GPU</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                            {container.resources.requests?.['nvidia.com/gpu'] && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Request</span>
+                                <span className="font-mono font-semibold text-green-600 dark:text-green-400">
+                                  {container.resources.requests['nvidia.com/gpu']}
+                                </span>
+                              </div>
+                            )}
+                            {container.resources.limits?.['nvidia.com/gpu'] && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Limit</span>
+                                <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                                  {container.resources.limits['nvidia.com/gpu']}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -203,7 +232,7 @@ export function ContainerTable(props: {
                       )}
                     </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground italic">
                       No resource configured
                     </div>
                   )}

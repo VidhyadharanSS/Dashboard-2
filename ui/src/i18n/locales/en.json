@@ -222,8 +222,14 @@
       "invalidCredentials": "Invalid username or password",
       "unknownError": "An unknown error occurred",
       "userDisabled": "User Disabled",
-      "userDisabledMessage": "Your user account has been disabled. Please contact Kites team for more information."
-    }
+      "userDisabledMessage": "Your user account has been disabled. Please contact Kites team for more information.",
+      "sessionExpired": "Session Expired",
+      "sessionExpiredMessage": "Your sign-in session expired or could not be verified. Please try signing in again.",
+      "sessionExpiredHint": "If this keeps happening, ensure cookies are enabled and try clearing your browser cache.",
+      "providerError": "The identity provider rejected the sign-in request. You may have cancelled or denied access.",
+      "userUpsertFailed": "Could not create or update your user record from {{provider}}."
+    },
+    "retrying": "Re-establishing session…"
   },
   "cluster": {
     "loading": "Loading clusters...",

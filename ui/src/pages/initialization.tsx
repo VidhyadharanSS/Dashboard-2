@@ -1,16 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Logo from '@/assets/icon.svg'
 import {
   IconCheck,
   IconLoader,
   IconServer,
+  IconShieldLock,
   IconUser,
 } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { createSuperUser, importClusters, useInitCheck } from '@/lib/api'
+import { useAuth } from '@/contexts/auth-context'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,10 +56,10 @@ function InitStep({
         <div
           className={`flex aspect-square h-10 w-10 items-center justify-center rounded-full border-2 flex-shrink-0 ${
             completed
-              ? 'border-green-500 bg-green-500 text-white'
+              ? 'border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500'
               : isActive
-                ? 'border-blue-500 bg-blue-50 text-blue-600'
-                : 'border-gray-300 bg-gray-50 text-gray-400'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-muted text-muted-foreground'
           }`}
         >
           {completed ? (
@@ -70,21 +72,21 @@ function InitStep({
           <h3
             className={`text-lg font-medium ${
               completed
-                ? 'text-green-600'
+                ? 'text-green-600 dark:text-green-400'
                 : isActive
-                  ? 'text-gray-900'
-                  : 'text-gray-400'
+                  ? 'text-foreground'
+                  : 'text-muted-foreground'
             }`}
           >
             {title}
           </h3>
           <p
-            className={`text-xs text-muted-foreground ${
+            className={`text-xs ${
               completed
-                ? 'text-green-600'
+                ? 'text-green-600 dark:text-green-400'
                 : isActive
-                  ? 'text-gray-600'
-                  : 'text-gray-400'
+                  ? 'text-muted-foreground'
+                  : 'text-muted-foreground/70'
             }`}
           >
             {description}
@@ -99,8 +101,14 @@ function InitStep({
 export function InitializationPage() {
   const { t } = useTranslation()
   const { data: initCheck, isLoading, refetch } = useInitCheck()
+  const { login, providers, user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Read OAuth callback errors from URL (when callback redirects to /setup?error=...)
+  const urlError = searchParams.get('error')
+  const urlReason = searchParams.get('reason')
 
   // User form state
   const [username, setUsername] = useState('')
@@ -112,6 +120,18 @@ export function InitializationPage() {
   const [kubeconfig, setKubeconfig] = useState('')
   const [isFileMode, setIsFileMode] = useState(false)
   const [isInCluster, setIsInCluster] = useState(false)
+
+  // OAuth login state
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+
+  const isOAuthBootstrap = initCheck?.oauthBootstrap ?? false
+
+  // After successful OAuth login during bootstrap, refetch init status
+  useEffect(() => {
+    if (isOAuthBootstrap && user) {
+      refetch()
+    }
+  }, [user, isOAuthBootstrap, refetch])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -128,7 +148,7 @@ export function InitializationPage() {
   // If loading, show spinner
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     )
@@ -171,6 +191,21 @@ export function InitializationPage() {
     }
   }
 
+  const handleOAuthLogin = async (provider: string) => {
+    setOauthLoading(provider)
+    setError(null)
+    try {
+      await login(provider)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to initiate OAuth login'
+      )
+      setOauthLoading(null)
+    }
+  }
+
   const handleImportClusters = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -197,8 +232,11 @@ export function InitializationPage() {
     }
   }
 
+  // Get OAuth providers (exclude "password")
+  const oauthProviders = providers.filter((p) => p !== 'password')
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       <div className="absolute top-6 right-6 z-10">
         <LanguageToggle />
       </div>
@@ -208,7 +246,7 @@ export function InitializationPage() {
           <div className="text-center mb-8">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <img src={Logo} className="h-10 w-10" />{' '}
-              <h1 className="text-2xl font-bold">Kite</h1>
+              <h1 className="text-2xl font-bold text-foreground">Kite</h1>
             </div>
           </div>
 
@@ -218,101 +256,164 @@ export function InitializationPage() {
                 {t('initialization.title')}
               </CardTitle>
               <CardDescription>
-                {t('initialization.description')}
+                {isOAuthBootstrap
+                  ? 'Sign in with your organization\'s OAuth provider to set up Kite.'
+                  : t('initialization.description')}
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {error && (
+              {(error || urlError) && (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>
+                    {error || `Authentication failed: ${urlReason || urlError}. Please try again.`}
+                  </AlertDescription>
                 </Alert>
               )}
 
-              {/* Step 1: Create Super Admin User */}
+              {/* Step 1: Create Admin — Password mode or OAuth bootstrap mode */}
               <InitStep
                 step={1}
                 currentStep={actualCurrentStep}
-                title={t('initialization.step1.title')}
-                description={t('initialization.step1.description')}
-                icon={IconUser}
+                title={
+                  isOAuthBootstrap
+                    ? 'Sign in as Admin'
+                    : t('initialization.step1.title')
+                }
+                description={
+                  isOAuthBootstrap
+                    ? 'Authenticate with your OAuth provider to create the admin account.'
+                    : t('initialization.step1.description')
+                }
+                icon={isOAuthBootstrap ? IconShieldLock : IconUser}
                 completed={step >= 1}
               >
-                <form onSubmit={handleCreateUser} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">
-                      {t('initialization.step1.usernameRequired')}
-                    </Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder={t(
-                        'initialization.step1.usernamePlaceholder'
-                      )}
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">
-                      {t('initialization.step1.displayName')}
-                    </Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder={t(
-                        'initialization.step1.displayNamePlaceholder'
-                      )}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">
-                      {t('initialization.step1.passwordRequired')}
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder={t(
-                        'initialization.step1.passwordPlaceholder'
-                      )}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">
-                      {t('initialization.step1.confirmPasswordRequired')}
-                    </Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder={t(
-                        'initialization.step1.confirmPasswordPlaceholder'
-                      )}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full"
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center space-x-2">
-                        <IconLoader className="h-4 w-4 animate-spin" />
-                        <span>{t('initialization.step1.creating')}</span>
+                {isOAuthBootstrap ? (
+                  /* OAuth Bootstrap: Show OAuth sign-in buttons instead of password form */
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4 text-sm text-blue-700 dark:text-blue-400">
+                      <div className="flex items-center gap-2 mb-1">
+                        <IconShieldLock className="h-4 w-4" />
+                        <strong>Secure OAuth Setup</strong>
+                      </div>
+                      <p>
+                        Your admin account will be created automatically when you sign in.
+                        No passwords are stored or transmitted.
+                      </p>
+                    </div>
+
+                    {oauthProviders.length > 0 ? (
+                      <div className="space-y-2">
+                        {oauthProviders.map((provider) => (
+                          <Button
+                            key={provider}
+                            onClick={() => handleOAuthLogin(provider)}
+                            disabled={oauthLoading !== null}
+                            className="w-full"
+                            variant="default"
+                          >
+                            {oauthLoading === provider ? (
+                              <div className="flex items-center space-x-2">
+                                <IconLoader className="h-4 w-4 animate-spin" />
+                                <span>Redirecting to {provider}…</span>
+                              </div>
+                            ) : (
+                              <>
+                                <IconShieldLock className="h-4 w-4 mr-2" />
+                                Sign in with{' '}
+                                {provider.charAt(0).toUpperCase() +
+                                  provider.slice(1)}
+                              </>
+                            )}
+                          </Button>
+                        ))}
                       </div>
                     ) : (
-                      t('initialization.step1.createButton')
+                      <div className="text-center py-4 text-muted-foreground">
+                        <p className="text-sm">
+                          Loading OAuth providers…
+                        </p>
+                      </div>
                     )}
-                  </Button>
-                </form>
+                  </div>
+                ) : (
+                  /* Traditional: Password-based admin creation */
+                  <form onSubmit={handleCreateUser} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">
+                        {t('initialization.step1.usernameRequired')}
+                      </Label>
+                      <Input
+                        id="username"
+                        type="text"
+                        placeholder={t(
+                          'initialization.step1.usernamePlaceholder'
+                        )}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">
+                        {t('initialization.step1.displayName')}
+                      </Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder={t(
+                          'initialization.step1.displayNamePlaceholder'
+                        )}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">
+                        {t('initialization.step1.passwordRequired')}
+                      </Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder={t(
+                          'initialization.step1.passwordPlaceholder'
+                        )}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">
+                        {t('initialization.step1.confirmPasswordRequired')}
+                      </Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder={t(
+                          'initialization.step1.confirmPasswordPlaceholder'
+                        )}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full"
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center space-x-2">
+                          <IconLoader className="h-4 w-4 animate-spin" />
+                          <span>{t('initialization.step1.creating')}</span>
+                        </div>
+                      ) : (
+                        t('initialization.step1.createButton')
+                      )}
+                    </Button>
+                  </form>
+                )}
               </InitStep>
 
               {/* Step 2: Import Cluster */}
@@ -339,8 +440,8 @@ export function InitializationPage() {
                         }}
                         className={`px-3 py-1 text-sm rounded-md transition-colors ${
                           !isFileMode && !isInCluster
-                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                            : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                            ? 'bg-primary/15 text-primary border border-primary/30'
+                            : 'bg-muted text-muted-foreground border border-border hover:bg-accent'
                         }`}
                       >
                         {t('initialization.step2.pasteMode', {
@@ -355,8 +456,8 @@ export function InitializationPage() {
                         }}
                         className={`px-3 py-1 text-sm rounded-md transition-colors ${
                           isFileMode && !isInCluster
-                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                            : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                            ? 'bg-primary/15 text-primary border border-primary/30'
+                            : 'bg-muted text-muted-foreground border border-border hover:bg-accent'
                         }`}
                       >
                         {t('initialization.step2.fileMode', {
@@ -371,8 +472,8 @@ export function InitializationPage() {
                         }}
                         className={`px-3 py-1 text-sm rounded-md transition-colors ${
                           isInCluster
-                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                            : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                            ? 'bg-primary/15 text-primary border border-primary/30'
+                            : 'bg-muted text-muted-foreground border border-border hover:bg-accent'
                         }`}
                       >
                         {t('initialization.step2.inClusterMode', {
@@ -383,7 +484,7 @@ export function InitializationPage() {
 
                     {isInCluster ? (
                       <div className="space-y-2">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           {t('initialization.step2.inClusterHint', {
                             defaultValue:
                               'Import clusters from inside the running Kite instance. No kubeconfig required.',
@@ -395,15 +496,15 @@ export function InitializationPage() {
                         <input
                           type="file"
                           onChange={handleFileSelect}
-                          className="w-full text-sm text-gray-500
+                          className="w-full text-sm text-muted-foreground
                             file:mr-4 file:py-2 file:px-4
                             file:rounded-md file:border-0
                             file:text-sm file:font-medium
-                            file:bg-blue-50 file:text-blue-700
-                            hover:file:bg-blue-100
+                            file:bg-primary/10 file:text-primary
+                            hover:file:bg-primary/20
                             file:cursor-pointer cursor-pointer"
                         />
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {t('initialization.step2.fileHint', {
                             defaultValue:
                               'Select your kubeconfig file (usually located at ~/.kube/config)',
@@ -423,7 +524,7 @@ export function InitializationPage() {
                       />
                     )}
 
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {t('initialization.step2.kubeconfigHint')}
                     </p>
                   </div>
@@ -450,14 +551,14 @@ export function InitializationPage() {
               {step >= 2 && (
                 <div className="text-center py-6">
                   <div className="flex items-center justify-center mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                      <IconCheck className="h-6 w-6 text-green-600" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/15">
+                      <IconCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
                     </div>
                   </div>
-                  <h3 className="text-lg font-medium text-green-600">
+                  <h3 className="text-lg font-medium text-green-600 dark:text-green-400">
                     {t('initialization.completion.title')}
                   </h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {t('initialization.completion.message')}
                   </p>
                 </div>
@@ -472,3 +573,4 @@ export function InitializationPage() {
     </div>
   )
 }
+
