@@ -20,6 +20,8 @@ import {
 export interface ComboboxOption {
     value: string
     label: string
+    /** Optional secondary info displayed at the trailing edge of each dropdown item (e.g. a count). */
+    description?: string
 }
 
 interface ComboboxProps {
@@ -109,11 +111,16 @@ export function Combobox({
                                 >
                                     <Check
                                         className={cn(
-                                            'mr-2 h-4 w-4',
+                                            'mr-2 h-4 w-4 shrink-0',
                                             isSelected(option.value) ? 'opacity-100' : 'opacity-0'
                                         )}
                                     />
-                                    {option.label}
+                                    <span className="flex-1 truncate">{option.label}</span>
+                                    {option.description && (
+                                        <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
+                                            {option.description}
+                                        </span>
+                                    )}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

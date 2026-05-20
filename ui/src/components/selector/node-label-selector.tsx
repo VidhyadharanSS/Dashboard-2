@@ -52,32 +52,36 @@ export function NodeLabelSelector({ onNodeNamesChange, onLabelsChange }: NodeLab
 
     const labelOptions = useMemo(() => {
         const safeNodes = Array.isArray(nodes) ? nodes : []
-        const labelMap = new Map<string, Set<string>>()
-        for (let i = 0; i < safeNodes.length; i++) {
-            const node = safeNodes[i]
+        // Count how many nodes carry each key=value label
+        const countMap = new Map<string, number>()
+        for (const node of safeNodes) {
             const labels = node?.metadata?.labels
             if (labels && typeof labels === 'object' && !Array.isArray(labels)) {
-                const entries = Object.entries(labels)
-                for (let j = 0; j < entries.length; j++) {
-                    const [key, value] = entries[j]
-                    if (!labelMap.has(key)) {
-                        labelMap.set(key, new Set())
-                    }
-                    labelMap.get(key)!.add(value)
+                for (const [key, value] of Object.entries(labels)) {
+                    const fullLabel = `${key}=${value}`
+                    countMap.set(fullLabel, (countMap.get(fullLabel) ?? 0) + 1)
                 }
             }
         }
 
-        const options: { value: string; label: string }[] = []
-        labelMap.forEach((values, key) => {
-            Array.from(values).sort().forEach((value) => {
-                const fullLabel = `${key}=${value}`
-                options.push({ value: fullLabel, label: fullLabel })
-            })
-        })
+        const selectedSet = new Set(selectedLabels)
+        const total = safeNodes.length
 
-        return options.sort((a, b) => a.label.localeCompare(b.label))
-    }, [nodes])
+        // Sort: active selections first, then by node count DESC, then alphabetically
+        return Array.from(countMap.entries())
+            .sort(([aLabel, aCount], [bLabel, bCount]) => {
+                const aPin = selectedSet.has(aLabel) ? 0 : 1
+                const bPin = selectedSet.has(bLabel) ? 0 : 1
+                if (aPin !== bPin) return aPin - bPin
+                if (bCount !== aCount) return bCount - aCount
+                return aLabel.localeCompare(bLabel)
+            })
+            .map(([fullLabel, count]) => ({
+                value: fullLabel,
+                label: fullLabel,
+                description: `${count}/${total}`,
+            }))
+    }, [nodes, selectedLabels])
 
     const handleLabelsChange = (labels: string[]) => {
         setSelectedLabels(labels)

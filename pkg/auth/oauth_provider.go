@@ -159,11 +159,15 @@ func (g *GenericProvider) GetAuthURL(state string) string {
 	params.Add("scope", g.Config.Scopes)
 	params.Add("state", state)
 	params.Add("response_type", "code")
-	// Zoho OAuth requires access_type=offline to return a refresh token,
-	// and prompt=consent ensures the consent screen is shown so scopes are granted.
-	// These params are safely ignored by providers that don't support them (GitHub, GitLab, etc.)
+	// access_type=offline requests a refresh token from providers that support it
+	// (Zoho, Google, etc.). Safely ignored by providers that don't (GitHub, GitLab).
+	// We intentionally do NOT add prompt=consent: forcing consent on every login
+	// caused Zoho to display the scope-approval screen on every single sign-in
+	// (and twice when the auto-retry mechanism re-initiated the OAuth flow after
+	// a transient state-cookie mismatch). Without prompt=consent, Zoho shows the
+	// consent screen only on the first authorization; subsequent logins are
+	// seamless. A refresh token is still issued on first grant via access_type=offline.
 	params.Add("access_type", "offline")
-	params.Add("prompt", "consent")
 
 	return g.AuthURL + "?" + params.Encode()
 }
