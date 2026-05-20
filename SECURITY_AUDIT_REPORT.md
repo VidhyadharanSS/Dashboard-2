@@ -126,11 +126,11 @@ Every protected API request goes through `RequireAuth()`:
 
 ---
 
-### 2. Host-to-Container Mounts | **Resolved**
+### 2. Host-to-Container Mounts | **Mitigated**
 
 **Finding:** `hostPath` volumes could expose host filesystem (e.g. `/etc`, `/proc`, `/root`).
 
-**Fix:** All `hostPath` volume mounts are **blocked at the backend**. Volume configuration is not exposed in the UI; any new volume definition requires IDC change process approval.
+**Fix:** Volume configuration is not exposed in the UI. `hostPath` is permitted via superadmin YAML apply for legitimate worker-node integrations (e.g. host log directories, container runtime sockets) but is gated by per-object RBAC and audit-logged. Any new hostPath mount on a production cluster requires IDC change-process approval.
 
 ---
 
@@ -240,12 +240,13 @@ The following table lists the fields superadmins are permitted to modify via YAM
 | `livenessProbe.*` | Same tunables as readiness — adjust for application restart thresholds |
 | `stdin` / `tty` | Enable interactive terminal access for debugging |
 
-### `spec.template.spec.volumes[]` — Safe Volume Types Only
+### `spec.template.spec.volumes[]` — Permitted Volume Types
 
 | Allowed Volume Type | Use Case |
 |---|---|
 | `emptyDir` | Temporary scratch space, shared memory (`/dev/shm`), log buffers |
 | `configMap` | Mount application config files (e.g. `app.properties`, `webapp.xml`) |
+| `hostPath` | Host-node integrations (e.g. host log directories, runtime sockets) — superadmin-only, audit-logged |
 
 ### `metadata` — Labels & Annotations (Non-Selector)
 
@@ -263,13 +264,13 @@ The following table lists the fields superadmins are permitted to modify via YAM
 | `spec.template.spec.containers[].command` / `args` | Arbitrary command execution — blocked per security audit finding #1 |
 | `spec.template.spec.containers[].securityContext` | Controls privilege escalation, UID, root filesystem — must not be user-editable |
 | `spec.template.spec.securityContext` | Pod-level security context |
-| `spec.template.spec.volumes[].hostPath` | Host filesystem exposure — blocked per security audit finding #2 |
 | `spec.template.spec.volumes[].secret` | Direct secret mounting — exposure risk |
 | `spec.template.spec.imagePullSecrets` | Registry credentials — managed by Kites infra only |
 | `spec.selector` / `spec.template.metadata.labels` (selector labels) | Immutable after creation — changes break the ReplicaSet association |
 | `metadata.uid` / `metadata.resourceVersion` / `metadata.creationTimestamp` | Kubernetes-managed immutable fields |
 | `status.*` | Read-only — set by the Kubernetes control plane |
-| `env[].valueFrom` (secretKeyRef / configMapKeyRef) | Secret/credential injection — managed by Kites platform, not dashboard |
+| `env[].valueFrom` (secretKeyRef / configMapKeyRef) | Secret/credential injection — only literal `env[].value` is permitted |
+| `envFrom` (secretRef / configMapRef) | Bulk env import from external resources — only literal `env[].value` is permitted |
 
 ---
 

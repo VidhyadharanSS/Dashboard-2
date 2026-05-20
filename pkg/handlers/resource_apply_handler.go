@@ -491,10 +491,37 @@ func resolveRESTMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) 
 //
 // Permitted fields are listed in SECURITY_AUDIT_REPORT.md §"Permitted YAML Fields".
 // Anything not on the allow-list that could influence security posture is rejected.
+//
+// Forbidden fields enforced by this validator:
+//   - metadata.uid / metadata.resourceVersion / metadata.creationTimestamp
+//     (server-managed; must not be supplied by clients)
+//   - spec.selector                                  (immutable; selector pairing)
+//   - spec.template.metadata.labels                  (selector pairing; must remain stable)
+//   - spec.template.spec.securityContext             (pod-level securityContext)
+//   - spec.template.spec.imagePullSecrets            (use cluster-level pull secrets)
+//   - spec.template.spec.volumes[].secret            (secret material exposure)
+//   - spec.template.spec.containers[].command / args (must be baked into the image)
+//   - spec.template.spec.containers[].securityContext (container-level securityContext)
+//   - spec.template.spec.containers[].env[].valueFrom (configmap or secret refs;
+//     only literal env[].value is permitted)
+//   - spec.template.spec.containers[].envFrom[].secretRef
+//   - spec.template.spec.containers[].envFrom[].configMapRef
+//   - status                                         (server-managed)
+//
+// hostPath volumes are PERMITTED.
 func validateWorkloadFields(obj *unstructured.Unstructured) string {
 	kind := obj.GetKind()
 	if kind != "Deployment" && kind != "StatefulSet" && kind != "DaemonSet" {
 		return ""
+	}
+
+	// --- Top-level metadata: block server-managed fields ---
+	if meta, ok := obj.Object["metadata"].(map[string]interface{}); ok {
+		for _, f := range []string{"uid", "resourceVersion", "creationTimestamp"} {
+			if v, has := meta[f]; has && v != nil && v != "" {
+				return fmt.Sprintf("%s: metadata.%s is server-managed and must not be set by clients", kind, f)
+			}
+		}
 	}
 
 	spec := obj.Object["spec"]
@@ -503,9 +530,14 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 		return ""
 	}
 
-	// --- Top-level spec: block selector mutation (immutable, security boundary) ---
+	// --- spec.selector: immutable on Deployment/StatefulSet/DaemonSet ---
 	if _, has := specMap["selector"]; has {
 		return fmt.Sprintf("%s: spec.selector is immutable and must not be included in updates", kind)
+	}
+
+	// --- spec.template.metadata.labels: pairs with selector, must remain stable ---
+	if tplLabels, _, _ := unstructured.NestedMap(obj.Object, "spec", "template", "metadata", "labels"); len(tplLabels) > 0 {
+		return fmt.Sprintf("%s: spec.template.metadata.labels is forbidden (selector-pairing; must remain stable)", kind)
 	}
 
 	// --- spec.template.spec checks ---
@@ -521,7 +553,7 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 		return fmt.Sprintf("%s: spec.template.spec.imagePullSecrets is forbidden (use cluster-level pull secrets)", kind)
 	}
 
-	// Block volumes with hostPath or secret types
+	// Block volumes that expose Secret material (hostPath is now permitted).
 	volumes, _, _ := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "volumes")
 	for _, v := range volumes {
 		volMap, ok := v.(map[string]interface{})
@@ -529,15 +561,12 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 			continue
 		}
 		volName, _ := volMap["name"].(string)
-		if _, has := volMap["hostPath"]; has {
-			return fmt.Sprintf("%s: volume %q uses hostPath which is forbidden (security hardening)", kind, volName)
-		}
 		if _, has := volMap["secret"]; has {
 			return fmt.Sprintf("%s: volume %q mounts a Secret which is forbidden (security hardening)", kind, volName)
 		}
 	}
 
-	// --- Per-container checks ---
+	// --- Per-container checks (apply to both containers and initContainers) ---
 	containers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "containers")
 	initContainers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "initContainers")
 	allContainers := append(containers, initContainers...)
@@ -559,7 +588,8 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 			return fmt.Sprintf("%s: container %q sets securityContext which is forbidden (security hardening)", kind, cName)
 		}
 
-		// Block env entries that reference secrets (secretKeyRef / secretRef)
+		// env[].valueFrom: block ANY valueFrom (configmap or secret refs).
+		// Only literal env[].value is permitted for non-sensitive config.
 		if envList, ok := cMap["env"].([]interface{}); ok {
 			for _, e := range envList {
 				envEntry, ok := e.(map[string]interface{})
@@ -567,13 +597,14 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 					continue
 				}
 				envName, _ := envEntry["name"].(string)
-				if vf, ok := envEntry["valueFrom"].(map[string]interface{}); ok {
-					if _, hasSecretRef := vf["secretKeyRef"]; hasSecretRef {
-						return fmt.Sprintf("%s: container %q env %q uses secretKeyRef which is forbidden", kind, cName, envName)
-					}
+				if _, has := envEntry["valueFrom"]; has {
+					return fmt.Sprintf("%s: container %q env %q uses valueFrom which is forbidden (only literal env[].value is permitted)", kind, cName, envName)
 				}
 			}
 		}
+
+		// envFrom: block both Secret and ConfigMap refs.
+		// Use explicit env[].value entries to declare each variable individually.
 		if envFromList, ok := cMap["envFrom"].([]interface{}); ok {
 			for _, ef := range envFromList {
 				efMap, ok := ef.(map[string]interface{})
@@ -583,30 +614,14 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 				if _, has := efMap["secretRef"]; has {
 					return fmt.Sprintf("%s: container %q uses envFrom secretRef which is forbidden", kind, cName)
 				}
-			}
-		}
-
-		// Block volumeMounts that mount paths that look like secret volumes
-		// (fine-grained: blocked at the volume declaration level above, but defence-in-depth)
-		if vmList, ok := cMap["volumeMounts"].([]interface{}); ok {
-			for _, vm := range vmList {
-				vmMap, ok := vm.(map[string]interface{})
-				if !ok {
-					continue
-				}
-				mountPath, _ := vmMap["mountPath"].(string)
-				// Block mounts to sensitive host paths
-				sensitiveHostPaths := []string{"/etc", "/proc", "/sys", "/var/run", "/run", "/root", "/home"}
-				for _, p := range sensitiveHostPaths {
-					if strings.HasPrefix(mountPath, p) {
-						return fmt.Sprintf("%s: container %q mounts a sensitive host path %q which is forbidden", kind, cName, mountPath)
-					}
+				if _, has := efMap["configMapRef"]; has {
+					return fmt.Sprintf("%s: container %q uses envFrom configMapRef which is forbidden (use explicit env[].value entries instead)", kind, cName)
 				}
 			}
 		}
 	}
 
-	// --- Block status mutations (status is server-managed) ---
+	// --- status is server-managed ---
 	if _, has := obj.Object["status"]; has {
 		return fmt.Sprintf("%s: status field must not be included in apply requests (server-managed)", kind)
 	}
