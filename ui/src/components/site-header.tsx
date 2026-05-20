@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/auth-context'
-import { Settings } from 'lucide-react'
+import { Plus, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 
+import { CreateResourceDialog } from './create-resource-dialog'
 import { DynamicBreadcrumb } from './dynamic-breadcrumb'
 import { FavoritesQuickAccess } from './favorites-quick-access'
 
@@ -24,9 +25,19 @@ export function SiteHeader() {
   const isMobile = useIsMobile()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
 
-  // Ctrl+J shortcut removed — workload creation via dashboard is disabled (security hardening)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+        e.preventDefault()
+        setCreateDialogOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   return (
     <>
@@ -51,8 +62,16 @@ export function SiteHeader() {
             {/* Live cluster event drawer */}
             <LiveEventDrawer />
 
-            {/* Plus / create button removed — workload creation via dashboard is disabled (security hardening) */}
-
+            <div className="relative group">
+              <Plus
+                className="h-5 w-5 cursor-pointer text-muted-foreground hover:text-foreground"
+                onClick={() => setCreateDialogOpen(true)}
+                aria-label="Create new resource"
+              />
+              <kbd className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 hidden group-hover:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 transition-all">
+                <span className="text-xs">^</span>J
+              </kbd>
+            </div>
             {!isMobile && (
               <>
                 <Separator
@@ -79,7 +98,10 @@ export function SiteHeader() {
         </div>
       </header>
 
-      {/* CreateResourceDialog removed — workload creation via dashboard is disabled (security hardening) */}
+      <CreateResourceDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
 
       {/* Keyboard shortcuts dialog — global */}
       <KeyboardShortcutsDialog />

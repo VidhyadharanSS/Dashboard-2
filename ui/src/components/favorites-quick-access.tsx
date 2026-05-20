@@ -20,7 +20,7 @@ import {
     IconLayersIntersect,
     IconNetwork,
     IconSettings,
-    // IconLock removed \u2014 secrets widget removed (security hardening)
+    IconLock,
     IconCloud,
     IconServer,
     IconChecklist,
@@ -52,7 +52,7 @@ const RESOURCE_ICONS: Record<string, React.ElementType> = {
     daemonsets: IconRepeat,
     services: IconNetwork,
     configmaps: IconSettings,
-    // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    secrets: IconLock,
     ingresses: IconCloud,
     nodes: IconServer,
     jobs: IconChecklist,
@@ -67,7 +67,7 @@ const RESOURCE_COLORS: Record<string, string> = {
     daemonsets: 'text-purple-500',
     services: 'text-emerald-500',
     configmaps: 'text-yellow-500',
-    // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    secrets: 'text-rose-500',
     ingresses: 'text-teal-500',
     nodes: 'text-blue-600',
     jobs: 'text-amber-500',

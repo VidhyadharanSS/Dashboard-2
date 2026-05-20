@@ -285,7 +285,7 @@ export function isStandardK8sResource(kind: string): boolean {
     'cronjobs',
     'services',
     'configmaps',
-    // 'secrets' removed — secret data must not be accessible via the dashboard (security hardening)
+    'secrets',
     'persistentvolumeclaims',
     'persistentvolumes',
     'ingresses',

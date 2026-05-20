@@ -113,9 +113,9 @@ func getResourceOrder(resourceType string) int {
 		"statefulsets": 4,
 		"configmaps":   5,
 		"services":     6,
-		// "secrets" removed — secrets not searchable (security hardening)
-		"ingresses":    7,
-		"namespaces":   8,
+		"secrets":      7,
+		"ingresses":    8,
+		"namespaces":   9,
 	}
 	if order, exists := resourceOrder[resourceType]; exists {
 		return order

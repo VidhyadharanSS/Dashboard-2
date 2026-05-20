@@ -56,7 +56,7 @@ const ALL_RESOURCE_DEFS: ResourceDef[] = [
     { type: 'jobs', label: 'Jobs', Icon: IconPlayerPlay },
     { type: 'services', label: 'Services', Icon: IconNetwork },
     { type: 'configmaps', label: 'ConfigMaps', Icon: IconMap },
-    // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    { type: 'secrets', label: 'Secrets', Icon: IconLock },
     { type: 'ingresses', label: 'Ingresses', Icon: IconRouter },
     { type: 'namespaces', label: 'Namespaces', Icon: IconBoxMultiple, clusterScope: true },
     { type: 'nodes', label: 'Nodes', Icon: IconServer2, clusterScope: true },
@@ -69,8 +69,7 @@ const ALL_RESOURCE_DEFS: ResourceDef[] = [
 ]
 
 const DEFAULT_RESOURCE_TYPES: ResourceType[] = [
-    'pods', 'deployments', 'statefulsets', 'daemonsets', 'jobs', 'services', 'configmaps',
-    // 'secrets' removed — secret data must not be accessible via the dashboard (security hardening)
+    'pods', 'deployments', 'statefulsets', 'daemonsets', 'jobs', 'services', 'configmaps', 'secrets',
 ]
 
 // ---------------------------------------------------------------------------
@@ -107,7 +106,7 @@ const KUBECTL_RESOURCE_MAP: Record<string, ResourceType> = {
     job: 'jobs', jobs: 'jobs',
     cj: 'cronjobs', cronjob: 'cronjobs', cronjobs: 'cronjobs',
     cm: 'configmaps', configmap: 'configmaps', configmaps: 'configmaps',
-    // secret/secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    secret: 'secrets', secrets: 'secrets',
     ing: 'ingresses', ingress: 'ingresses', ingresses: 'ingresses',
     no: 'nodes', node: 'nodes', nodes: 'nodes',
     ns: 'namespaces', namespace: 'namespaces', namespaces: 'namespaces',
@@ -408,7 +407,7 @@ export function ExpressionSearchPage() {
         setAllItems(results)
         setLoadedAt(new Date())
         setIsLoading(false)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTypesKey, selectedNamespace, canAccess, stableAuthorizedDefs])
 
     useEffect(() => {
@@ -728,10 +727,11 @@ export function ExpressionSearchPage() {
 
                 {/* kubectl mode indicator */}
                 {kubectlParsed.isKubectl && (
-                    <div className={`flex items-center gap-2 text-xs rounded-md px-3 py-2 ${kubectlParsed.error
+                    <div className={`flex items-center gap-2 text-xs rounded-md px-3 py-2 ${
+                        kubectlParsed.error
                             ? 'text-destructive bg-destructive/5 border border-destructive/20'
                             : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 border border-emerald-500/20'
-                        }`}>
+                    }`}>
                         <IconBolt className="h-3.5 w-3.5 shrink-0" />
                         {kubectlParsed.error ? (
                             <span className="font-mono">{kubectlParsed.error}</span>

@@ -46,7 +46,7 @@ const COMPARABLE_TYPES: { value: ResourceType; label: string }[] = [
     { value: 'daemonsets', label: 'DaemonSets' },
     { value: 'services', label: 'Services' },
     { value: 'configmaps', label: 'ConfigMaps' },
-    // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    { value: 'secrets', label: 'Secrets' },
     { value: 'pods', label: 'Pods' },
     { value: 'ingresses', label: 'Ingresses' },
     { value: 'cronjobs', label: 'CronJobs' },
@@ -104,11 +104,12 @@ function DiffView({ left, right }: { left: string; right: string }) {
                         {lines.map((line, i) => (
                             <div
                                 key={`l-${i}`}
-                                className={`flex min-h-[20px] ${line.type === 'changed' ? 'bg-amber-500/10' :
-                                        line.type === 'removed' ? 'bg-red-500/10' :
-                                            line.type === 'added' ? 'bg-muted/20' :
-                                                ''
-                                    }`}
+                                className={`flex min-h-[20px] ${
+                                    line.type === 'changed' ? 'bg-amber-500/10' :
+                                    line.type === 'removed' ? 'bg-red-500/10' :
+                                    line.type === 'added' ? 'bg-muted/20' :
+                                    ''
+                                }`}
                             >
                                 <span className="w-8 text-right pr-2 text-muted-foreground/50 select-none shrink-0 border-r border-border/30">
                                     {i + 1}
@@ -124,11 +125,12 @@ function DiffView({ left, right }: { left: string; right: string }) {
                         {lines.map((line, i) => (
                             <div
                                 key={`r-${i}`}
-                                className={`flex min-h-[20px] ${line.type === 'changed' ? 'bg-amber-500/10' :
-                                        line.type === 'added' ? 'bg-emerald-500/10' :
-                                            line.type === 'removed' ? 'bg-muted/20' :
-                                                ''
-                                    }`}
+                                className={`flex min-h-[20px] ${
+                                    line.type === 'changed' ? 'bg-amber-500/10' :
+                                    line.type === 'added' ? 'bg-emerald-500/10' :
+                                    line.type === 'removed' ? 'bg-muted/20' :
+                                    ''
+                                }`}
                             >
                                 <span className="w-8 text-right pr-2 text-muted-foreground/50 select-none shrink-0 border-r border-border/30">
                                     {i + 1}

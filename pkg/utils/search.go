@@ -24,7 +24,8 @@ func GuessSearchResources(query string) (string, string) {
 		guessSearchResources = "persistentvolumeclaims"
 	case "cm", "configmap", "configmaps":
 		guessSearchResources = "configmaps"
-	// "secret"/"secrets" removed — secrets not searchable (security hardening)
+	case "secret", "secrets":
+		guessSearchResources = "secrets"
 	case "dep", "deploy", "deployment", "deployments":
 		guessSearchResources = "deployments"
 	case "ds", "daemonset", "daemonsets":

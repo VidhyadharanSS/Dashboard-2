@@ -190,7 +190,13 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 			apiKeyAPI.POST("/", handlers.CreateAPIKey)
 			apiKeyAPI.DELETE("/:id", handlers.DeleteAPIKey)
 		}
-		// template CRUD routes removed — workload creation via templates is disabled (security hardening)
+
+		templateAPI := adminAPI.Group("/templates")
+		{
+			templateAPI.POST("/", handlers.CreateTemplate)
+			templateAPI.PUT("/:id", handlers.UpdateTemplate)
+			templateAPI.DELETE("/:id", handlers.DeleteTemplate)
+		}
 	}
 
 	// API routes group (protected)
@@ -234,7 +240,7 @@ func setupAPIRouter(r *gin.RouterGroup, cm *cluster.ClusterManager) {
 		api.GET("/audit-logs/resource/:resourceType/:namespace/:name", handlers.GetAuditResourceActivity)
 
 		api.GET("/image/tags", handlers.GetImageTags)
-		// templates list endpoint removed — workload creation via templates is disabled
+		api.GET("/templates", handlers.ListTemplates)
 
 		proxyHandler := handlers.NewProxyHandler()
 		proxyHandler.RegisterRoutes(api)
@@ -305,7 +311,7 @@ func main() {
 	r.Use(middleware.SecurityHeaders())
 	model.InitDB()
 	rbac.InitRBAC()
-	// handlers.InitTemplates() removed — template seeding disabled (security hardening)
+	handlers.InitTemplates()
 	internal.LoadConfigFromEnv()
 
 	cm, err := cluster.NewClusterManager()

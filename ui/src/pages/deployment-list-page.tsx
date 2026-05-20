@@ -28,7 +28,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DeploymentStatusIcon } from '@/components/deployment-status-icon'
-// DeploymentCreateDialog import removed — workload creation via dashboard is disabled (security hardening)
+import { DeploymentCreateDialog } from '@/components/editors/deployment-create-dialog'
 import { DescribeDialog } from '@/components/describe-dialog'
 import { ResourceTable } from '@/components/resource-table'
 import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
@@ -56,7 +56,7 @@ function fallbackCopy(text: string) {
 
 export function DeploymentListPage() {
   const { t } = useTranslation()
-  // isCreateDialogOpen removed — workload creation via dashboard is disabled (security hardening)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedLabels, setSelectedLabels] = useSessionState<string>('deployments-selectedLabels', '')
   const [querySelector, setQuerySelector] = useSessionState<string>('deployments-querySelector', '')
   const [rollbackTarget, setRollbackTarget] = useState<{ ns: string; name: string } | null>(null)
@@ -230,7 +230,12 @@ export function DeploymentListPage() {
     []
   )
 
-  // handleCreateClick and handleCreateSuccess removed — workload creation via dashboard is disabled (security hardening)
+  // handleCreateClick / handleCreateSuccess
+  const handleCreateClick = useCallback(() => setIsCreateDialogOpen(true), [])
+  const handleCreateSuccess = useCallback(() => {
+    setIsCreateDialogOpen(false)
+    toast.success(t('deployments.createSuccess', { defaultValue: 'Deployment created successfully' }))
+  }, [t])
 
   const handleBatchRestart = useCallback(async (rows: Deployment[]) => {
     const promises = rows.map((row) => {
@@ -285,14 +290,20 @@ export function DeploymentListPage() {
         resourceName="Deployments"
         columns={columns}
         searchQueryFilter={deploymentSearchFilter}
-        showCreateButton={false}
+        showCreateButton={true}
+        onCreateClick={handleCreateClick}
         onBatchRestart={handleBatchRestart}
         extraToolbars={[filterToolbar]}
         labelSelector={effectiveLabelSelector}
         enableMultiNamespace
       />
 
-      {/* DeploymentCreateDialog removed — workload creation via dashboard is disabled (security hardening) */}
+      {/* DeploymentCreateDialog */}
+      <DeploymentCreateDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={handleCreateSuccess}
+      />
 
       {/* Rollback Confirmation Dialog */}
       <Dialog open={!!rollbackTarget} onOpenChange={(open) => { if (!open) setRollbackTarget(null) }}>

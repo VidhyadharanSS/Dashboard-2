@@ -10,6 +10,7 @@ import { DeploymentDetail } from './deployment-detail'
 import { JobDetail } from './job-detail'
 import { NodeDetail } from './node-detail'
 import { PodDetail } from './pod-detail'
+import { SecretDetail } from './secret-detail'
 import { ServiceDetail } from './service-detail'
 import { SimpleResourceDetail } from './simple-resource-detail'
 import { StatefulSetDetail } from './statefulset-detail'
@@ -66,7 +67,8 @@ export function ResourceDetail() {
       return <JobDetail namespace={namespace!} name={name} />
     case 'cronjobs':
       return <CronJobDetail namespace={namespace!} name={name} />
-    // case 'secrets' removed — secret data must not be accessible via the dashboard (security hardening)
+    case 'secrets':
+      return <SecretDetail namespace={namespace!} name={name} />
     case 'nodes':
       return <NodeDetail name={name} />
     case 'services':
