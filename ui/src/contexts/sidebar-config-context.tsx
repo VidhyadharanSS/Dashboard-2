@@ -202,7 +202,64 @@ const defaultMenus: DefaultMenus = {
   ],
 }
 
-const CURRENT_CONFIG_VERSION = 1
+const CURRENT_CONFIG_VERSION = 2
+
+// URLs that must never appear in the sidebar regardless of any user's
+// persisted customisation. Listed here as a hard server-of-record because
+// `user.sidebar_preference` is stored in the backend DB and is otherwise
+// re-applied verbatim on login. This guarantees that once a route is
+// retired for security reasons (e.g. /secrets) it cannot resurrect itself
+// from an older saved preference.
+const FORBIDDEN_SIDEBAR_URLS = new Set<string>(['/secrets'])
+
+function sanitizeSidebarConfig(cfg: SidebarConfig): {
+  config: SidebarConfig
+  changed: boolean
+} {
+  let changed = false
+  const cleanedGroups: SidebarGroup[] = (cfg.groups ?? []).map((g) => {
+    const filtered = (g.items ?? []).filter((it) => {
+      if (FORBIDDEN_SIDEBAR_URLS.has(it.url)) {
+        changed = true
+        return false
+      }
+      return true
+    })
+    if (filtered.length !== (g.items?.length ?? 0)) {
+      return { ...g, items: filtered }
+    }
+    return g
+  })
+  // hiddenItems / pinnedItems hold item ids derived from urls; strip any
+  // that reference forbidden urls.
+  const isForbiddenId = (id: string) =>
+    Array.from(FORBIDDEN_SIDEBAR_URLS).some((u) =>
+      id.includes(u.replace(/[^a-zA-Z0-9]/g, '-'))
+    )
+  const cleanedHidden = (cfg.hiddenItems ?? []).filter((id) => {
+    if (isForbiddenId(id)) {
+      changed = true
+      return false
+    }
+    return true
+  })
+  const cleanedPinned = (cfg.pinnedItems ?? []).filter((id) => {
+    if (isForbiddenId(id)) {
+      changed = true
+      return false
+    }
+    return true
+  })
+  return {
+    config: {
+      ...cfg,
+      groups: cleanedGroups,
+      hiddenItems: cleanedHidden,
+      pinnedItems: cleanedPinned,
+    },
+    changed,
+  }
+}
 
 const defaultConfigs = (): SidebarConfig => {
   const groups: SidebarGroup[] = []
@@ -253,12 +310,38 @@ export const SidebarConfigProvider: React.FC<SidebarConfigProviderProps> = ({
 
   const loadConfig = useCallback(async () => {
     if (user && user.sidebar_preference && user.sidebar_preference != '') {
-      const userConfig = JSON.parse(user.sidebar_preference)
-      setConfig(userConfig)
+      const userConfig = JSON.parse(user.sidebar_preference) as SidebarConfig
+      // Strip any items referencing routes that have been retired for
+      // security reasons (e.g. /secrets). This runs on every load so a
+      // pre-existing preference cannot resurrect a forbidden surface.
+      const { config: cleaned, changed } = sanitizeSidebarConfig(userConfig)
+      setConfig(cleaned)
 
       const currentVersion = userConfig.version || 0
-      if (currentVersion < CURRENT_CONFIG_VERSION) {
+      if (currentVersion < CURRENT_CONFIG_VERSION || changed) {
         setHasUpdate(true)
+      }
+      // If sanitisation removed forbidden URLs, persist the cleaned config
+      // back to the server so the dirty preference cannot resurface on the
+      // next login (defence-in-depth in case the user never opens the
+      // sidebar editor to dismiss the update banner).
+      if (changed) {
+        try {
+          await fetch(withSubPath('/api/users/sidebar_preference'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              sidebar_preference: JSON.stringify({
+                ...cleaned,
+                lastUpdated: Date.now(),
+                version: CURRENT_CONFIG_VERSION,
+              }),
+            }),
+          })
+        } catch (err) {
+          console.error('Failed to persist sanitised sidebar config:', err)
+        }
       }
       return
     }

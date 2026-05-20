@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Editor from '@monaco-editor/react'
-import { IconCheck, IconEdit, IconLoader, IconX } from '@tabler/icons-react'
+import { IconCheck, IconEdit, IconLoader, IconLock, IconX } from '@tabler/icons-react'
 import { formatHex } from 'culori'
 import * as yaml from 'js-yaml'
 import { editor as monacoEditor } from 'monaco-editor'
@@ -8,6 +8,11 @@ import { editor as monacoEditor } from 'monaco-editor'
 import { ResourceType, ResourceTypeMap } from '@/types/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  diffForbiddenInYaml,
+  isWorkloadKind,
+  LOCKED_WORKLOAD_FIELD_LABELS,
+} from '@/lib/workload-policy'
 
 import { useAppearance } from './appearance-provider'
 import { YamlDiffViewer } from './yaml-diff-viewer'
@@ -54,10 +59,34 @@ export function YamlEditor<T extends ResourceType>({
   const [editorValue, setEditorValue] = useState(value)
   const [isValidYaml, setIsValidYaml] = useState(true)
   const [validationError, setValidationError] = useState<string>('')
+  const [policyViolations, setPolicyViolations] = useState<string[]>([])
   const { actualTheme, colorTheme } = useAppearance()
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const [isDiffVisible, setIsDiffVisible] = useState(false)
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // The original YAML at first render is the security baseline. Forbidden
+  // fields are diffed against this baseline on Save; any change is rejected
+  // client-side regardless of caller role. Mirrors the server-side validator
+  // in pkg/handlers/resource_apply_handler.go::validateWorkloadFields.
+  const baselineYamlRef = useRef<string>(value)
+  useEffect(() => {
+    // Refresh baseline only when the editor is not in edit mode AND the value
+    // changed (background poll). Once the user starts editing, the baseline
+    // is frozen for the duration of the edit session.
+    if (!isEditing) {
+      baselineYamlRef.current = value
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  const isWorkloadDoc = useMemo(() => {
+    try {
+      return isWorkloadKind(yaml.load(editorValue))
+    } catch {
+      return false
+    }
+  }, [editorValue])
 
   const getCardBackgroundColor = () => {
     const card = getComputedStyle(document.documentElement)
@@ -114,6 +143,9 @@ export function YamlEditor<T extends ResourceType>({
   const handleEditorChange = (value: string | undefined) => {
     const newValue = value || ''
     setEditorValue(newValue)
+    // Clear any prior policy-violation banner — the user is now editing again
+    // and should get a fresh re-check on the next Save click.
+    if (policyViolations.length > 0) setPolicyViolations([])
     onChange?.(newValue)
   }
 
@@ -128,11 +160,20 @@ export function YamlEditor<T extends ResourceType>({
   }
 
   const handleSave = () => {
-    if (isValidYaml) {
-      onSave?.(yaml.load(editorValue) as ResourceTypeMap[T])
-      if (!readOnly) {
-        setIsEditing(false)
-      }
+    if (!isValidYaml) return
+    // Enforce the workload field policy client-side. The server enforces the
+    // same policy authoritatively; this check exists so the user gets
+    // immediate feedback and we never transmit a request that mutates a
+    // protected field.
+    const violations = diffForbiddenInYaml(baselineYamlRef.current, editorValue)
+    if (violations.length > 0) {
+      setPolicyViolations(violations)
+      return
+    }
+    setPolicyViolations([])
+    onSave?.(yaml.load(editorValue) as ResourceTypeMap[T])
+    if (!readOnly) {
+      setIsEditing(false)
     }
   }
 
@@ -216,6 +257,34 @@ export function YamlEditor<T extends ResourceType>({
           {!isValidYaml && validationError && (
             <div className="px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-md">
               <p className="text-sm text-destructive">{validationError}</p>
+            </div>
+          )}
+          {isWorkloadDoc && isEditing && !effectiveReadOnly && (
+            <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs text-amber-700 dark:text-amber-300">
+              <div className="flex items-center gap-2 font-medium mb-1">
+                <IconLock className="w-3.5 h-3.5" />
+                Read-only fields (security policy — applies to all roles):
+              </div>
+              <ul className="list-disc pl-5 leading-relaxed">
+                {LOCKED_WORKLOAD_FIELD_LABELS.map((p) => (
+                  <li key={p}>
+                    <code className="font-mono">{p}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {policyViolations.length > 0 && (
+            <div className="px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-md">
+              <p className="text-sm font-medium text-destructive mb-1">
+                Save blocked: the following protected fields were modified.
+                Revert them to their original values to save.
+              </p>
+              <ul className="list-disc pl-5 text-xs text-destructive font-mono">
+                {policyViolations.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
             </div>
           )}
           <div className="overflow-hidden h-[calc(100dvh-300px)]">
