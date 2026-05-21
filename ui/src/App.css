@@ -333,4 +333,74 @@
   .dark .scrollbar-thin {
     scrollbar-color: oklch(0.6 0 0 / 0.2) transparent;
   }
+
+  /* ─── Dark-mode polish ─────────────────────────────────────────────────── */
+  /* Cards get a subtle inner top-highlight + soft outer shadow so they read
+     as elevated surfaces against the deeper background instead of looking
+     washed out / flat. */
+  .dark [data-slot="card"],
+  .dark .card {
+    background-image: linear-gradient(
+      to bottom,
+      oklch(1 0 0 / 0.022),
+      oklch(1 0 0 / 0) 40%
+    );
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 0.04) inset,
+      0 1px 3px oklch(0 0 0 / 0.35),
+      0 4px 14px -6px oklch(0 0 0 / 0.4);
+  }
+
+  /* Stronger, more readable hover state on table rows in dark mode */
+  .dark table tbody tr:hover {
+    background-color: oklch(1 0 0 / 0.035);
+  }
+
+  /* Focus ring is more visible in dark mode — accessibility win */
+  .dark *:focus-visible {
+    outline: 2px solid oklch(0.7 0.18 235 / 0.9);
+    outline-offset: 2px;
+  }
+
+  /* Inputs in dark mode: softer fill + clearer border on hover/focus */
+  .dark input,
+  .dark textarea,
+  .dark select,
+  .dark [data-slot="input"] {
+    background-color: oklch(1 0 0 / 0.03);
+  }
+  .dark input:hover,
+  .dark textarea:hover,
+  .dark select:hover {
+    background-color: oklch(1 0 0 / 0.045);
+  }
+
+  /* Sidebar nav-item active state: stronger contrast in dark mode */
+  .dark [data-active="true"],
+  .dark [aria-current="page"] {
+    background-color: oklch(0.68 0.19 235 / 0.14);
+    color: oklch(0.92 0.04 235);
+  }
+
+  /* Slight letter-spacing tightening on body text in dark mode helps
+     readability on darker surfaces (LCD anti-aliasing trade-off). */
+  .dark body {
+    letter-spacing: 0.005em;
+  }
+
+  /* Tabs: more visible active-tab indicator in dark mode */
+  .dark [role="tab"][data-state="active"] {
+    background-color: oklch(1 0 0 / 0.06);
+    color: oklch(0.985 0 0);
+    box-shadow: 0 1px 0 oklch(0.68 0.19 235 / 0.5) inset;
+  }
+
+  /* Smooth fade-in for page content — applies in both themes */
+  .animate-page-enter {
+    animation: pageEnter 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes pageEnter {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 }

@@ -448,9 +448,9 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
             value: 'overview',
             label: 'Overview',
             content: (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* ── Left Column ── */}
-                <div className="lg:col-span-2 space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                {/* ── Left Column (3/5) ── */}
+                <div className="lg:col-span-3 space-y-4">
                   {/* Status Cards Row */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                     <Card className="p-3 space-y-1">
@@ -541,80 +541,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                     </Card>
                   )}
 
-                  {/* Deployment Information */}
-                  <Card>
-                    <CardHeader className="pb-2 pt-4 px-4">
-                      <CardTitle className="text-sm font-semibold">Deployment Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4">
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                        <div>
-                          <span className="text-muted-foreground text-xs">Owner</span>
-                          <p className="font-medium">None</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Selector</span>
-                          <div className="flex flex-wrap gap-1 mt-0.5">
-                            {Object.entries(deployment.spec?.selector?.matchLabels || {}).map(([key, value]) => (
-                              <Badge key={key} variant="secondary" className="text-[10px]">
-                                {key}={value}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground text-xs">Images</span>
-                          <div className="flex flex-wrap gap-1 mt-0.5">
-                            {deployment.spec?.template?.spec?.containers?.map((c) => (
-                              <Badge key={c.name} variant="outline" className="text-[10px] font-mono">
-                                {c.image}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Strategy</span>
-                          <p className="font-medium">{deployment.spec?.strategy?.type || 'RollingUpdate'}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Revision</span>
-                          <p className="font-medium">{deployment.metadata?.annotations?.['deployment.kubernetes.io/revision'] || '-'}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Max Surge</span>
-                          <p className="font-medium">{deployment.spec?.strategy?.rollingUpdate?.maxSurge ?? '25%'}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Max Unavailable</span>
-                          <p className="font-medium">{deployment.spec?.strategy?.rollingUpdate?.maxUnavailable ?? '25%'}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Service Account</span>
-                          <p className="font-medium">{deployment.spec?.template?.spec?.serviceAccountName || 'default'}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Containers</span>
-                          <p className="font-medium">{deployment.spec?.template?.spec?.containers?.length || 0}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Volumes</span>
-                          <p className="font-medium">{deployment.spec?.template?.spec?.volumes?.length || 0}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Min Ready</span>
-                          <p className="font-medium">{deployment.spec?.minReadySeconds ?? 0}s</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Progress Deadline</span>
-                          <p className="font-medium">{deployment.spec?.progressDeadlineSeconds ?? 600}s</p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground text-xs">UID</span>
-                          <p className="font-mono text-xs text-muted-foreground">{deployment.metadata?.uid}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* Deployment Information card moved to right column for layout balance */}
 
                   {/* Init Containers */}
                   {deployment.spec?.template.spec?.initContainers?.length &&
@@ -674,17 +601,101 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                     </CardContent>
                   </Card>
 
+                  {/* Resource Topology Link — moved to right column */}
+
+                  {/* Conditions — moved to right column */}
+                </div>
+
+                {/* ── Right Column (2/5) ── */}
+                <div className="lg:col-span-2 space-y-4">
+                  <SidebarEvents resource="deployments" name={name} namespace={namespace} />
+                  <SidebarRelatedResources resource="deployments" name={name} namespace={namespace} />
+
+                  {/* Deployment Information */}
+                  <Card>
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <CardTitle className="text-sm font-semibold">Deployment Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground text-xs">Owner</span>
+                          <p className="font-medium">None</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Strategy</span>
+                          <p className="font-medium">{deployment.spec?.strategy?.type || 'RollingUpdate'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Revision</span>
+                          <p className="font-medium">{deployment.metadata?.annotations?.['deployment.kubernetes.io/revision'] || '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Service Account</span>
+                          <p className="font-medium truncate">{deployment.spec?.template?.spec?.serviceAccountName || 'default'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Max Surge</span>
+                          <p className="font-medium">{deployment.spec?.strategy?.rollingUpdate?.maxSurge ?? '25%'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Max Unavailable</span>
+                          <p className="font-medium">{deployment.spec?.strategy?.rollingUpdate?.maxUnavailable ?? '25%'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Containers</span>
+                          <p className="font-medium">{deployment.spec?.template?.spec?.containers?.length || 0}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Volumes</span>
+                          <p className="font-medium">{deployment.spec?.template?.spec?.volumes?.length || 0}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Min Ready</span>
+                          <p className="font-medium">{deployment.spec?.minReadySeconds ?? 0}s</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">Progress Deadline</span>
+                          <p className="font-medium">{deployment.spec?.progressDeadlineSeconds ?? 600}s</p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground text-xs">Selector</span>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {Object.entries(deployment.spec?.selector?.matchLabels || {}).map(([key, value]) => (
+                              <Badge key={key} variant="secondary" className="text-[10px]">
+                                {key}={value}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground text-xs">Images</span>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {deployment.spec?.template?.spec?.containers?.map((c) => (
+                              <Badge key={c.name} variant="outline" className="text-[10px] font-mono break-all">
+                                {c.image}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground text-xs">UID</span>
+                          <p className="font-mono text-[10px] text-muted-foreground break-all">{deployment.metadata?.uid}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <SidebarLabels labels={deployment.metadata?.labels || {}} />
+
                   {/* Resource Topology Link */}
                   <Card className="overflow-hidden">
                     <CardContent className="py-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm">
-                        <IconServer2 className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">Resource Topology</span>
-                        <span className="text-xs text-muted-foreground">
-                          View related resources and connections
-                        </span>
+                      <div className="flex items-center gap-2 text-sm min-w-0">
+                        <IconServer2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="font-medium truncate">Resource Topology</span>
                       </div>
-                      <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs"
+                      <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs shrink-0"
                         onClick={() => {
                           setSearchParams((prev) => {
                             prev.set('tab', 'Related')
@@ -692,11 +703,13 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                           }, { replace: true })
                         }}
                       >
-                        View Topology
+                        View
                         <IconExternalLink className="w-3 h-3" />
                       </Button>
                     </CardContent>
                   </Card>
+
+                  <SidebarAnnotations annotations={deployment.metadata?.annotations || {}} />
 
                   {/* Conditions */}
                   {status?.conditions && (
@@ -730,7 +743,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <Badge variant={isTrue ? 'default' : isFailing ? 'destructive' : 'secondary'} className="text-[10px]">
                                       {condition.type}
                                     </Badge>
@@ -742,10 +755,10 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                                   {condition.message && (
                                     <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{condition.message}</p>
                                   )}
+                                  <span className="text-[10px] text-muted-foreground block mt-1">
+                                    {formatDate(condition.lastTransitionTime || condition.lastUpdateTime || '')}
+                                  </span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0 mt-0.5">
-                                  {formatDate(condition.lastTransitionTime || condition.lastUpdateTime || '')}
-                                </span>
                               </div>
                             )
                           })}
@@ -753,14 +766,6 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                       </CardContent>
                     </Card>
                   )}
-                </div>
-
-                {/* ── Right Sidebar ── */}
-                <div className="space-y-4">
-                  <SidebarEvents resource="deployments" name={name} namespace={namespace} />
-                  <SidebarRelatedResources resource="deployments" name={name} namespace={namespace} />
-                  <SidebarLabels labels={deployment.metadata?.labels || {}} />
-                  <SidebarAnnotations annotations={deployment.metadata?.annotations || {}} />
                 </div>
               </div>
             ),

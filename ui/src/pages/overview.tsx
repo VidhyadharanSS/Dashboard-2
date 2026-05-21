@@ -12,12 +12,8 @@ import { RecentEvents } from '@/components/recent-events'
 import { ResourceCharts } from '@/components/resources-charts'
 import { SettingsHint } from '@/components/settings-hint'
 import { LiveLogWidget } from '@/components/dashboard/live-log-widget'
-import { QuickActionsWidget } from '@/components/dashboard/quick-actions-widget'
-import { NamespaceHealthWidget } from '@/components/dashboard/namespace-health-widget'
 import { WorkloadDistributionWidget } from '@/components/dashboard/workload-distribution-widget'
 import { ResourceTopConsumers } from '@/components/dashboard/resource-top-consumers'
-import { RecentDeploymentsWidget } from '@/components/dashboard/recent-deployments-widget'
-import { DeploymentRollbackWidget } from '@/components/dashboard/deployment-rollback-widget'
 
 export function Overview() {
   const { t } = useTranslation()
@@ -88,17 +84,9 @@ export function Overview() {
         {canAccess('pods', 'list') && <ResourceTopConsumers />}
       </div>
 
-      {/* ─── Row 3: Namespace Health + Recent Deployments ─── */}
-      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
-        {canAccess('pods', 'list') && <NamespaceHealthWidget />}
-        {canAccess('deployments', 'list') && <RecentDeploymentsWidget />}
-      </div>
-
-      {/* ─── Row 4: Rollback + Quick Actions ─── */}
-      <div className="grid grid-cols-1 gap-4 @5xl/main:grid-cols-2">
-        {canAccess('deployments', 'update') && <DeploymentRollbackWidget />}
-        <QuickActionsWidget />
-      </div>
+      {/* Row 3 (namespace health + recent deployments) and Row 4 (rollback +
+          quick actions) were removed — they duplicated information already
+          surfaced on dedicated pages and cluttered the home overview. */}
 
       {/* ─── Row 5: Live System Logs ─── */}
       {canAccess('nodes', 'get') && <LiveLogWidget />}
