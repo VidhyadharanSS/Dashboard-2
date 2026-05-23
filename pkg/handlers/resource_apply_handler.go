@@ -506,9 +506,18 @@ func resolveRESTMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) 
 //     only literal env[].value is permitted)
 //   - spec.template.spec.containers[].envFrom[].secretRef
 //   - spec.template.spec.containers[].envFrom[].configMapRef
+//   - spec.template.spec.containers[].volumeMounts[].subPath / subPathExpr
+//     (must not be settable; would let a user surface a different file from
+//     a permitted volume into a sensitive container path)
+//   - spec.template.spec.containers[].volumeMounts[].mountPropagation
+//     (Bidirectional / HostToContainer must not be selectable via Apply)
+//   - spec.template.spec.containers[].volumeMounts[].mountPath under any
+//     sensitive container path (see sensitiveMountPathPrefixes below)
 //   - status                                         (server-managed)
 //
-// hostPath volumes are PERMITTED.
+// hostPath volumes are PERMITTED. volumeMounts[].readOnly may be set to true
+// but cannot be flipped from true to false via this validator alone (the
+// editor-side diff is the second guard for that case).
 func validateWorkloadFields(obj *unstructured.Unstructured) string {
 	kind := obj.GetKind()
 	if kind != "Deployment" && kind != "StatefulSet" && kind != "DaemonSet" {
@@ -619,6 +628,31 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 				}
 			}
 		}
+
+		// volumeMounts[]: lock down the security-sensitive sub-fields.
+		if mountList, ok := cMap["volumeMounts"].([]interface{}); ok {
+			for _, vm := range mountList {
+				vmMap, ok := vm.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				vmName, _ := vmMap["name"].(string)
+				if _, has := vmMap["subPath"]; has {
+					return fmt.Sprintf("%s: container %q volumeMount %q sets subPath which is forbidden (re-binding a sub-file into the container is not allowed via Apply)", kind, cName, vmName)
+				}
+				if _, has := vmMap["subPathExpr"]; has {
+					return fmt.Sprintf("%s: container %q volumeMount %q sets subPathExpr which is forbidden", kind, cName, vmName)
+				}
+				if _, has := vmMap["mountPropagation"]; has {
+					return fmt.Sprintf("%s: container %q volumeMount %q sets mountPropagation which is forbidden (Bidirectional/HostToContainer must not be selectable via Apply)", kind, cName, vmName)
+				}
+				if mp, _ := vmMap["mountPath"].(string); mp != "" {
+					if reason := checkSensitiveMountPath(mp); reason != "" {
+						return fmt.Sprintf("%s: container %q volumeMount %q mountPath %q is forbidden (%s)", kind, cName, vmName, mp, reason)
+					}
+				}
+			}
+		}
 	}
 
 	// --- status is server-managed ---
@@ -626,5 +660,57 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 		return fmt.Sprintf("%s: status field must not be included in apply requests (server-managed)", kind)
 	}
 
+	return ""
+}
+
+// sensitiveMountPathPrefixes lists container paths that must not be a
+// volumeMount target. A volumeMount under any of these paths could overlay
+// system binaries, configuration, or runtime sockets and shadow them with
+// content controlled by the requester.
+//
+// Allowed application roots (e.g. /home/sas/..., /home/zoho/..., /dev/shm,
+// /usr/tmp/...) are permitted; only the explicitly sensitive prefixes below
+// are rejected.
+var sensitiveMountPathPrefixes = []string{
+	"/etc",
+	"/bin",
+	"/sbin",
+	"/usr/bin",
+	"/usr/sbin",
+	"/usr/local/bin",
+	"/usr/local/sbin",
+	"/lib",
+	"/lib64",
+	"/usr/lib",
+	"/usr/lib64",
+	"/boot",
+	"/root",
+	"/proc",
+	"/sys",
+	"/var/run",
+	"/var/lib/kubelet",
+	"/var/lib/docker",
+	"/var/lib/containerd",
+}
+
+// checkSensitiveMountPath returns a non-empty reason if mp falls under any
+// sensitive container path. It treats "/dev" as forbidden except for the
+// explicit "/dev/shm" carve-out (legitimately used by application workloads).
+func checkSensitiveMountPath(mp string) string {
+	if mp == "" {
+		return ""
+	}
+	if mp == "/" {
+		return "mountPath \"/\" overlays the container root filesystem"
+	}
+	// /dev with a /dev/shm carve-out
+	if mp == "/dev" || (strings.HasPrefix(mp, "/dev/") && mp != "/dev/shm" && !strings.HasPrefix(mp, "/dev/shm/")) {
+		return "mountPath under /dev is restricted; only /dev/shm is permitted"
+	}
+	for _, p := range sensitiveMountPathPrefixes {
+		if mp == p || strings.HasPrefix(mp, p+"/") {
+			return fmt.Sprintf("mountPath under %s is a sensitive container path", p)
+		}
+	}
 	return ""
 }

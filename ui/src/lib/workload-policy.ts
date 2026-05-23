@@ -157,10 +157,58 @@ export function diffForbiddenWorkloadFields(
           )
         }
       }
+
+      // volumeMounts[]: the security-sensitive sub-fields are frozen and
+      // cannot be added/removed/changed via Apply. mountPath is also
+      // additionally checked against a deny-list of sensitive container
+      // paths (see isSensitiveMountPath below).
+      const oVMs = listByName(oc.volumeMounts)
+      const nVMs = listByName(nc.volumeMounts)
+      const vmNames = new Set([...oVMs.keys(), ...nVMs.keys()])
+      for (const vn of vmNames) {
+        const oVM = (oVMs.get(vn) ?? {}) as AnyObj
+        const nVM = (nVMs.get(vn) ?? {}) as AnyObj
+        for (const f of ['mountPath', 'readOnly', 'subPath', 'subPathExpr', 'mountPropagation'] as const) {
+          if (!deepEqual(oVM[f], nVM[f])) {
+            violations.push(
+              `spec.template.spec.${collection}[name=${n}].volumeMounts[name=${vn}].${f}`
+            )
+          }
+        }
+        const mp = (nVM.mountPath as string | undefined) ?? ''
+        if (mp && isSensitiveMountPath(mp)) {
+          violations.push(
+            `spec.template.spec.${collection}[name=${n}].volumeMounts[name=${vn}].mountPath (sensitive container path)`
+          )
+        }
+      }
     }
   }
 
   return violations
+}
+
+/**
+ * Returns true if mp is a sensitive container path that must not be a
+ * volumeMount target. Mirrors checkSensitiveMountPath() in the Go validator:
+ * /dev is forbidden except for the explicit /dev/shm carve-out.
+ */
+function isSensitiveMountPath(mp: string): boolean {
+  if (!mp) return false
+  if (mp === '/') return true
+  if (mp === '/dev') return true
+  if (mp.startsWith('/dev/') && mp !== '/dev/shm' && !mp.startsWith('/dev/shm/')) return true
+  const prefixes = [
+    '/etc', '/bin', '/sbin',
+    '/usr/bin', '/usr/sbin', '/usr/local/bin', '/usr/local/sbin',
+    '/lib', '/lib64', '/usr/lib', '/usr/lib64',
+    '/boot', '/root', '/proc', '/sys',
+    '/var/run', '/var/lib/kubelet', '/var/lib/docker', '/var/lib/containerd',
+  ]
+  for (const p of prefixes) {
+    if (mp === p || mp.startsWith(p + '/')) return true
+  }
+  return false
 }
 
 /**
@@ -194,6 +242,7 @@ export const LOCKED_WORKLOAD_FIELD_LABELS = [
   'spec.template.spec.volumes[].secret',
   'spec.template.spec.{containers,initContainers}[].command / args / securityContext / envFrom',
   'spec.template.spec.{containers,initContainers}[].env[].valueFrom',
+  'spec.template.spec.{containers,initContainers}[].volumeMounts[].{mountPath, readOnly, subPath, subPathExpr, mountPropagation} — and mountPath must not be a sensitive container path (/etc, /bin, /sbin, /usr/{bin,sbin,local/bin,local/sbin,lib,lib64}, /lib, /lib64, /boot, /root, /proc, /sys, /var/run, /var/lib/{kubelet,docker,containerd}, /dev except /dev/shm)',
   'status',
 ]
 

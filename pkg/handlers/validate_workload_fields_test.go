@@ -41,7 +41,7 @@ func deployObj() *unstructured.Unstructured {
 								"volumeMounts": []interface{}{
 									map[string]interface{}{
 										"name":      "config",
-										"mountPath": "/etc/myapp",
+										"mountPath": "/home/zoho/conf/myapp",
 									},
 								},
 							},
@@ -324,7 +324,7 @@ func TestValidateWorkloadFields_RejectsEnvFromConfigMapRef(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// status / volumeMounts (mountPath is no longer blanket-blocked)
+// status / volumeMounts
 // ---------------------------------------------------------------------------
 
 func TestValidateWorkloadFields_RejectsStatus(t *testing.T) {
@@ -333,9 +333,10 @@ func TestValidateWorkloadFields_RejectsStatus(t *testing.T) {
 	assert.Contains(t, validateWorkloadFields(obj), "status")
 }
 
-func TestValidateWorkloadFields_AllowsVolumeMountAtEtcPath(t *testing.T) {
-	// /etc/myapp is a legitimate location for ConfigMap mounts.
-	// The validator must no longer reject mountPath prefixes blanketly.
+func TestValidateWorkloadFields_RejectsVolumeMountUnderEtc(t *testing.T) {
+	// /etc is a sensitive container path; overlaying it via a volumeMount
+	// would let a requester shadow system configuration with attacker-
+	// controlled content.
 	obj := deployObj()
 	mutateFirstContainer(obj, func(c map[string]interface{}) {
 		c["volumeMounts"] = []interface{}{
@@ -345,5 +346,117 @@ func TestValidateWorkloadFields_AllowsVolumeMountAtEtcPath(t *testing.T) {
 			},
 		}
 	})
+	msg := validateWorkloadFields(obj)
+	assert.Contains(t, msg, "mountPath")
+	assert.Contains(t, msg, "/etc")
+}
+
+func TestValidateWorkloadFields_RejectsVolumeMountAtRoot(t *testing.T) {
+	obj := deployObj()
+	mutateFirstContainer(obj, func(c map[string]interface{}) {
+		c["volumeMounts"] = []interface{}{
+			map[string]interface{}{"name": "config", "mountPath": "/"},
+		}
+	})
+	assert.Contains(t, validateWorkloadFields(obj), "mountPath")
+}
+
+func TestValidateWorkloadFields_RejectsVolumeMountUnderBinSbinLib(t *testing.T) {
+	for _, mp := range []string{"/bin/ls", "/sbin/sshd", "/usr/bin/sudo", "/usr/local/bin/foo", "/lib/x", "/lib64/x", "/boot/grub"} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "config", "mountPath": mp},
+			}
+		})
+		assert.Contains(t, validateWorkloadFields(obj), "mountPath", "expected %s to be rejected", mp)
+	}
+}
+
+func TestValidateWorkloadFields_RejectsVolumeMountUnderProcSysRunVarLib(t *testing.T) {
+	for _, mp := range []string{"/proc/1/root", "/sys/fs/cgroup", "/var/run/docker.sock", "/var/lib/kubelet", "/var/lib/docker", "/var/lib/containerd", "/root/.ssh"} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "config", "mountPath": mp},
+			}
+		})
+		assert.Contains(t, validateWorkloadFields(obj), "mountPath", "expected %s to be rejected", mp)
+	}
+}
+
+func TestValidateWorkloadFields_RejectsVolumeMountUnderDevExceptShm(t *testing.T) {
+	obj := deployObj()
+	mutateFirstContainer(obj, func(c map[string]interface{}) {
+		c["volumeMounts"] = []interface{}{
+			map[string]interface{}{"name": "config", "mountPath": "/dev/sda1"},
+		}
+	})
+	assert.Contains(t, validateWorkloadFields(obj), "/dev")
+}
+
+func TestValidateWorkloadFields_AllowsVolumeMountAtDevShm(t *testing.T) {
+	obj := deployObj()
+	mutateFirstContainer(obj, func(c map[string]interface{}) {
+		c["volumeMounts"] = []interface{}{
+			map[string]interface{}{"name": "shm", "mountPath": "/dev/shm"},
+		}
+	})
 	assert.Equal(t, "", validateWorkloadFields(obj))
+}
+
+func TestValidateWorkloadFields_AllowsVolumeMountUnderHomeSasAndHomeZoho(t *testing.T) {
+	for _, mp := range []string{"/home/sas/saved", "/home/sas/zoho/cert/ray/tls.crt", "/home/zoho/logs", "/home/zoho/zoho/resources/conf/app.properties", "/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR"} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "v", "mountPath": mp},
+			}
+		})
+		assert.Equal(t, "", validateWorkloadFields(obj), "expected %s to be permitted", mp)
+	}
+}
+
+func TestValidateWorkloadFields_RejectsVolumeMountSubPath(t *testing.T) {
+	obj := deployObj()
+	mutateFirstContainer(obj, func(c map[string]interface{}) {
+		c["volumeMounts"] = []interface{}{
+			map[string]interface{}{
+				"name":      "config",
+				"mountPath": "/home/zoho/conf/app.properties",
+				"subPath":   "app.properties",
+			},
+		}
+	})
+	assert.Contains(t, validateWorkloadFields(obj), "subPath")
+}
+
+func TestValidateWorkloadFields_RejectsVolumeMountSubPathExpr(t *testing.T) {
+	obj := deployObj()
+	mutateFirstContainer(obj, func(c map[string]interface{}) {
+		c["volumeMounts"] = []interface{}{
+			map[string]interface{}{
+				"name":         "config",
+				"mountPath":    "/home/zoho/conf/app.properties",
+				"subPathExpr":  "$(POD_NAME).properties",
+			},
+		}
+	})
+	assert.Contains(t, validateWorkloadFields(obj), "subPathExpr")
+}
+
+func TestValidateWorkloadFields_RejectsVolumeMountPropagation(t *testing.T) {
+	for _, mode := range []string{"Bidirectional", "HostToContainer", "None"} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{
+					"name":             "v",
+					"mountPath":        "/home/sas/saved",
+					"mountPropagation": mode,
+				},
+			}
+		})
+		assert.Contains(t, validateWorkloadFields(obj), "mountPropagation", "expected %s to be rejected", mode)
+	}
 }
