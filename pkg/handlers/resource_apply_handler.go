@@ -243,10 +243,27 @@ func (h *ResourceApplyHandler) ApplyResource(c *gin.Context) {
 			continue
 		}
 
+		// Enforce kind-level blacklist (security hardening)
+		if kindErr := isApplyKindForbidden(obj); kindErr != "" {
+			result.Status = "failed"
+			result.Error = kindErr
+			logger.Audit(user.Key(), "ApplyDenied", strings.ToLower(obj.GetKind()), obj.GetNamespace(), cs.Name,
+				fmt.Sprintf("Forbidden kind: %s/%s rejected (%s)", obj.GetKind(), obj.GetName(), kindErr),
+				logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Name: obj.GetName()})
+			logger.Security(user.Key(), "APPLY_KIND_FORBIDDEN", fmt.Sprintf("kind=%s name=%s ns=%s cluster=%s", obj.GetKind(), obj.GetName(), obj.GetNamespace(), cs.Name))
+			failCount++
+			results = append(results, result)
+			continue
+		}
+
 		// Enforce permitted-field policy for workload kinds (security hardening)
 		if fieldErr := validateWorkloadFields(obj); fieldErr != "" {
 			result.Status = "failed"
 			result.Error = fieldErr
+			logger.Audit(user.Key(), "ApplyDenied", strings.ToLower(obj.GetKind()), obj.GetNamespace(), cs.Name,
+				fmt.Sprintf("Forbidden field in %s/%s: %s", obj.GetKind(), obj.GetName(), fieldErr),
+				logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Name: obj.GetName()})
+			logger.Security(user.Key(), "APPLY_FIELD_FORBIDDEN", fmt.Sprintf("kind=%s name=%s ns=%s reason=%s", obj.GetKind(), obj.GetName(), obj.GetNamespace(), fieldErr))
 			failCount++
 			results = append(results, result)
 			continue
@@ -278,7 +295,9 @@ func (h *ResourceApplyHandler) ApplyResource(c *gin.Context) {
 			result.Namespace = ""
 		}
 
-		// Resources with generateName are always created (never updated)
+		// Resources with generateName would always be created — creation is
+		// disabled by policy. Resources whose target name does not exist are
+		// also rejected: this endpoint is for UPDATING pre-existing resources.
 		var existingObj *unstructured.Unstructured
 		var getErr error
 		var opStatus string
@@ -286,75 +305,63 @@ func (h *ResourceApplyHandler) ApplyResource(c *gin.Context) {
 		var historyAction string
 
 		if obj.GetName() == "" && obj.GetGenerateName() != "" {
-			if !rbac.CanAccess(user, resource, "create", cs.Name, ns) {
+			result.Status = "failed"
+			result.Action = "create"
+			result.Error = fmt.Sprintf("resource creation is disabled via the dashboard (kind=%s used generateName; only updates of pre-existing resources are permitted)", obj.GetKind())
+			logger.Audit(user.Key(), "ApplyCreateBlocked", resource, ns, cs.Name,
+				fmt.Sprintf("Create blocked (generateName) for %s", obj.GetKind()),
+				logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Name: obj.GetGenerateName() + "*"})
+			logger.Security(user.Key(), "APPLY_CREATE_BLOCKED", fmt.Sprintf("kind=%s generateName=%s ns=%s cluster=%s", obj.GetKind(), obj.GetGenerateName(), ns, cs.Name))
+			failCount++
+			results = append(results, result)
+			continue
+		}
+
+		existingObj = &unstructured.Unstructured{}
+		existingObj.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
+		getErr = cs.K8sClient.Get(ctx, client.ObjectKey{
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+		}, existingObj)
+
+		if apierrors.IsNotFound(getErr) {
+			result.Status = "failed"
+			result.Action = "create"
+			result.Error = fmt.Sprintf("resource creation is disabled via the dashboard (%s/%s does not exist; only updates of pre-existing resources are permitted)", obj.GetKind(), obj.GetName())
+			logger.Audit(user.Key(), "ApplyCreateBlocked", resource, ns, cs.Name,
+				fmt.Sprintf("Create blocked for non-existent %s/%s", obj.GetKind(), obj.GetName()),
+				logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Name: obj.GetName()})
+			logger.Security(user.Key(), "APPLY_CREATE_BLOCKED", fmt.Sprintf("kind=%s name=%s ns=%s cluster=%s", obj.GetKind(), obj.GetName(), ns, cs.Name))
+			failCount++
+			results = append(results, result)
+			continue
+		} else if getErr == nil {
+			result.Action = "update"
+			historyAction = "update"
+			if !rbac.CanAccess(user, resource, "update", cs.Name, ns) {
 				result.Status = "failed"
-				result.Error = rbac.NoAccess(user.Key(), string(common.VerbCreate), resource, ns, cs.Name)
+				result.Error = rbac.NoAccess(user.Key(), string(common.VerbUpdate), resource, ns, cs.Name)
+				logger.Audit(user.Key(), "ApplyDenied", resource, ns, cs.Name,
+					fmt.Sprintf("RBAC denied update on %s/%s", obj.GetKind(), obj.GetName()),
+					logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Name: obj.GetName()})
 				failCount++
 				results = append(results, result)
 				continue
 			}
-			result.Action = "create"
-			historyAction = "create"
+			patchOpts := []client.PatchOption{
+				client.FieldOwner(applyFieldOwner),
+				client.ForceOwnership,
+			}
 			if req.DryRun {
-				opErr = cs.K8sClient.Create(ctx, obj, client.DryRunAll)
-				opStatus = "created (dry-run)"
+				patchOpts = append(patchOpts, client.DryRunAll)
+				opStatus = "updated (dry-run)"
 			} else {
-				opErr = cs.K8sClient.Create(ctx, obj)
-				opStatus = "created"
-				if opErr == nil {
-					result.Name = obj.GetName()
-				}
+				opStatus = "updated"
 			}
+			opErr = cs.K8sClient.Patch(ctx, obj, client.Apply, patchOpts...)
 		} else {
-			existingObj = &unstructured.Unstructured{}
-			existingObj.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-			getErr = cs.K8sClient.Get(ctx, client.ObjectKey{
-				Name:      obj.GetName(),
-				Namespace: obj.GetNamespace(),
-			}, existingObj)
-
-			if apierrors.IsNotFound(getErr) {
-				if !rbac.CanAccess(user, resource, "create", cs.Name, ns) {
-					result.Status = "failed"
-					result.Error = rbac.NoAccess(user.Key(), string(common.VerbCreate), resource, ns, cs.Name)
-					failCount++
-					results = append(results, result)
-					continue
-				}
-				result.Action = "create"
-				historyAction = "create"
-				if req.DryRun {
-					opErr = cs.K8sClient.Create(ctx, obj, client.DryRunAll)
-					opStatus = "created (dry-run)"
-				} else {
-					opErr = cs.K8sClient.Create(ctx, obj)
-					opStatus = "created"
-				}
-			} else if getErr == nil {
-				result.Action = "update"
-				historyAction = "update"
-				if !rbac.CanAccess(user, resource, "update", cs.Name, ns) {
-					result.Status = "failed"
-					result.Error = rbac.NoAccess(user.Key(), string(common.VerbUpdate), resource, ns, cs.Name)
-					failCount++
-					results = append(results, result)
-					continue
-				}
-				patchOpts := []client.PatchOption{
-					client.FieldOwner(applyFieldOwner),
-					client.ForceOwnership,
-				}
-				if req.DryRun {
-					patchOpts = append(patchOpts, client.DryRunAll)
-					opStatus = "updated (dry-run)"
-				} else {
-					opStatus = "updated"
-				}
-				opErr = cs.K8sClient.Patch(ctx, obj, client.Apply, patchOpts...)
-			} else {
-				opErr = getErr
-				opStatus = "failed"
-			}
+			opErr = getErr
+			opStatus = "failed"
 		}
 
 		// Record per-object history and audit
@@ -370,8 +377,14 @@ func (h *ResourceApplyHandler) ApplyResource(c *gin.Context) {
 			result.Status = "failed"
 			result.Error = opErr.Error()
 			failCount++
+			logger.Audit(user.Key(), "ApplyFailed", resource, ns, cs.Name,
+				fmt.Sprintf("%s/%s %s failed: %s", obj.GetKind(), obj.GetName(), historyAction, opErr.Error()),
+				logger.AuditOpts{Severity: logger.AuditError, SourceIP: c.ClientIP(), Name: obj.GetName()})
 		} else {
 			successCount++
+			logger.Audit(user.Key(), "Apply", resource, ns, cs.Name,
+				fmt.Sprintf("%s %s/%s (%s)", historyAction, obj.GetKind(), obj.GetName(), opStatus),
+				logger.AuditOpts{Severity: logger.AuditInfo, SourceIP: c.ClientIP(), Name: obj.GetName()})
 		}
 		results = append(results, result)
 	}
@@ -483,6 +496,21 @@ func resolveRESTMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) 
 		return nil, err
 	}
 	return mapper.RESTMapping(obj.GroupVersionKind().GroupKind(), gv.Version)
+}
+
+// isApplyKindForbidden returns a non-empty reason if obj's Kubernetes kind
+// must not be applied via the dashboard regardless of RBAC. Used as the
+// outermost guard in ApplyResource() to prevent secret material from being
+// written through the YAML editor.
+//
+// The check is intentionally simple and string-based on Kind so that even
+// unknown / future API versions of the same kind are blocked.
+func isApplyKindForbidden(obj *unstructured.Unstructured) string {
+	switch obj.GetKind() {
+	case "Secret":
+		return "Secret resources cannot be applied via the dashboard (security hardening: secret material must never traverse the dashboard)"
+	}
+	return ""
 }
 
 // validateWorkloadFields enforces the permitted-field policy for Deployment,

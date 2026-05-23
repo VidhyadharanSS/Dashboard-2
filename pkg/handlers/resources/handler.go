@@ -47,17 +47,40 @@ type Restartable interface {
 	Restart(c *gin.Context, namespace, name string) error
 }
 
-// workloadCreateDisabled lists resource types for which direct creation via the
-// dashboard is disabled per security audit requirements. New workloads must be
-// created through the Kites AppServer orchestration layer.
-var workloadCreateDisabled = map[string]bool{
-	"pods":         true,
-	"deployments":  true,
-	"statefulsets": true,
-	"daemonsets":   true,
-	"jobs":         true,
-	"cronjobs":     true,
-	"replicasets":  true,
+// resourceCreateDisabled lists Kubernetes resource types for which direct
+// creation (POST) via the dashboard is disabled per the security hardening
+// policy. The dashboard's role is observe + targeted update — net-new
+// resources must be provisioned through the Kites AppServer orchestration
+// layer (Helm / CD pipeline). Any new resource handler registered below must
+// be added to this map.
+//
+// Mirror of pkg/handlers/resource_apply_handler.go::isCreationBlockedResource.
+var resourceCreateDisabled = map[string]bool{
+	"pods":                     true,
+	"deployments":              true,
+	"statefulsets":             true,
+	"daemonsets":               true,
+	"jobs":                     true,
+	"cronjobs":                 true,
+	"replicasets":              true,
+	"configmaps":               true,
+	"services":                 true,
+	"endpoints":                true,
+	"endpointslices":           true,
+	"persistentvolumes":        true,
+	"persistentvolumeclaims":   true,
+	"serviceaccounts":          true,
+	"namespaces":               true,
+	"ingresses":                true,
+	"storageclasses":           true,
+	"roles":                    true,
+	"rolebindings":             true,
+	"clusterroles":             true,
+	"clusterrolebindings":      true,
+	"gateways":                 true,
+	"httproutes":               true,
+	"horizontalpodautoscalers": true,
+	"crds":                     true,
 }
 
 var handlers = map[string]resourceHandler{}
@@ -100,9 +123,9 @@ func RegisterRoutes(group *gin.RouterGroup) {
 		g := group.Group("/" + name)
 		handler.registerCustomRoutes(g)
 		if handler.IsClusterScoped() {
-			registerClusterScopeRoutes(g, handler, workloadCreateDisabled[name])
+			registerClusterScopeRoutes(g, handler, resourceCreateDisabled[name])
 		} else {
-			registerNamespaceScopeRoutes(g, handler, workloadCreateDisabled[name])
+			registerNamespaceScopeRoutes(g, handler, resourceCreateDisabled[name])
 		}
 
 		if handler.Searchable() {
@@ -165,7 +188,7 @@ func registerClusterScopeRoutes(group *gin.RouterGroup, handler resourceHandler,
 		group.POST("/_all", handler.Create)
 	} else {
 		group.POST("/_all", func(c *gin.Context) {
-			c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "workload creation is disabled via the dashboard"})
+			c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "resource creation is disabled via the dashboard (use the Kites AppServer for provisioning)"})
 		})
 	}
 	group.PUT("/_all/:name", handler.Update)
@@ -183,7 +206,7 @@ func registerNamespaceScopeRoutes(group *gin.RouterGroup, handler resourceHandle
 		group.POST("/:namespace", handler.Create)
 	} else {
 		group.POST("/:namespace", func(c *gin.Context) {
-			c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "workload creation is disabled via the dashboard"})
+			c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "resource creation is disabled via the dashboard (use the Kites AppServer for provisioning)"})
 		})
 	}
 	group.PUT("/:namespace/:name", handler.Update)

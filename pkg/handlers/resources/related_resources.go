@@ -333,7 +333,9 @@ func GetRelatedResources(c *gin.Context) {
 			addLink(rootKey, podKey, "selects")
 		}
 
-	case *corev1.ConfigMap, *corev1.Secret, *corev1.PersistentVolumeClaim:
+	case *corev1.ConfigMap, *corev1.PersistentVolumeClaim:
+		// Secret intentionally excluded — secret names must not be enumerated
+		// via the topology endpoint, and the Secret kind has no list route.
 		if workloads, err := discoveryWorkloads(ctx, cs.K8sClient, namespace, name, resourceType); err == nil {
 			for _, w := range workloads {
 				workloadKey := addNode(w.Type, w.Namespace, w.Name)

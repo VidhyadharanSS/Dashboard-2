@@ -67,13 +67,13 @@ export function VolumeTable({
       )
     }
     if (volume.secret) {
+      // Secret resources are not browsable via the dashboard — render the
+      // referenced name as inert text so that no link to /secrets/* leaks
+      // out of the UI (security hardening).
       return (
-        <Link
-          to={`/secrets/${namespace}/${volume.secret.secretName}`}
-          className="text-blue-600 hover:underline"
-        >
+        <span className="text-sm text-muted-foreground font-mono">
           {volume.secret.secretName || 'N/A'}
-        </Link>
+        </span>
       )
     }
     if (volume.hostPath) {

@@ -43,18 +43,25 @@ func RBACMiddleware() gin.HandlerFunc {
 		} else {
 			denialMsg := rbac.NoAccess(user.Key(), verbs, resource, ns, cs.Name)
 
-			// Audit-log denied write operations (create/update/delete) for security monitoring
-			if isWriteVerb(verbs) {
-				logger.Audit(
-					user.Key(), "DENIED", resource, ns, cs.Name,
-					fmt.Sprintf("Blocked %s on %s — insufficient permissions", verbs, resource),
-				)
-				logger.Security(user.Key(), "RBAC_DENIED",
-					fmt.Sprintf("verb=%s resource=%s ns=%s cluster=%s ip=%s",
-						verbs, resource, ns, cs.Name, c.ClientIP()))
-				klog.V(1).Infof("RBAC DENIED: user=%s verb=%s resource=%s ns=%s cluster=%s",
-					user.Key(), verbs, resource, ns, cs.Name)
+			// Audit-log ALL denied operations for security monitoring. Writes
+			// (create/update/delete) and access to sensitive resources are
+			// escalated to WARN severity; ordinary read denials are logged at
+			// INFO so they can be retrieved forensically without dominating
+			// the audit stream.
+			severity := logger.AuditInfo
+			if isWriteVerb(verbs) || isSensitiveResource(resource) {
+				severity = logger.AuditWarning
 			}
+			logger.Audit(
+				user.Key(), "DENIED", resource, ns, cs.Name,
+				fmt.Sprintf("Blocked %s on %s — insufficient permissions", verbs, resource),
+				logger.AuditOpts{Severity: severity, SourceIP: c.ClientIP()},
+			)
+			logger.Security(user.Key(), "RBAC_DENIED",
+				fmt.Sprintf("verb=%s resource=%s ns=%s cluster=%s ip=%s",
+					verbs, resource, ns, cs.Name, c.ClientIP()))
+			klog.V(1).Infof("RBAC DENIED: user=%s verb=%s resource=%s ns=%s cluster=%s",
+				user.Key(), verbs, resource, ns, cs.Name)
 
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error":     denialMsg,
@@ -71,6 +78,19 @@ func RBACMiddleware() gin.HandlerFunc {
 func isWriteVerb(verb string) bool {
 	switch verb {
 	case string(common.VerbCreate), string(common.VerbUpdate), string(common.VerbDelete):
+		return true
+	default:
+		return false
+	}
+}
+
+// isSensitiveResource returns true for resource types whose READ access
+// denials warrant elevated audit attention (potential reconnaissance).
+func isSensitiveResource(resource string) bool {
+	switch resource {
+	case "secrets", "serviceaccounts",
+		"roles", "rolebindings", "clusterroles", "clusterrolebindings",
+		"oauth-providers", "apikeys", "users", "clusters":
 		return true
 	default:
 		return false

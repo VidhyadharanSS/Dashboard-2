@@ -83,6 +83,13 @@ func DeleteTemplate(c *gin.Context) {
 }
 
 func InitTemplates() {
+	// Defense-in-depth: purge any pre-existing Secret template that may have
+	// been seeded by an earlier version. Secret resources are now fully
+	// blocked from creation/apply via the dashboard.
+	if model.DB != nil {
+		model.DB.Where("name = ?", "Secret").Delete(&model.ResourceTemplate{})
+	}
+
 	var count int64
 	model.DB.Model(&model.ResourceTemplate{}).Count(&count)
 	if count > 0 {
@@ -291,21 +298,10 @@ data:
     logging:
       level: info`,
 		},
-		{
-			Name:        "Secret",
-			Description: "A Secret to store sensitive data",
-			YAML: `apiVersion: v1
-kind: Secret
-metadata:
-  name: example-secret
-  namespace: default
-type: Opaque
-data:
-  username: YWRtaW4=  # base64 encoded "admin"
-  password: MWYyZDFlMmU2N2Rm  # base64 encoded "1f2d1e2e67df"
-stringData:
-  database-url: "postgresql://user:pass@localhost:5432/mydb"`,
-		},
+		// Secret template intentionally removed — Secret resources must not
+		// be created or edited via the dashboard. The Kubernetes Secret kind
+		// is also blocked by isApplyKindForbidden() in resource_apply_handler.go
+		// and there is no list/get route registered for "secrets".
 		{
 			Name:        "Daemonset",
 			Description: "A DaemonSet to run pods on all nodes",
