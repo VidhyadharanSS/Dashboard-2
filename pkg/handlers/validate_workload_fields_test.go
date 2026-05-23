@@ -460,3 +460,177 @@ func TestValidateWorkloadFields_RejectsVolumeMountPropagation(t *testing.T) {
 		assert.Contains(t, validateWorkloadFields(obj), "mountPropagation", "expected %s to be rejected", mode)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// mountPath canonicalisation: bypass attempts must be caught
+// ---------------------------------------------------------------------------
+
+func TestValidateWorkloadFields_RejectsMountPathBypassAttempts(t *testing.T) {
+	// All of these canonicalise to a sensitive container path and must be
+	// rejected. Tests are explicit so the failure message points at the
+	// specific bypass attempt that slipped through.
+	cases := []struct {
+		path   string
+		reason string
+	}{
+		{"//etc/passwd", "double-leading-slash"},
+		{"/etc//passwd", "double-internal-slash"},
+		{"/etc/./passwd", "current-dir segment"},
+		{"/etc/foo/..", "parent-dir back to /etc"},
+		{"/etc/", "trailing slash"},
+		{"/etc/foo/../bar", "parent-dir mid-path"},
+		{"/bin/./ls", "current-dir segment under /bin"},
+		{"/proc/1/./root", "current-dir segment under /proc"},
+		{"/var/lib/kubelet/./pods", "current-dir segment under kubelet root"},
+		{"/dev/sda/../sda1", "parent-dir under /dev"},
+		{"//dev/sda1", "double-leading-slash under /dev"},
+		{"/dev/./sda1", "current-dir under /dev"},
+		{"//", "double-slash root"},
+		{"/./", "root with current-dir"},
+	}
+	for _, tc := range cases {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "v", "mountPath": tc.path},
+			}
+		})
+		assert.NotEqual(t, "", validateWorkloadFields(obj), "expected %q (%s) to be rejected", tc.path, tc.reason)
+	}
+}
+
+func TestValidateWorkloadFields_RejectsRelativeMountPath(t *testing.T) {
+	for _, mp := range []string{"etc/passwd", "../etc/passwd", "home/sas/saved", "."} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "v", "mountPath": mp},
+			}
+		})
+		assert.Contains(t, validateWorkloadFields(obj), "absolute", "expected %q to be rejected", mp)
+	}
+}
+
+func TestValidateWorkloadFields_AllowsDevShmSubdirectory(t *testing.T) {
+	for _, mp := range []string{"/dev/shm", "/dev/shm/cache", "/dev/shm/multiproc/PROMETHEUS"} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "shm", "mountPath": mp},
+			}
+		})
+		assert.Equal(t, "", validateWorkloadFields(obj), "expected %q to be permitted", mp)
+	}
+}
+
+func TestValidateWorkloadFields_AllowsLookalikeNonSensitivePaths(t *testing.T) {
+	// Paths whose first segment LOOKS LIKE a sensitive prefix but is actually
+	// a different directory (e.g. /etcd, /binary, /rooted) must NOT be
+	// rejected by an over-broad string-prefix check.
+	for _, mp := range []string{"/etcd/data", "/binary/payload", "/sbinary/foo", "/rooted/app", "/proceeds/log", "/system/ok"} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "v", "mountPath": mp},
+			}
+		})
+		assert.Equal(t, "", validateWorkloadFields(obj), "expected %q to be permitted", mp)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// initContainer parity: every per-container check applies to initContainers
+// ---------------------------------------------------------------------------
+
+func TestValidateWorkloadFields_InitContainerVolumeMountChecks(t *testing.T) {
+	cases := []struct {
+		name string
+		vm   map[string]interface{}
+		want string
+	}{
+		{"sensitive mountPath", map[string]interface{}{"name": "v", "mountPath": "/etc/x"}, "mountPath"},
+		{"subPath", map[string]interface{}{"name": "v", "mountPath": "/home/sas/x", "subPath": "x"}, "subPath"},
+		{"subPathExpr", map[string]interface{}{"name": "v", "mountPath": "/home/sas/x", "subPathExpr": "x"}, "subPathExpr"},
+		{"mountPropagation", map[string]interface{}{"name": "v", "mountPath": "/home/sas/x", "mountPropagation": "Bidirectional"}, "mountPropagation"},
+	}
+	for _, tc := range cases {
+		obj := deployObj()
+		setNested(obj, []interface{}{
+			map[string]interface{}{
+				"name":         "init",
+				"image":        "busybox",
+				"volumeMounts": []interface{}{tc.vm},
+			},
+		}, "spec", "template", "spec", "initContainers")
+		msg := validateWorkloadFields(obj)
+		assert.Contains(t, msg, tc.want, "init container case %q: %s", tc.name, msg)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Multiple mounts: rejection fires on the first sensitive one
+// ---------------------------------------------------------------------------
+
+func TestValidateWorkloadFields_RejectsWhenAnyOfManyMountsIsSensitive(t *testing.T) {
+	obj := deployObj()
+	mutateFirstContainer(obj, func(c map[string]interface{}) {
+		c["volumeMounts"] = []interface{}{
+			map[string]interface{}{"name": "ok1", "mountPath": "/home/sas/a"},
+			map[string]interface{}{"name": "ok2", "mountPath": "/home/zoho/b"},
+			map[string]interface{}{"name": "bad", "mountPath": "/etc/shadow"},
+			map[string]interface{}{"name": "ok3", "mountPath": "/dev/shm/cache"},
+		}
+	})
+	msg := validateWorkloadFields(obj)
+	assert.Contains(t, msg, "mountPath")
+	assert.Contains(t, msg, "/etc")
+}
+
+func TestValidateWorkloadFields_AllowsAllPermittedMountsTogether(t *testing.T) {
+	obj := deployObj()
+	mutateFirstContainer(obj, func(c map[string]interface{}) {
+		c["volumeMounts"] = []interface{}{
+			map[string]interface{}{"name": "nohup", "mountPath": "/home/zoho/nohup"},
+			map[string]interface{}{"name": "logs", "mountPath": "/home/zoho/logs"},
+			map[string]interface{}{"name": "tmp", "mountPath": "/usr/tmp"},
+			map[string]interface{}{"name": "conf", "mountPath": "/home/zoho/zoho/resources/conf/app.properties"},
+			map[string]interface{}{"name": "saved", "mountPath": "/home/sas/saved"},
+			map[string]interface{}{"name": "cert", "mountPath": "/home/sas/zoho/cert/ray/tls.crt"},
+			map[string]interface{}{"name": "shm", "mountPath": "/dev/shm"},
+			map[string]interface{}{"name": "prom", "mountPath": "/usr/tmp/PROMETHEUS_MULTIPROC_DIR"},
+		}
+	})
+	assert.Equal(t, "", validateWorkloadFields(obj))
+}
+
+// ---------------------------------------------------------------------------
+// checkSensitiveMountPath unit table (covers the helper directly)
+// ---------------------------------------------------------------------------
+
+func TestCheckSensitiveMountPath_Table(t *testing.T) {
+	deny := []string{
+		"/", "//", "/./", "/etc", "/etc/", "/etc/passwd", "//etc/passwd",
+		"/bin", "/bin/ls", "/sbin/sshd", "/usr/bin/sudo", "/usr/sbin/foo",
+		"/usr/local/bin/x", "/usr/local/sbin/y", "/lib/x", "/lib64/y",
+		"/usr/lib/x", "/usr/lib64/y", "/boot/grub", "/root/.ssh",
+		"/proc/1/root", "/sys/fs/cgroup", "/var/run/docker.sock",
+		"/var/lib/kubelet/x", "/var/lib/docker/y", "/var/lib/containerd/z",
+		"/dev", "/dev/sda1", "/dev/null", "/etc/foo/../bar", "/etc/./passwd",
+	}
+	for _, p := range deny {
+		assert.NotEqual(t, "", checkSensitiveMountPath(p), "expected %q to be denied", p)
+	}
+	allow := []string{
+		"/home/sas/saved", "/home/zoho/logs", "/usr/tmp",
+		"/usr/tmp/PROMETHEUS_MULTIPROC_DIR", "/dev/shm", "/dev/shm/cache",
+		"/etcd/data", "/binary/x", "/rooted/x", "/proceeds/x", "/var/log/app",
+		"/opt/app", "/app/data", "",
+	}
+	for _, p := range allow {
+		assert.Equal(t, "", checkSensitiveMountPath(p), "expected %q to be permitted", p)
+	}
+	// Relative paths are rejected too (mountPath must be absolute).
+	for _, p := range []string{"etc/passwd", "../etc/passwd", "home/sas/x", "."} {
+		assert.NotEqual(t, "", checkSensitiveMountPath(p), "expected relative %q to be rejected", p)
+	}
+}

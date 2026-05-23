@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	gopath "path"
 	"strings"
 	"sync"
 	"time"
@@ -525,9 +526,9 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 	}
 
 	// --- Top-level metadata: block server-managed fields ---
-	if meta, ok := obj.Object["metadata"].(map[string]interface{}); ok {
+	if metaMap, ok := obj.Object["metadata"].(map[string]interface{}); ok {
 		for _, f := range []string{"uid", "resourceVersion", "creationTimestamp"} {
-			if v, has := meta[f]; has && v != nil && v != "" {
+			if v, has := metaMap[f]; has && v != nil && v != "" {
 				return fmt.Sprintf("%s: metadata.%s is server-managed and must not be set by clients", kind, f)
 			}
 		}
@@ -696,19 +697,30 @@ var sensitiveMountPathPrefixes = []string{
 // checkSensitiveMountPath returns a non-empty reason if mp falls under any
 // sensitive container path. It treats "/dev" as forbidden except for the
 // explicit "/dev/shm" carve-out (legitimately used by application workloads).
+//
+// The input path is canonicalised with path.Clean before matching so that
+// trivial bypasses such as "//etc/passwd", "/etc/./passwd", "/etc/foo/.."
+// and trailing-slash variants are all caught.
 func checkSensitiveMountPath(mp string) string {
 	if mp == "" {
 		return ""
 	}
-	if mp == "/" {
+	// Only absolute, POSIX-style paths make sense for a container mountPath.
+	// Reject any relative or empty path outright — kubelet would reject too,
+	// but the validator must not silently accept odd input.
+	if !strings.HasPrefix(mp, "/") {
+		return "mountPath must be an absolute path"
+	}
+	clean := gopath.Clean(mp)
+	if clean == "/" {
 		return "mountPath \"/\" overlays the container root filesystem"
 	}
 	// /dev with a /dev/shm carve-out
-	if mp == "/dev" || (strings.HasPrefix(mp, "/dev/") && mp != "/dev/shm" && !strings.HasPrefix(mp, "/dev/shm/")) {
+	if clean == "/dev" || (strings.HasPrefix(clean, "/dev/") && clean != "/dev/shm" && !strings.HasPrefix(clean, "/dev/shm/")) {
 		return "mountPath under /dev is restricted; only /dev/shm is permitted"
 	}
 	for _, p := range sensitiveMountPathPrefixes {
-		if mp == p || strings.HasPrefix(mp, p+"/") {
+		if clean == p || strings.HasPrefix(clean, p+"/") {
 			return fmt.Sprintf("mountPath under %s is a sensitive container path", p)
 		}
 	}

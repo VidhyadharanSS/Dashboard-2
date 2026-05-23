@@ -191,13 +191,17 @@ export function diffForbiddenWorkloadFields(
 /**
  * Returns true if mp is a sensitive container path that must not be a
  * volumeMount target. Mirrors checkSensitiveMountPath() in the Go validator:
- * /dev is forbidden except for the explicit /dev/shm carve-out.
+ * /dev is forbidden except for the explicit /dev/shm carve-out. The path is
+ * canonicalised (POSIX path.Clean) before matching so that /etc//x,
+ * /etc/./x, /etc/foo/.., and trailing-slash variants are all caught.
  */
 function isSensitiveMountPath(mp: string): boolean {
   if (!mp) return false
-  if (mp === '/') return true
-  if (mp === '/dev') return true
-  if (mp.startsWith('/dev/') && mp !== '/dev/shm' && !mp.startsWith('/dev/shm/')) return true
+  if (!mp.startsWith('/')) return true
+  const clean = cleanPosixPath(mp)
+  if (clean === '/') return true
+  if (clean === '/dev') return true
+  if (clean.startsWith('/dev/') && clean !== '/dev/shm' && !clean.startsWith('/dev/shm/')) return true
   const prefixes = [
     '/etc', '/bin', '/sbin',
     '/usr/bin', '/usr/sbin', '/usr/local/bin', '/usr/local/sbin',
@@ -206,9 +210,34 @@ function isSensitiveMountPath(mp: string): boolean {
     '/var/run', '/var/lib/kubelet', '/var/lib/docker', '/var/lib/containerd',
   ]
   for (const p of prefixes) {
-    if (mp === p || mp.startsWith(p + '/')) return true
+    if (clean === p || clean.startsWith(p + '/')) return true
   }
   return false
+}
+
+/**
+ * Minimal POSIX-style path canonicaliser. Equivalent to Go's path.Clean for
+ * absolute inputs: collapses repeated slashes, resolves "." and ".."
+ * segments, and strips trailing slashes (except for the root "/").
+ */
+function cleanPosixPath(p: string): string {
+  const isAbs = p.startsWith('/')
+  const parts: string[] = []
+  for (const seg of p.split('/')) {
+    if (seg === '' || seg === '.') continue
+    if (seg === '..') {
+      if (parts.length > 0 && parts[parts.length - 1] !== '..') {
+        parts.pop()
+      } else if (!isAbs) {
+        parts.push('..')
+      }
+      continue
+    }
+    parts.push(seg)
+  }
+  const joined = parts.join('/')
+  if (isAbs) return '/' + joined
+  return joined === '' ? '.' : joined
 }
 
 /**
