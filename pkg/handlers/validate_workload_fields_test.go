@@ -523,11 +523,58 @@ func TestValidateWorkloadFields_AllowsDevShmSubdirectory(t *testing.T) {
 	}
 }
 
-func TestValidateWorkloadFields_AllowsLookalikeNonSensitivePaths(t *testing.T) {
+func TestValidateWorkloadFields_RejectsLookalikePathsOutsideAllowList(t *testing.T) {
 	// Paths whose first segment LOOKS LIKE a sensitive prefix but is actually
-	// a different directory (e.g. /etcd, /binary, /rooted) must NOT be
-	// rejected by an over-broad string-prefix check.
+	// a different directory (e.g. /etcd, /binary, /rooted) are not on the
+	// blocklist — the older policy permitted them. The current allow-list
+	// gate now rejects them because they fall outside permittedMountPathPrefixes.
 	for _, mp := range []string{"/etcd/data", "/binary/payload", "/sbinary/foo", "/rooted/app", "/proceeds/log", "/system/ok"} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "v", "mountPath": mp},
+			}
+		})
+		msg := validateWorkloadFields(obj)
+		assert.NotEqual(t, "", msg, "expected %q to be rejected by the allow-list", mp)
+		assert.Contains(t, msg, "permitted prefix", "expected allow-list error for %q, got: %s", mp, msg)
+	}
+}
+
+func TestValidateWorkloadFields_RejectsAppAndOptPathsOutsideAllowList(t *testing.T) {
+	// Common application paths that an attacker could use to overlay app
+	// config/data/logs with caller-controlled volume content. None are on
+	// the sensitive-path blocklist, all are now rejected by the allow-list.
+	for _, mp := range []string{
+		"/app", "/app/config", "/app/data", "/app/logs",
+		"/opt/app", "/opt/app/conf",
+		"/var/log/app", "/var/log/myapp",
+		"/tmp", "/tmp/cache", "/var/tmp/x",
+		"/data", "/cache", "/scratch", "/workspace/code",
+		"/srv/www", "/mnt/data", "/media/usb",
+	} {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["volumeMounts"] = []interface{}{
+				map[string]interface{}{"name": "v", "mountPath": mp},
+			}
+		})
+		msg := validateWorkloadFields(obj)
+		assert.NotEqual(t, "", msg, "expected %q to be rejected by the allow-list", mp)
+		assert.Contains(t, msg, "permitted prefix", "expected allow-list error for %q, got: %s", mp, msg)
+	}
+}
+
+func TestValidateWorkloadFields_AllowsEveryPermittedMountPrefix(t *testing.T) {
+	// Every entry in permittedMountPathPrefixes must be accepted both as an
+	// exact match and as a sub-path.
+	cases := []string{
+		"/home/sas", "/home/sas/saved", "/home/sas/zoho/cert/ray/tls.crt",
+		"/home/zoho", "/home/zoho/logs", "/home/zoho/zoho/resources/conf/app.properties",
+		"/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR",
+		"/dev/shm", "/dev/shm/cache", "/dev/shm/multiproc/PROMETHEUS",
+	}
+	for _, mp := range cases {
 		obj := deployObj()
 		mutateFirstContainer(obj, func(c map[string]interface{}) {
 			c["volumeMounts"] = []interface{}{
@@ -608,6 +655,7 @@ func TestValidateWorkloadFields_AllowsAllPermittedMountsTogether(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCheckSensitiveMountPath_Table(t *testing.T) {
+	// Paths rejected by the sensitive-path blocklist (specific error message).
 	deny := []string{
 		"/", "//", "/./", "/etc", "/etc/", "/etc/passwd", "//etc/passwd",
 		"/bin", "/bin/ls", "/sbin/sshd", "/usr/bin/sudo", "/usr/sbin/foo",
@@ -620,11 +668,25 @@ func TestCheckSensitiveMountPath_Table(t *testing.T) {
 	for _, p := range deny {
 		assert.NotEqual(t, "", checkSensitiveMountPath(p), "expected %q to be denied", p)
 	}
+	// Paths rejected by the allow-list gate (do not match any permitted prefix).
+	allowListDeny := []string{
+		"/etcd/data", "/binary/x", "/rooted/x", "/proceeds/x",
+		"/var/log/app", "/opt/app", "/app/data", "/app", "/tmp", "/tmp/x",
+		"/data", "/cache", "/scratch", "/srv", "/mnt/x", "/workspace",
+	}
+	for _, p := range allowListDeny {
+		msg := checkSensitiveMountPath(p)
+		assert.NotEqual(t, "", msg, "expected %q to be denied by allow-list", p)
+		assert.Contains(t, msg, "permitted prefix", "expected allow-list error for %q, got: %s", p, msg)
+	}
+	// Paths permitted because they match one of permittedMountPathPrefixes
+	// (and pass the blocklist).
 	allow := []string{
-		"/home/sas/saved", "/home/zoho/logs", "/usr/tmp",
-		"/usr/tmp/PROMETHEUS_MULTIPROC_DIR", "/dev/shm", "/dev/shm/cache",
-		"/etcd/data", "/binary/x", "/rooted/x", "/proceeds/x", "/var/log/app",
-		"/opt/app", "/app/data", "",
+		"",
+		"/home/sas", "/home/sas/saved", "/home/sas/zoho/cert/ray/tls.crt",
+		"/home/zoho", "/home/zoho/logs", "/home/zoho/nohup",
+		"/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR",
+		"/dev/shm", "/dev/shm/cache", "/dev/shm/multiproc/PROMETHEUS",
 	}
 	for _, p := range allow {
 		assert.Equal(t, "", checkSensitiveMountPath(p), "expected %q to be permitted", p)
@@ -632,5 +694,97 @@ func TestCheckSensitiveMountPath_Table(t *testing.T) {
 	// Relative paths are rejected too (mountPath must be absolute).
 	for _, p := range []string{"etc/passwd", "../etc/passwd", "home/sas/x", "."} {
 		assert.NotEqual(t, "", checkSensitiveMountPath(p), "expected relative %q to be rejected", p)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// env[].value: sensitive-key blocklist (passwords, secrets, tokens, …)
+// ---------------------------------------------------------------------------
+
+func TestValidateWorkloadFields_RejectsSensitiveEnvKey(t *testing.T) {
+	// Every name here matches a sensitive substring (case-insensitive) and
+	// must be rejected when set via a literal env[].value.
+	cases := []string{
+		"PASSWORD", "DB_PASSWORD", "db_password", "MyPassword",
+		"PASSWD", "ROOT_PASSWD",
+		"SECRET", "APP_SECRET", "client_secret", "OAUTH_CLIENT_SECRET",
+		"TOKEN", "AUTH_TOKEN", "refresh_token", "JWT_TOKEN",
+		"APIKEY", "API_KEY", "OPENAI_API_KEY",
+		"CREDENTIAL", "AWS_CREDENTIALS",
+		"PRIVATE_KEY", "SSH_PRIVATE_KEY", "PRIVKEY",
+		"PASSPHRASE", "GPG_PASSPHRASE",
+	}
+	for _, name := range cases {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["env"] = []interface{}{
+				map[string]interface{}{"name": name, "value": "x"},
+			}
+		})
+		msg := validateWorkloadFields(obj)
+		assert.NotEqual(t, "", msg, "expected env name %q to be rejected", name)
+		assert.Contains(t, msg, "sensitive-key pattern", "expected sensitive-key error for %q, got: %s", name, msg)
+	}
+}
+
+func TestValidateWorkloadFields_AllowsBenignEnvKeysThatLookSensitive(t *testing.T) {
+	// Names that contain partial matches but are not credential material
+	// must still be accepted — the substring list is intentionally narrow.
+	cases := []string{
+		"LOG_LEVEL", "HTTP_PROXY", "JAVA_TOOL_OPTIONS", "APP_UID",
+		"CACHE_KEY_PREFIX", "MAP_KEY", "KEY_VAULT_URL",
+		"CERT_PATH", "TLS_CA_FILE", "TLS_CERT_FILE",
+		"PUBLIC_KEY_PATH", "KEYSTORE_PATH",
+		"FEATURE_FLAG_X", "DB_HOST", "DB_PORT", "DB_USER",
+	}
+	for _, name := range cases {
+		obj := deployObj()
+		mutateFirstContainer(obj, func(c map[string]interface{}) {
+			c["env"] = []interface{}{
+				map[string]interface{}{"name": name, "value": "x"},
+			}
+		})
+		assert.Equal(t, "", validateWorkloadFields(obj), "expected benign env name %q to be permitted", name)
+	}
+}
+
+func TestValidateWorkloadFields_RejectsSensitiveEnvKey_OnInitContainer(t *testing.T) {
+	obj := deployObj()
+	setNested(obj, []interface{}{
+		map[string]interface{}{
+			"name":  "init",
+			"image": "busybox",
+			"env": []interface{}{
+				map[string]interface{}{"name": "INIT_DB_PASSWORD", "value": "hunter2"},
+			},
+		},
+	}, "spec", "template", "spec", "initContainers")
+	msg := validateWorkloadFields(obj)
+	assert.Contains(t, msg, "sensitive-key pattern")
+	assert.Contains(t, msg, "INIT_DB_PASSWORD")
+}
+
+func TestIsSensitiveEnvKey_Table(t *testing.T) {
+	deny := []string{
+		"PASSWORD", "password", "DB_PASSWORD", "My_PaSsWoRd",
+		"PASSWD", "root_passwd",
+		"SECRET", "client_secret", "WEBHOOK_SECRET",
+		"TOKEN", "GITHUB_TOKEN", "refresh_token",
+		"API_KEY", "APIKEY", "X_APIKEY",
+		"CREDENTIAL", "AWS_CREDENTIALS",
+		"PRIVATE_KEY", "PRIVKEY", "GPG_PRIVATE_KEY",
+		"PASSPHRASE", "KEY_PASSPHRASE",
+	}
+	for _, n := range deny {
+		assert.True(t, isSensitiveEnvKey(n), "expected %q to be sensitive", n)
+	}
+	allow := []string{
+		"", "LOG_LEVEL", "HTTP_PROXY", "DB_HOST", "DB_PORT", "DB_USER",
+		"CACHE_KEY_PREFIX", "MAP_KEY", "KEY_VAULT_URL",
+		"CERT_PATH", "TLS_CA_FILE", "PUBLIC_KEY_PATH",
+		"FEATURE_FLAG", "APP_UID", "JAVA_TOOL_OPTIONS",
+	}
+	for _, n := range allow {
+		assert.False(t, isSensitiveEnvKey(n), "expected %q to be non-sensitive", n)
 	}
 }

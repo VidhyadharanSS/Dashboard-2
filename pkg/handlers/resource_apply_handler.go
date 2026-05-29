@@ -628,6 +628,11 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 
 		// env[].valueFrom: block ANY valueFrom (configmap or secret refs).
 		// Only literal env[].value is permitted for non-sensitive config.
+		// env[].name: even literal values are rejected when the variable name
+		// matches a sensitive-key pattern (passwords, secrets, tokens, etc.).
+		// Credential material must not be settable via the dashboard at all —
+		// it must come from a separate provisioning path (e.g. external secret
+		// operator, sealed-secrets, IaC) so the dashboard never sees plaintext.
 		if envList, ok := cMap["env"].([]interface{}); ok {
 			for _, e := range envList {
 				envEntry, ok := e.(map[string]interface{})
@@ -637,6 +642,9 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 				envName, _ := envEntry["name"].(string)
 				if _, has := envEntry["valueFrom"]; has {
 					return fmt.Sprintf("%s: container %q env %q uses valueFrom which is forbidden (only literal env[].value is permitted)", kind, cName, envName)
+				}
+				if _, has := envEntry["value"]; has && isSensitiveEnvKey(envName) {
+					return fmt.Sprintf("%s: container %q env %q matches a sensitive-key pattern (passwords/secrets/tokens/credentials/api keys/private keys/passphrases must not be set via Apply; provision them through a separate secret-management path)", kind, cName, envName)
 				}
 			}
 		}
@@ -697,9 +705,9 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 // system binaries, configuration, or runtime sockets and shadow them with
 // content controlled by the requester.
 //
-// Allowed application roots (e.g. /home/sas/..., /home/zoho/..., /dev/shm,
-// /usr/tmp/...) are permitted; only the explicitly sensitive prefixes below
-// are rejected.
+// This list is the first-line defence and provides specific error messages.
+// The second-line defence is permittedMountPathPrefixes below, which is an
+// allow-list any mountPath must also satisfy.
 var sensitiveMountPathPrefixes = []string{
 	"/etc",
 	"/bin",
@@ -722,9 +730,31 @@ var sensitiveMountPathPrefixes = []string{
 	"/var/lib/containerd",
 }
 
-// checkSensitiveMountPath returns a non-empty reason if mp falls under any
-// sensitive container path. It treats "/dev" as forbidden except for the
-// explicit "/dev/shm" carve-out (legitimately used by application workloads).
+// permittedMountPathPrefixes is the allow-list of container paths under which
+// a volumeMount.mountPath may be placed via Apply. Anything that does not fall
+// under one of these prefixes is rejected, even if it would also pass the
+// sensitive-path blocklist above.
+//
+// The list reflects the Zoho-internal conventions actually used by Kites
+// workloads (see TestValidateWorkloadFields_AllowsAllPermittedMountsTogether).
+// To add a new prefix, get security sign-off and add a test case here.
+var permittedMountPathPrefixes = []string{
+	"/home/sas",
+	"/home/zoho",
+	"/usr/tmp",
+	"/dev/shm",
+}
+
+// checkSensitiveMountPath returns a non-empty reason if mp is not a safe
+// mountPath. It enforces two checks in order:
+//
+//  1. Blocklist — rejects sensitive container paths (/etc, /bin, /proc, …)
+//     with a specific error message. The /dev tree is rejected wholesale
+//     except for the /dev/shm carve-out.
+//  2. Allow-list — even if a path is not on the blocklist, it must fall
+//     under one of permittedMountPathPrefixes. This stops an actor from
+//     overlaying app-controlled paths such as /app/config or /opt/app with
+//     attacker-controlled volume content.
 //
 // The input path is canonicalised with path.Clean before matching so that
 // trivial bypasses such as "//etc/passwd", "/etc/./passwd", "/etc/foo/.."
@@ -752,5 +782,51 @@ func checkSensitiveMountPath(mp string) string {
 			return fmt.Sprintf("mountPath under %s is a sensitive container path", p)
 		}
 	}
-	return ""
+	// Allow-list gate: even non-sensitive paths must be under an approved
+	// prefix. This blocks overlaying app paths such as /app/config, /opt/app,
+	// /var/log/app, etc. with caller-controlled volume content.
+	for _, p := range permittedMountPathPrefixes {
+		if clean == p || strings.HasPrefix(clean, p+"/") {
+			return ""
+		}
+	}
+	return fmt.Sprintf("mountPath %q is not under any permitted prefix (allowed: %s)", clean, strings.Join(permittedMountPathPrefixes, ", "))
+}
+
+// sensitiveEnvKeySubstrings lists case-insensitive substrings that, when
+// present in a container env variable NAME, mark the variable as carrying
+// credential material. Such variables must not be set via the dashboard
+// Apply path — the dashboard must never see plaintext credentials. They
+// have to be provisioned through a separate path (external secret operator,
+// sealed-secrets, IaC pipeline, etc.).
+//
+// Substrings are intentionally narrow to avoid false positives on benign
+// names like CACHE_KEY, MAP_KEY, KEY_VAULT_URL, CERT_PATH, TLS_CA_FILE.
+var sensitiveEnvKeySubstrings = []string{
+	"PASSWORD",
+	"PASSWD",
+	"SECRET",
+	"TOKEN",
+	"APIKEY",
+	"API_KEY",
+	"CREDENTIAL",
+	"PRIVATE_KEY",
+	"PRIVKEY",
+	"PASSPHRASE",
+}
+
+// isSensitiveEnvKey returns true if the env variable name matches a
+// credential-like pattern. Comparison is case-insensitive on the upper-cased
+// name so PassWord, db_password, AUTH_TOKEN, etc. are all caught.
+func isSensitiveEnvKey(name string) bool {
+	if name == "" {
+		return false
+	}
+	up := strings.ToUpper(name)
+	for _, s := range sensitiveEnvKeySubstrings {
+		if strings.Contains(up, s) {
+			return true
+		}
+	}
+	return false
 }
