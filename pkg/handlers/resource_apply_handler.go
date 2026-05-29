@@ -735,14 +735,11 @@ var sensitiveMountPathPrefixes = []string{
 // under one of these prefixes is rejected, even if it would also pass the
 // sensitive-path blocklist above.
 //
-// The list reflects the Zoho-internal conventions actually used by Kites
-// workloads (see TestValidateWorkloadFields_AllowsAllPermittedMountsTogether).
-// To add a new prefix, get security sign-off and add a test case here.
+// Policy: strict single-prefix allow-list. Only paths under /home/sas may be
+// used as a volumeMount target. To widen this set, get security sign-off and
+// add both the prefix and a locking test case here.
 var permittedMountPathPrefixes = []string{
 	"/home/sas",
-	"/home/zoho",
-	"/usr/tmp",
-	"/dev/shm",
 }
 
 // checkSensitiveMountPath returns a non-empty reason if mp is not a safe

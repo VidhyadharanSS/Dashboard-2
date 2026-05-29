@@ -41,7 +41,7 @@ func deployObj() *unstructured.Unstructured {
 								"volumeMounts": []interface{}{
 									map[string]interface{}{
 										"name":      "config",
-										"mountPath": "/home/zoho/conf/myapp",
+										"mountPath": "/home/sas/conf/myapp",
 									},
 								},
 							},
@@ -395,18 +395,23 @@ func TestValidateWorkloadFields_RejectsVolumeMountUnderDevExceptShm(t *testing.T
 	assert.Contains(t, validateWorkloadFields(obj), "/dev")
 }
 
-func TestValidateWorkloadFields_AllowsVolumeMountAtDevShm(t *testing.T) {
+func TestValidateWorkloadFields_RejectsVolumeMountAtDevShm_OutsideAllowList(t *testing.T) {
+	// /dev/shm is carved out of the /dev blocklist (so it does not get the
+	// "/dev restricted" message), but the strict single-prefix allow-list
+	// now rejects it because it is not under /home/sas.
 	obj := deployObj()
 	mutateFirstContainer(obj, func(c map[string]interface{}) {
 		c["volumeMounts"] = []interface{}{
 			map[string]interface{}{"name": "shm", "mountPath": "/dev/shm"},
 		}
 	})
-	assert.Equal(t, "", validateWorkloadFields(obj))
+	msg := validateWorkloadFields(obj)
+	assert.NotEqual(t, "", msg, "/dev/shm must be rejected under the strict /home/sas allow-list")
+	assert.Contains(t, msg, "permitted prefix")
 }
 
-func TestValidateWorkloadFields_AllowsVolumeMountUnderHomeSasAndHomeZoho(t *testing.T) {
-	for _, mp := range []string{"/home/sas/saved", "/home/sas/zoho/cert/ray/tls.crt", "/home/zoho/logs", "/home/zoho/zoho/resources/conf/app.properties", "/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR"} {
+func TestValidateWorkloadFields_AllowsVolumeMountUnderHomeSas(t *testing.T) {
+	for _, mp := range []string{"/home/sas", "/home/sas/saved", "/home/sas/zoho/cert/ray/tls.crt", "/home/sas/conf/app.properties", "/home/sas/PROMETHEUS_MULTIPROC_DIR"} {
 		obj := deployObj()
 		mutateFirstContainer(obj, func(c map[string]interface{}) {
 			c["volumeMounts"] = []interface{}{
@@ -423,7 +428,7 @@ func TestValidateWorkloadFields_RejectsVolumeMountSubPath(t *testing.T) {
 		c["volumeMounts"] = []interface{}{
 			map[string]interface{}{
 				"name":      "config",
-				"mountPath": "/home/zoho/conf/app.properties",
+				"mountPath": "/home/sas/conf/app.properties",
 				"subPath":   "app.properties",
 			},
 		}
@@ -437,7 +442,7 @@ func TestValidateWorkloadFields_RejectsVolumeMountSubPathExpr(t *testing.T) {
 		c["volumeMounts"] = []interface{}{
 			map[string]interface{}{
 				"name":         "config",
-				"mountPath":    "/home/zoho/conf/app.properties",
+				"mountPath":    "/home/sas/conf/app.properties",
 				"subPathExpr":  "$(POD_NAME).properties",
 			},
 		}
@@ -511,7 +516,10 @@ func TestValidateWorkloadFields_RejectsRelativeMountPath(t *testing.T) {
 	}
 }
 
-func TestValidateWorkloadFields_AllowsDevShmSubdirectory(t *testing.T) {
+func TestValidateWorkloadFields_RejectsDevShmSubdirectoryOutsideAllowList(t *testing.T) {
+	// Under the strict single-prefix allow-list, every /dev/shm path is
+	// rejected because it is not under /home/sas. The blocklist still carves
+	// /dev/shm out of /dev, so the rejection comes from the allow-list gate.
 	for _, mp := range []string{"/dev/shm", "/dev/shm/cache", "/dev/shm/multiproc/PROMETHEUS"} {
 		obj := deployObj()
 		mutateFirstContainer(obj, func(c map[string]interface{}) {
@@ -519,7 +527,9 @@ func TestValidateWorkloadFields_AllowsDevShmSubdirectory(t *testing.T) {
 				map[string]interface{}{"name": "shm", "mountPath": mp},
 			}
 		})
-		assert.Equal(t, "", validateWorkloadFields(obj), "expected %q to be permitted", mp)
+		msg := validateWorkloadFields(obj)
+		assert.NotEqual(t, "", msg, "expected %q to be rejected by allow-list", mp)
+		assert.Contains(t, msg, "permitted prefix", "expected allow-list error for %q, got: %s", mp, msg)
 	}
 }
 
@@ -545,6 +555,8 @@ func TestValidateWorkloadFields_RejectsAppAndOptPathsOutsideAllowList(t *testing
 	// Common application paths that an attacker could use to overlay app
 	// config/data/logs with caller-controlled volume content. None are on
 	// the sensitive-path blocklist, all are now rejected by the allow-list.
+	// Under the strict single-prefix policy this also includes paths that
+	// were previously on the allow-list (/home/zoho, /usr/tmp, /dev/shm).
 	for _, mp := range []string{
 		"/app", "/app/config", "/app/data", "/app/logs",
 		"/opt/app", "/opt/app/conf",
@@ -552,6 +564,10 @@ func TestValidateWorkloadFields_RejectsAppAndOptPathsOutsideAllowList(t *testing
 		"/tmp", "/tmp/cache", "/var/tmp/x",
 		"/data", "/cache", "/scratch", "/workspace/code",
 		"/srv/www", "/mnt/data", "/media/usb",
+		"/home/zoho", "/home/zoho/logs", "/home/zoho/conf/app.properties",
+		"/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR",
+		"/dev/shm", "/dev/shm/cache",
+		"/home", "/home/other", "/home/sasx",
 	} {
 		obj := deployObj()
 		mutateFirstContainer(obj, func(c map[string]interface{}) {
@@ -567,12 +583,15 @@ func TestValidateWorkloadFields_RejectsAppAndOptPathsOutsideAllowList(t *testing
 
 func TestValidateWorkloadFields_AllowsEveryPermittedMountPrefix(t *testing.T) {
 	// Every entry in permittedMountPathPrefixes must be accepted both as an
-	// exact match and as a sub-path.
+	// exact match and as a sub-path. Under the strict policy this is only
+	// /home/sas and its sub-paths.
 	cases := []string{
-		"/home/sas", "/home/sas/saved", "/home/sas/zoho/cert/ray/tls.crt",
-		"/home/zoho", "/home/zoho/logs", "/home/zoho/zoho/resources/conf/app.properties",
-		"/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR",
-		"/dev/shm", "/dev/shm/cache", "/dev/shm/multiproc/PROMETHEUS",
+		"/home/sas",
+		"/home/sas/saved",
+		"/home/sas/zoho/cert/ray/tls.crt",
+		"/home/sas/conf/app.properties",
+		"/home/sas/logs/myapp",
+		"/home/sas/PROMETHEUS_MULTIPROC_DIR",
 	}
 	for _, mp := range cases {
 		obj := deployObj()
@@ -623,9 +642,9 @@ func TestValidateWorkloadFields_RejectsWhenAnyOfManyMountsIsSensitive(t *testing
 	mutateFirstContainer(obj, func(c map[string]interface{}) {
 		c["volumeMounts"] = []interface{}{
 			map[string]interface{}{"name": "ok1", "mountPath": "/home/sas/a"},
-			map[string]interface{}{"name": "ok2", "mountPath": "/home/zoho/b"},
+			map[string]interface{}{"name": "ok2", "mountPath": "/home/sas/b"},
 			map[string]interface{}{"name": "bad", "mountPath": "/etc/shadow"},
-			map[string]interface{}{"name": "ok3", "mountPath": "/dev/shm/cache"},
+			map[string]interface{}{"name": "ok3", "mountPath": "/home/sas/cache"},
 		}
 	})
 	msg := validateWorkloadFields(obj)
@@ -637,14 +656,14 @@ func TestValidateWorkloadFields_AllowsAllPermittedMountsTogether(t *testing.T) {
 	obj := deployObj()
 	mutateFirstContainer(obj, func(c map[string]interface{}) {
 		c["volumeMounts"] = []interface{}{
-			map[string]interface{}{"name": "nohup", "mountPath": "/home/zoho/nohup"},
-			map[string]interface{}{"name": "logs", "mountPath": "/home/zoho/logs"},
-			map[string]interface{}{"name": "tmp", "mountPath": "/usr/tmp"},
-			map[string]interface{}{"name": "conf", "mountPath": "/home/zoho/zoho/resources/conf/app.properties"},
+			map[string]interface{}{"name": "nohup", "mountPath": "/home/sas/nohup"},
+			map[string]interface{}{"name": "logs", "mountPath": "/home/sas/logs"},
+			map[string]interface{}{"name": "tmp", "mountPath": "/home/sas/tmp"},
+			map[string]interface{}{"name": "conf", "mountPath": "/home/sas/zoho/resources/conf/app.properties"},
 			map[string]interface{}{"name": "saved", "mountPath": "/home/sas/saved"},
 			map[string]interface{}{"name": "cert", "mountPath": "/home/sas/zoho/cert/ray/tls.crt"},
-			map[string]interface{}{"name": "shm", "mountPath": "/dev/shm"},
-			map[string]interface{}{"name": "prom", "mountPath": "/usr/tmp/PROMETHEUS_MULTIPROC_DIR"},
+			map[string]interface{}{"name": "shm", "mountPath": "/home/sas/shm"},
+			map[string]interface{}{"name": "prom", "mountPath": "/home/sas/PROMETHEUS_MULTIPROC_DIR"},
 		}
 	})
 	assert.Equal(t, "", validateWorkloadFields(obj))
@@ -669,24 +688,28 @@ func TestCheckSensitiveMountPath_Table(t *testing.T) {
 		assert.NotEqual(t, "", checkSensitiveMountPath(p), "expected %q to be denied", p)
 	}
 	// Paths rejected by the allow-list gate (do not match any permitted prefix).
+	// Under the strict single-prefix policy, /home/zoho, /usr/tmp, and /dev/shm
+	// all fall here too — only /home/sas paths are permitted.
 	allowListDeny := []string{
 		"/etcd/data", "/binary/x", "/rooted/x", "/proceeds/x",
 		"/var/log/app", "/opt/app", "/app/data", "/app", "/tmp", "/tmp/x",
 		"/data", "/cache", "/scratch", "/srv", "/mnt/x", "/workspace",
+		"/home", "/home/other", "/home/sasx", "/home/zoho", "/home/zoho/logs",
+		"/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR",
+		"/dev/shm", "/dev/shm/cache", "/dev/shm/multiproc/PROMETHEUS",
 	}
 	for _, p := range allowListDeny {
 		msg := checkSensitiveMountPath(p)
 		assert.NotEqual(t, "", msg, "expected %q to be denied by allow-list", p)
 		assert.Contains(t, msg, "permitted prefix", "expected allow-list error for %q, got: %s", p, msg)
 	}
-	// Paths permitted because they match one of permittedMountPathPrefixes
-	// (and pass the blocklist).
+	// Paths permitted because they match the single permitted prefix
+	// (/home/sas) and pass the blocklist.
 	allow := []string{
 		"",
 		"/home/sas", "/home/sas/saved", "/home/sas/zoho/cert/ray/tls.crt",
-		"/home/zoho", "/home/zoho/logs", "/home/zoho/nohup",
-		"/usr/tmp", "/usr/tmp/PROMETHEUS_MULTIPROC_DIR",
-		"/dev/shm", "/dev/shm/cache", "/dev/shm/multiproc/PROMETHEUS",
+		"/home/sas/logs", "/home/sas/nohup", "/home/sas/conf/app.properties",
+		"/home/sas/PROMETHEUS_MULTIPROC_DIR",
 	}
 	for _, p := range allow {
 		assert.Equal(t, "", checkSensitiveMountPath(p), "expected %q to be permitted", p)

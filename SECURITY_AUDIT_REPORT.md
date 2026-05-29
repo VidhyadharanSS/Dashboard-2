@@ -122,7 +122,7 @@ Every protected API request goes through `RequireAuth()`:
 - Container edit UI is limited to **3 safe fields**: image tag/pull policy, CPU/memory limits & requests, environment variables. `command`, `args`, `volumes`, `volumeMounts`, and `securityContext` have no UI surface.
 - Superadmin YAML apply: each object is individually parsed, field-validated, and **per-object RBAC-checked** before reaching the Kubernetes API. Blocked objects are audit-logged.
 - **Env-variable allow-list (May 2026 follow-up):** literal `env[].value` entries whose NAME matches a sensitive-key substring (`PASSWORD`, `PASSWD`, `SECRET`, `TOKEN`, `APIKEY` / `API_KEY`, `CREDENTIAL`, `PRIVATE_KEY` / `PRIVKEY`, `PASSPHRASE`) are rejected at the apply gate. Credential material must come from a separate provisioning path. Match is case-insensitive substring (so `DB_PASSWORD`, `db_password`, `OAUTH_CLIENT_SECRET`, `GITHUB_TOKEN`, `AWS_CREDENTIALS`, etc. are all blocked). Benign names like `CACHE_KEY`, `KEY_VAULT_URL`, `CERT_PATH`, `TLS_CA_FILE` remain permitted.
-- **`volumeMounts` allow-list (May 2026 follow-up):** `mountPath` now enforces both a sensitive-path blocklist and a Zoho-canonical allow-list. Any mountPath that does not fall under `/home/sas`, `/home/zoho`, `/usr/tmp`, or `/dev/shm` is rejected. This stops a superadmin from overlaying app-controlled paths such as `/app/config`, `/opt/app`, or `/var/log/app` with caller-controlled volume content (configMap, emptyDir, or non-sensitive hostPath).
+- **`volumeMounts` allow-list (May 2026 follow-up, tightened):** `mountPath` enforces both a sensitive-path blocklist and a **strict single-prefix allow-list**. Only mountPaths under `/home/sas` are accepted; every other path — including previously-considered `/home/zoho`, `/usr/tmp`, and `/dev/shm` — is rejected. This stops a superadmin from overlaying app-controlled paths such as `/app/config`, `/opt/app`, or `/var/log/app` with caller-controlled volume content (configMap, emptyDir, or non-sensitive hostPath).
 
 ---
 
@@ -281,5 +281,5 @@ The following table lists the fields superadmins are permitted to modify via YAM
 | Audit log forwarding to ZohoLogs | In Progress |
 | Security team sign-off on approved templates | Pending |
 | Review env-var editing scope in container edit UI | **Resolved** — sensitive-key blocklist enforced server-side (`PASSWORD`, `PASSWD`, `SECRET`, `TOKEN`, `APIKEY`/`API_KEY`, `CREDENTIAL`, `PRIVATE_KEY`/`PRIVKEY`, `PASSPHRASE`). |
-| `containers[].volumeMounts[]` mountPath allow-list | **Resolved** — mountPath restricted to `/home/sas`, `/home/zoho`, `/usr/tmp`, `/dev/shm` (in addition to the existing sensitive-path blocklist). |
+| `containers[].volumeMounts[]` mountPath allow-list | **Resolved** — strict single-prefix policy: mountPath must be under `/home/sas`. All other paths (including `/home/zoho`, `/usr/tmp`, `/dev/shm`) are rejected, in addition to the existing sensitive-path blocklist. |
 | IDC domain approval (`kites.zohointernals.*`) | Pending this report |
