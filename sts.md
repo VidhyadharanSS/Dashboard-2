@@ -375,3 +375,126 @@ Secret-block verification: POST to `/api/v1/resources/apply` with a
 `kind: Secret` body returns the `APPLY_KIND_FORBIDDEN` rejection. The
 related-resources topology for any ConfigMap or PVC no longer includes
 Secret nodes.
+
+## Phase 6: Hardening & UX Fixes (commit `8380d9e`, merged at `4a6debd`)
+
+This phase addresses five operator-reported items in a single commit.
+
+### 6.1 Reject credential-bearing env VALUES on Apply
+
+The earlier env-key blocklist caught `PASSWORD`/`TOKEN`/`SECRET` style
+names but missed credentials smuggled into the VALUE of a benign-named
+variable. Two real examples seen in submitted YAML:
+
+- `http_proxy=http://kites:ct1kites-8090@172.20.95.189:8090` - the
+  proxy URL embeds a username and password.
+- `JAVA_TOOL_OPTIONS=-Dhttp.proxyPassword=...` - a benign JVM env
+  variable carrying a password in its value.
+
+`pkg/handlers/resource_apply_handler.go` adds `checkSensitiveEnvValue`
+with three regex families:
+
+1. `scheme://[user]:password@host` (catches proxy URLs, jdbc://,
+   redis://, including the no-user `redis://:pwd@` form).
+2. `(password|passwd|secret|token|apikey|api_key|credential|passphrase|privatekey|privkey|proxypassword|proxyuser)\s*[:=]\s*\S+`
+   with leading `-`/`.` allowed, so `-Dhttp.proxyPassword=...` matches.
+3. HTTP `Bearer <token>` / `Basic <b64>` headers.
+
+Values shorter than 8 chars are skipped to avoid false positives on
+short flags like `no_proxy=1,2,3`. The same regex set is mirrored in
+`ui/src/lib/workload-policy.ts::containsSensitiveEnvValue` so the YAML
+editor refuses the input before submission, and the
+`LOCKED_WORKLOAD_FIELD_LABELS` panel explicitly lists this rule.
+
+Tests: `TestCheckSensitiveEnvValue_Table` plus three integration tests
+in `validate_workload_fields_test.go` covering proxy URL,
+JAVA_TOOL_OPTIONS, and Bearer-token rejection, plus an explicit
+allow-list of benign values (`no_proxy`, `APP_UID`, file paths).
+
+### 6.2 Remove em-dashes from UI strings
+
+All em-dash characters in user-facing UI strings under `ui/src`
+(`.ts`, `.tsx`, `.css`) were replaced with regular hyphens to remove
+the visual signal that often correlates with AI-generated copy. Sweep
+verified: `grep -rln "—" ui/src` returns 0 matches.
+
+### 6.3 Expand audit logging coverage
+
+The audit log now records the following events that were previously
+silent:
+
+- OAuth callback - `LoginFailed` for provider-returned errors
+  (`error=access_denied` etc.) at severity `WARNING`.
+- OAuth callback - `LoginFailed` for state/CSRF mismatch at severity
+  `CRITICAL`.
+- OAuth callback - `LoginDenied` when an authenticated user has no
+  roles or a disabled account, at severity `WARNING`.
+- Logout - `Logout` event at severity `INFO` with source IP.
+- Session revocation - `RevokeSession` (self), `RevokeAllSessions`
+  (self), `AdminRevokeSession` (admin) all with source IP and the
+  number of revoked rows.
+- Batch user delete - per-user audit entry (one per ID in the batch)
+  with `Success` flag and `Name` set to the user's key; failed
+  deletes are logged at `ERROR` severity.
+
+All entries use the existing `logger.AuditOpts` payload (`SourceIP`
+via `c.ClientIP()`, `Severity`, `Name`, `Success`).
+
+### 6.4 Fix the role-filter bug in User Management
+
+Symptom: filtering the user list by a role (for example "CRM DI -
+Role") returned "No users found" even though the same users clearly
+showed that role badge.
+
+Root cause: the legacy filter in `pkg/model/user.go::ListUsers` did a
+SQL JOIN against `role_assignments`, matching on
+`subject = users.username OR subject = users.email`. Role badges in
+the UI, however, come from `pkg/rbac/rbac.go::GetUserRoles` which
+reads the in-memory `RBACConfig.RoleMapping` snapshot. The two data
+paths could disagree (subject format differences, OIDC-group mapped
+membership not represented as a direct user assignment), producing
+the empty result.
+
+Fix:
+
+- New helper `rbac.SubjectsForRole(name)` returns the user/OIDC-group
+  subjects from the same snapshot the UI uses to render badges.
+- `pkg/handlers/user_handler.go::ListUsers` resolves the role to a
+  subject list via that helper, then passes it as a new
+  `roleSubjects []string` parameter.
+- `model.ListUsers` applies
+  `WHERE users.username IN ? OR users.email IN ?` when
+  `roleSubjects` is non-empty. A non-existent role or one with zero
+  subjects yields a sentinel `__kite_no_match__` so the DB returns
+  zero rows instead of all rows.
+
+The filter result is now guaranteed to match the badges.
+
+### 6.5 Dark theme readability
+
+`ui/src/styles/themes/default.css` adjustments for the `.dark` scope:
+
+- `--popover` `0.215 -> 0.235` (clearer panel lift over background).
+- `--secondary` `0.28 -> 0.3` and `--accent` `0.295 -> 0.32` for
+  better separation of secondary buttons and active states.
+- `--muted-foreground` `0.745 -> 0.785` so secondary text passes WCAG
+  AA contrast on dark cards.
+- `--border` `14% -> 18%`, `--input` `18% -> 22%`,
+  `--sidebar-border` `12% -> 16%` so card and field outlines remain
+  visible.
+
+### 6.6 Verification
+
+```
+go vet ./pkg/... ./internal/... .
+go test ./pkg/handlers/ ./pkg/handlers/resources/ \
+        ./pkg/middleware/ ./pkg/rbac/ ./pkg/model/ -count=1
+cd ui && pnpm test            # 48/48 passing
+pnpm build                    # succeeds
+cd .. && go build .           # produces ./kite binary
+```
+
+Both remotes synchronized at `4a6debd`:
+
+- origin (GitHub): `security-hardening` -> `4a6debd`
+- zoho (Zoho repo): `security-hardening` -> `4a6debd`
