@@ -500,151 +500,36 @@ Both remotes synchronized at `4a6debd`:
 - zoho (Zoho repo): `security-hardening` -> `4a6debd`
 
 
-## Development Tracking and Code Review Guide
 
-Audience: Security audit team, code reviewers (Deneshraj R and others)
-needing to compare team-authored changes against the upstream baseline.
+## Development tracking
 
-### Repository lineage
+The team imported the source via `git init` (not `git clone`), so this
+repository has no shared ancestor with the upstream OSS history.
+To make changes reviewable, the following annotated tags are published
+on both remotes (origin = GitHub mirror, zoho = Zoho repository):
 
-```mermaid
-flowchart LR
-    A["github.com/zxh326/kite<br/>(public OSS upstream)"] --> B["git.csez.zohocorpin.com/ziax/kitesdashboard<br/>branch: kites-core-v1<br/>(internal Zoho fork)"]
-    B --> C["Team import<br/>(git init, not git clone)<br/>tag: kites-team-start (2efa508)"]
-    C --> D["Feature dev<br/>tag: kites-feature-complete (7c3ffe8)"]
-    D --> E["Security phases 1 to 6<br/>tags: security-phase-1 ... security-phase-6"]
-    E --> H["HEAD (security-hardening branch)"]
+| Tag                      | Commit    | Date       | Marks |
+|--------------------------|-----------|------------|-------|
+| `baseline-upstream-oss`  | `2865610` | 2026-02-06 | Upstream zxh326/kite snapshot the internal `kites-core-v1` fork is built on. |
+| `kites-team-start`       | `2efa508` | 2026-02-20 | Team divergence point (first team commit). |
+| `kites-feature-complete` | `7c3ffe8` | 2026-04-13 | End of feature-development phase. |
+| `security-phase-1`       | `eb550ab` | 2026-05-19 | Remove Secrets viewer, disable workload creation, restrict editable YAML fields. |
+| `security-phase-2`       | `8d3799a` | 2026-05-23 | Freeze volumeMount fields, deny sensitive mountPaths, canonicalise + bypass-attempt tests. |
+| `security-phase-3`       | `c93fe96` | 2026-05-29 | mountPath allow-list and sensitive env-KEY blocklist. |
+| `security-phase-4`       | `41097e5` | 2026-05-29 | mountPath allow-list tightened to `/home/sas` only. |
+| `security-phase-5`       | `8380d9e` | 2026-06-01 | Reject credential-bearing env VALUES; role-filter fix; audit-log expansion; UI polish. |
+| `security-phase-6`       | `601b113` | 2026-06-01 | Documentation update for phase-5. |
 
-    A -.snapshot used.-> X["tag: baseline-upstream-oss<br/>= upstream commit 2865610<br/>feat: Support mysql query #383, 2026-02-06"]
+Lineage: `github.com/zxh326/kite` (upstream OSS)
+-> `git.csez.zohocorpin.com/ziax/kitesdashboard` branch `kites-core-v1` (internal Zoho fork)
+-> team `git init` import -> `kites-team-start` -> `kites-feature-complete` -> security phases 1-6 -> HEAD.
 
-    classDef ext fill:#fde2e2,stroke:#c33,color:#000
-    classDef int fill:#dbeafe,stroke:#1d4ed8,color:#000
-    classDef team fill:#dcfce7,stroke:#15803d,color:#000
-    classDef tag fill:#fef3c7,stroke:#a16207,color:#000
-    class A ext
-    class B int
-    class C,D,E,H team
-    class X tag
-```
-
-Important: the team imported the `kites-core-v1` internal source as a
-fresh `git init` rather than as a clone, so this repository has no
-graft connecting `kites-team-start` (2efa508) back to the upstream
-DAG. The annotated tag `baseline-upstream-oss` is published in this
-repository as a standalone reference so reviewers can still do
-content-level diffs.
-
-### Earlier personal-fork work (historical, kept for context only)
-
-Before the team was formed and before migration to the internal Zoho
-repository, contributions were made on a personal GitHub fork of
-zxh326/kite. These branches predate `kites-team-start` and are NOT
-part of the current review scope, but are preserved so reviewers can
-trace prior individual contribution history:
+Earlier personal-fork branches (pre-team, retained for history only,
+out of scope for this review):
 
 - https://github.com/VidhyadharanSS/kite/tree/feature/ui-font-language-update
 - https://github.com/VidhyadharanSS/kite/tree/fix-sqlite-hostpath
 - https://github.com/VidhyadharanSS/kite/tree/fix-websocket-proxy
-- Squashed view of those changes:
-  https://git.csez.zohocorpin.com/vidhyadharan.ss/kite-dashboard/-/commit/fa80a8740f9721fa096abc313a2a4c593934b42d
 
-These were superseded once the team adopted the internal Zoho
-repository (`git.csez.zohocorpin.com/ziax/kitesdashboard`,
-`kites-core-v1` branch) as the canonical source.
-
-### Published tags (immutable review handles)
-
-All tags are annotated and pushed to both `origin` (GitHub mirror)
-and `zoho` (Zoho repository).
-
-| Tag                       | Commit    | Date       | What it marks |
-|---------------------------|-----------|------------|---------------|
-| `baseline-upstream-oss`   | `2865610` | 2026-02-06 | Upstream OSS reference: zxh326/kite snapshot the internal `kites-core-v1` fork is built on. Use this for tree/content diffs against pure upstream. |
-| `kites-team-start`        | `2efa508` | 2026-02-20 | Team divergence point. Everything reachable from HEAD but not from this tag is team work. |
-| `kites-feature-complete`  | `7c3ffe8` | 2026-04-13 | End of feature-development phase (Topology Map, Terminal Stability, Prometheus, WebSocket migration, dashboard enhancements). |
-| `security-phase-1`        | `eb550ab` | 2026-05-19 | Remove Secrets viewer, disable workload creation, restrict editable YAML fields. |
-| `security-phase-2`        | `8d3799a` | 2026-05-23 | Freeze volumeMount fields, deny sensitive mountPaths, canonicalise mountPath with bypass-attempt tests, mirror in UI. |
-| `security-phase-3`        | `c93fe96` | 2026-05-29 | mountPath allow-list and sensitive env-KEY blocklist (PASSWORD/SECRET/TOKEN/APIKEY/CREDENTIAL/PRIVATE_KEY/PASSPHRASE patterns). |
-| `security-phase-4`        | `41097e5` | 2026-05-29 | mountPath allow-list tightened to `/home/sas` only. |
-| `security-phase-5`        | `8380d9e` | 2026-06-01 | Reject credential-bearing env VALUES; fix role filter to use RBAC snapshot; expand audit logging; dark theme polish; em-dash sweep. |
-| `security-phase-6`        | `601b113` | 2026-06-01 | Documentation update capturing phase-5 fixes. |
-
-### How a reviewer can audit the changes
-
-Clone the Zoho repository and fetch all refs:
-
-```
-git clone https://repository.zohocorpcloud.in/zohocorp/user/Vidhya_Dharan/KitesDashboard.git
-cd KitesDashboard
-git fetch --tags origin    # or 'zoho' depending on remote name
-git checkout security-hardening
-```
-
-#### Review only the security work
-
-```
-# All commits added by the security hardening phases:
-git log --oneline kites-feature-complete..HEAD
-
-# Full diff of all security work over the post-feature baseline:
-git diff kites-feature-complete..HEAD -- .
-
-# Per-phase diffs (most useful for incremental review):
-git diff security-phase-1..security-phase-2
-git diff security-phase-2..security-phase-3
-git diff security-phase-3..security-phase-4
-git diff security-phase-4..security-phase-5
-git diff security-phase-5..security-phase-6   # docs only
-
-# All security phase commits combined:
-git log --oneline security-phase-1^..security-phase-6
-```
-
-#### Review all team work since the team took over
-
-```
-# Every commit the team has made on top of the imported source:
-git log --oneline kites-team-start..HEAD
-
-# Total tree delta the team introduced:
-git diff kites-team-start..HEAD --stat | tail -1
-```
-
-#### Compare team source against pure upstream OSS
-
-Because the team's history is a separate root (no shared commits with
-upstream), use a content-level diff between the two tags rather than a
-log-based comparison:
-
-```
-# Files differing between the upstream OSS snapshot and current HEAD:
-git diff baseline-upstream-oss..HEAD --stat
-
-# Full diff of those files:
-git diff baseline-upstream-oss..HEAD
-
-# Files added by the team that do not exist upstream:
-git diff baseline-upstream-oss..HEAD --diff-filter=A --name-only
-
-# Files deleted by the team relative to upstream:
-git diff baseline-upstream-oss..HEAD --diff-filter=D --name-only
-```
-
-The 406-file delta between `baseline-upstream-oss` (`2865610`) and
-`kites-team-start` (`2efa508`) is the internal `kites-core-v1`
-customisation layer (branding, configuration, internal endpoints,
-etc.). Anything beyond `kites-team-start` is team work and is what the
-security review should focus on.
-
-### Tag publication
-
-The tags above are pushed to both remotes and can be fetched by any
-reviewer with read access:
-
-- origin (GitHub mirror): https://github.com/VidhyadharanSS/Dashboard-2
-- zoho (Zoho repository): https://repository.zohocorpcloud.in/zohocorp/user/Vidhya_Dharan/KitesDashboard
-
-Going forward, every future hardening phase will land its own
-`security-phase-N` annotated tag (or a `release-vX.Y.Z` tag for
-production cuts) so the review handle list stays linear and
-unambiguous.
+Going forward, every new hardening phase will land its own
+`security-phase-N` annotated tag.
