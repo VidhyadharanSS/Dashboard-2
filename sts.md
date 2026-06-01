@@ -4,10 +4,10 @@
 
 - **Current working repository (Zoho):** https://repository.zohocorpcloud.in/zohocorp/user/Vidhya_Dharan/KitesDashboard#/source/security-hardening/KitesDashboard
 - **Active branch:** `security-hardening`
-- **Commit URL pattern:** `https://repository.zohocorpcloud.in/zohocorp/user/Vidhya_Dharan/KitesDashboard#/commit/<sha>`
+- **Previous UI changes** : https://git.csez.zohocorpin.com/vidhyadharan.ss/kite-dashboard/-/commit/fa80a8740f9721fa096abc313a2a4c593934b42d
 - **Previous mirror (GitLab, no longer used for discussions):** https://git.csez.zohocorpin.com/vidhyadharan.ss/kite-dashboard/-/tree/feature/ui-font-language-update
 - **Upstream baseline (cloned from):** https://git.csez.zohocorpin.com/ziax/kitesdashboard/-/tree/kites-core-v1
-- **First commit by our team on top of the upstream baseline:** `2efa508` ("feat: Workload Topology Map & Terminal Stability Fixes"). Every commit from `2efa508` onwards is work done by our team for the Kites Dashboard feature.
+- **First commit by our team on top of the upstream baseline:** `2efa508` ("feat: Workload Topology Map & Terminal Stability Fixes"). Every commit from `2efa508` onwards is work done by our team for the Kites Dashboard features.
 
 ## Commits (chronological)
 
