@@ -4,10 +4,26 @@
 
 - **Canonical repository (Zoho):** [KitesDashboard](https://repository.zohocorpcloud.in/zohocorp/user/Vidhya_Dharan/KitesDashboard)
 - **GitHub mirror:** [VidhyadharanSS/Dashboard-2](https://github.com/VidhyadharanSS/Dashboard-2)
-- **Active branch:** [`security-hardening`](https://github.com/VidhyadharanSS/Dashboard-2/tree/security-hardening)
-- **Current HEAD:** [`7d286dd`](https://github.com/VidhyadharanSS/Dashboard-2/commit/7d286dd)
-- **Upstream OSS project:** [zxh326/kite](https://github.com/zxh326/kite)
-- **Internal pre-fork source:** [`ziax/kitesdashboard@kites-core-v1`](https://git.csez.zohocorpin.com/ziax/kitesdashboard/-/tree/kites-core-v1)
+- **Active branch (team work):** [`security-hardening`](https://github.com/VidhyadharanSS/Dashboard-2/tree/security-hardening) — current HEAD [`400c9ba`](https://github.com/VidhyadharanSS/Dashboard-2/commit/400c9ba)
+- **Pre-fork baseline branch (OSS upstream snapshot):** [`baseline/upstream-oss-pre-fork`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/upstream-oss-pre-fork) — points at upstream commit [`2865610`](https://github.com/zxh326/kite/commit/2865610) from [zxh326/kite](https://github.com/zxh326/kite). This is the cloned-from reference; diff `baseline/upstream-oss-pre-fork..security-hardening` for the full team delta.
+- **Internal pre-fork source (Zoho fork before team handover):** [`ziax/kitesdashboard@kites-core-v1`](https://git.csez.zohocorpin.com/ziax/kitesdashboard/-/tree/kites-core-v1)
+
+### Comparing branches
+
+```bash
+git fetch origin
+git log  origin/baseline/upstream-oss-pre-fork..origin/security-hardening   # commits added by the team
+git diff origin/baseline/upstream-oss-pre-fork..origin/security-hardening   # full content diff vs OSS baseline
+```
+
+Per-phase comparisons (tags described in the next section):
+
+```bash
+git log security-phase-1..security-phase-2
+git log security-phase-2..security-phase-3
+git log security-phase-3..security-phase-4
+git log security-phase-4..security-phase-5
+```
 
 ## Development tracking
 
@@ -28,18 +44,20 @@ stable, immutable handle for `git log` and `git diff`.
 
 **Lineage:**
 [`zxh326/kite`](https://github.com/zxh326/kite) (upstream OSS, snapshot
-tagged [`baseline-upstream-oss`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/baseline-upstream-oss))
+published as branch [`baseline/upstream-oss-pre-fork`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/upstream-oss-pre-fork)
+and tag [`baseline-upstream-oss`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/baseline-upstream-oss))
 → [`ziax/kitesdashboard@kites-core-v1`](https://git.csez.zohocorpin.com/ziax/kitesdashboard/-/tree/kites-core-v1) (internal Zoho fork)
 → [`kites-team-start`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/kites-team-start)
 → [`kites-feature-complete`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/kites-feature-complete)
 → security phases 1-6
 → [`HEAD`](https://github.com/VidhyadharanSS/Dashboard-2/tree/security-hardening).
 
-Earlier personal-fork branches (pre-team, retained for history):
+Earlier personal-fork branches (pre-team, retained for history; also
+published on the GitHub mirror as `baseline/personal-*` branches):
 
-- [feature/ui-font-language-update](https://github.com/VidhyadharanSS/kite/tree/feature/ui-font-language-update)
-- [fix-sqlite-hostpath](https://github.com/VidhyadharanSS/kite/tree/fix-sqlite-hostpath)
-- [fix-websocket-proxy](https://github.com/VidhyadharanSS/kite/tree/fix-websocket-proxy)
+- [feature/ui-font-language-update](https://github.com/VidhyadharanSS/kite/tree/feature/ui-font-language-update) → mirrored as [`baseline/personal-font-update`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/personal-font-update)
+- [fix-sqlite-hostpath](https://github.com/VidhyadharanSS/kite/tree/fix-sqlite-hostpath) → mirrored as [`baseline/personal-sqlite-hostpath`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/personal-sqlite-hostpath)
+- [fix-websocket-proxy](https://github.com/VidhyadharanSS/kite/tree/fix-websocket-proxy) → mirrored as [`baseline/personal-websocket-proxy`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/personal-websocket-proxy)
 - [Squashed UI changes (internal GitLab mirror)](https://git.csez.zohocorpin.com/vidhyadharan.ss/kite-dashboard/-/commit/fa80a8740f9721fa096abc313a2a4c593934b42d)
 
 Every new hardening phase will land its own `security-phase-N`
