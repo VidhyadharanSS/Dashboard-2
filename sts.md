@@ -4,11 +4,11 @@
 
 - **Zoho (source of truth):** [KitesDashboard](https://repository.zohocorpcloud.in/zohocorp/user/Vidhya_Dharan/KitesDashboard)
 - **GitHub mirror:** [VidhyadharanSS/Dashboard-2](https://github.com/VidhyadharanSS/Dashboard-2)
-- **Team branch:** [`security-hardening`](https://github.com/VidhyadharanSS/Dashboard-2/tree/security-hardening) — HEAD [`8534187`](https://github.com/VidhyadharanSS/Dashboard-2/commit/8534187)
-- **Baseline branch (cloned-from upstream OSS):** [`baseline/upstream-oss-pre-fork`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/upstream-oss-pre-fork) → [`zxh326/kite@2865610`](https://github.com/zxh326/kite/commit/2865610)
+- **Active branch:** [`security-hardening`](https://github.com/VidhyadharanSS/Dashboard-2/tree/security-hardening), HEAD [`8534187`](https://github.com/VidhyadharanSS/Dashboard-2/commit/8534187)
+- **Baseline branch (cloned-from upstream OSS):** [`baseline/upstream-oss-pre-fork`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/upstream-oss-pre-fork), pointing at [`zxh326/kite@2865610`](https://github.com/zxh326/kite/commit/2865610)
 - **Internal pre-fork source:** [`ziax/kitesdashboard@kites-core-v1`](https://git.csez.zohocorpin.com/ziax/kitesdashboard/-/tree/kites-core-v1)
 
-### Compare team work against the OSS baseline
+### Compare the active branch against the OSS baseline
 
 ```bash
 git fetch origin
@@ -24,7 +24,7 @@ handle for `git log` / `git diff`.
 | Tag | Commit | Date | Marks |
 |---|---|---|---|
 | [`baseline-upstream-oss`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/baseline-upstream-oss) | [`2865610`](https://github.com/zxh326/kite/commit/2865610) | 2026-02-06 | Upstream `zxh326/kite` snapshot. |
-| [`kites-team-start`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/kites-team-start) | [`2efa508`](https://github.com/VidhyadharanSS/Dashboard-2/commit/2efa508) | 2026-02-20 | First team commit. |
+| [`kites-team-start`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/kites-team-start) | [`2efa508`](https://github.com/VidhyadharanSS/Dashboard-2/commit/2efa508) | 2026-02-20 | First commit on the internal Zoho fork (divergence point). |
 | [`kites-feature-complete`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/kites-feature-complete) | [`7c3ffe8`](https://github.com/VidhyadharanSS/Dashboard-2/commit/7c3ffe8) | 2026-04-13 | End of feature development. |
 | [`security-phase-1`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/security-phase-1) | [`eb550ab`](https://github.com/VidhyadharanSS/Dashboard-2/commit/eb550ab) | 2026-05-19 | Remove Secrets viewer; disable workload create; first YAML field restrictions. |
 | [`security-phase-2`](https://github.com/VidhyadharanSS/Dashboard-2/releases/tag/security-phase-2) | [`8d3799a`](https://github.com/VidhyadharanSS/Dashboard-2/commit/8d3799a) | 2026-05-23 | Freeze `volumeMount` fields; deny sensitive `mountPaths` + canonicalise. |
@@ -45,7 +45,7 @@ Per-phase diff: `git log security-phase-N..security-phase-N+1`.
 → security phases 1–6
 → [`HEAD`](https://github.com/VidhyadharanSS/Dashboard-2/tree/security-hardening).
 
-Earlier personal-fork branches (pre-team, mirrored as `baseline/personal-*`):
+Earlier personal-fork branches (predate the internal fork, mirrored as `baseline/personal-*`):
 
 - [feature/ui-font-language-update](https://github.com/VidhyadharanSS/kite/tree/feature/ui-font-language-update) → [`baseline/personal-font-update`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/personal-font-update)
 - [fix-sqlite-hostpath](https://github.com/VidhyadharanSS/kite/tree/fix-sqlite-hostpath) → [`baseline/personal-sqlite-hostpath`](https://github.com/VidhyadharanSS/Dashboard-2/tree/baseline/personal-sqlite-hostpath)
@@ -73,7 +73,7 @@ Earlier personal-fork branches (pre-team, mirrored as `baseline/personal-*`):
 | [`601b113`](https://github.com/VidhyadharanSS/Dashboard-2/commit/601b113) | 2026-06-01 | docs: phase 6 (**phase-6**) |
 
 Feature-development commits (`kites-team-start` → `kites-feature-complete`,
-27 commits) are visible with:
+27 commits) can be listed with:
 
 ```bash
 git log --oneline kites-team-start..kites-feature-complete
@@ -81,23 +81,23 @@ git log --oneline kites-team-start..kites-feature-complete
 
 ## What each security phase covers
 
-**Phase 1 ([`eb550ab`](https://github.com/VidhyadharanSS/Dashboard-2/commit/eb550ab))** — Removed Secrets list/detail/topology routes and the Secrets handler (`/api/v1/_/secrets/*` → 404); removed "Create Workload" actions on Deployment/StatefulSet/DaemonSet/Job/CronJob/ReplicaSet; introduced `validateWorkloadFields()` gating the YAML apply endpoint. Follow-ups: secret references stripped from search/related-resources/UI selector ([`eddbc9b`](https://github.com/VidhyadharanSS/Dashboard-2/commit/eddbc9b)); persisted sidebar sanitised and client-side YAML editor mirror added ([`d2cb2d1`](https://github.com/VidhyadharanSS/Dashboard-2/commit/d2cb2d1)).
+**Phase 1 ([`eb550ab`](https://github.com/VidhyadharanSS/Dashboard-2/commit/eb550ab)).** Removed Secrets list/detail/topology routes and the Secrets handler (`/api/v1/_/secrets/*` → 404); removed "Create Workload" actions on Deployment/StatefulSet/DaemonSet/Job/CronJob/ReplicaSet; introduced `validateWorkloadFields()` gating the YAML apply endpoint. Follow-ups: secret references stripped from search/related-resources/UI selector ([`eddbc9b`](https://github.com/VidhyadharanSS/Dashboard-2/commit/eddbc9b)); persisted sidebar sanitised and client-side YAML editor mirror added ([`d2cb2d1`](https://github.com/VidhyadharanSS/Dashboard-2/commit/d2cb2d1)).
 
-**Phase 2 ([`8d3799a`](https://github.com/VidhyadharanSS/Dashboard-2/commit/8d3799a))** — `volumeMounts[].{subPath, subPathExpr, mountPropagation}` forbidden; `mountPath` rejected under sensitive container paths (`/`, `/etc`, `/bin`, `/sbin`, `/usr/{bin,sbin,local/bin,local/sbin,lib,lib64}`, `/lib`, `/lib64`, `/boot`, `/root`, `/proc`, `/sys`, `/var/run`, `/var/lib/{kubelet,docker,containerd}`, `/dev`) with `/dev/shm` carve-out. `mountPath` canonicalised via `path.Clean` (server) and `cleanPosixPath` (client) to defeat `//etc`, `/etc//`, `/etc/./`, `/etc/foo/..`, trailing-slash bypasses. Pre-cursor commit [`9729ecc`](https://github.com/VidhyadharanSS/Dashboard-2/commit/9729ecc) introduced the field freeze; resource-CREATE deny + kind-level Secret deny added in [`23a5756`](https://github.com/VidhyadharanSS/Dashboard-2/commit/23a5756) (same window).
+**Phase 2 ([`8d3799a`](https://github.com/VidhyadharanSS/Dashboard-2/commit/8d3799a)).** `volumeMounts[].{subPath, subPathExpr, mountPropagation}` forbidden; `mountPath` rejected under sensitive container paths (`/`, `/etc`, `/bin`, `/sbin`, `/usr/{bin,sbin,local/bin,local/sbin,lib,lib64}`, `/lib`, `/lib64`, `/boot`, `/root`, `/proc`, `/sys`, `/var/run`, `/var/lib/{kubelet,docker,containerd}`, `/dev`) with `/dev/shm` carve-out. `mountPath` canonicalised via `path.Clean` (server) and `cleanPosixPath` (client) to defeat `//etc`, `/etc//`, `/etc/./`, `/etc/foo/..`, trailing-slash bypasses. Pre-cursor commit [`9729ecc`](https://github.com/VidhyadharanSS/Dashboard-2/commit/9729ecc) introduced the field freeze; resource-CREATE deny + kind-level Secret deny added in [`23a5756`](https://github.com/VidhyadharanSS/Dashboard-2/commit/23a5756) (same window).
 
-**Phase 3 ([`c93fe96`](https://github.com/VidhyadharanSS/Dashboard-2/commit/c93fe96))** — Replaced the `mountPath` deny-list with an explicit allow-list; added case-insensitive env-KEY blocklist (`PASSWORD`, `PASSWD`, `SECRET`, `TOKEN`, `APIKEY`, `API_KEY`, `CREDENTIAL`, `PRIVATE_KEY`, `PRIVKEY`, `PASSPHRASE`). Mirrored client-side.
+**Phase 3 ([`c93fe96`](https://github.com/VidhyadharanSS/Dashboard-2/commit/c93fe96)).** Replaced the `mountPath` deny-list with an explicit allow-list; added case-insensitive env-KEY blocklist (`PASSWORD`, `PASSWD`, `SECRET`, `TOKEN`, `APIKEY`, `API_KEY`, `CREDENTIAL`, `PRIVATE_KEY`, `PRIVKEY`, `PASSPHRASE`). Mirrored client-side.
 
-**Phase 4 ([`41097e5`](https://github.com/VidhyadharanSS/Dashboard-2/commit/41097e5))** — `mountPath` allow-list reduced to a single root: `/home/sas` (and subpaths) after live-workload audit.
+**Phase 4 ([`41097e5`](https://github.com/VidhyadharanSS/Dashboard-2/commit/41097e5)).** `mountPath` allow-list reduced to a single root: `/home/sas` (and subpaths) after live-workload audit.
 
 **Phase 5 ([`8380d9e`](https://github.com/VidhyadharanSS/Dashboard-2/commit/8380d9e))**
 
-- *Env-VALUE blocklist:* `checkSensitiveEnvValue` rejects three patterns — `scheme://[user]:password@host` (proxy URLs, `jdbc://`, `redis://`), `(password|passwd|secret|token|apikey|api_key|credential|passphrase|privatekey|privkey|proxypassword|proxyuser)\s*[:=]\s*\S+` (with leading `-`/`.` allowed, catches `-Dhttp.proxyPassword=…`), and HTTP `Bearer <token>` / `Basic <b64>` headers. Values shorter than 8 chars skipped. Mirrored client-side as `containsSensitiveEnvValue`.
+- *Env-VALUE blocklist:* `checkSensitiveEnvValue` rejects three patterns: `scheme://[user]:password@host` (proxy URLs, `jdbc://`, `redis://`); `(password|passwd|secret|token|apikey|api_key|credential|passphrase|privatekey|privkey|proxypassword|proxyuser)\s*[:=]\s*\S+` with leading `-`/`.` allowed (catches `-Dhttp.proxyPassword=...`); and HTTP `Bearer <token>` / `Basic <b64>` headers. Values shorter than 8 chars are skipped. Mirrored client-side as `containsSensitiveEnvValue`.
 - *Audit expansion:* OAuth `LoginFailed` (`WARNING`) / state-CSRF mismatch (`CRITICAL`) / `LoginDenied` (`WARNING`); `Logout` (`INFO`); `RevokeSession`, `RevokeAllSessions`, `AdminRevokeSession` with source IP and revoked-row count; per-user entries for batch delete (`ERROR` on failure).
 - *Role-filter fix:* `rbac.SubjectsForRole(name)` reads the same in-memory `RBACConfig.RoleMapping` snapshot the UI uses for badges; `model.ListUsers` filters via `WHERE users.username IN ? OR users.email IN ?`, sentinel `__kite_no_match__` for empty/unknown roles.
 - *Dark theme:* `default.css` `.dark`: `--popover` 0.215→0.235, `--secondary` 0.28→0.3, `--accent` 0.295→0.32, `--muted-foreground` 0.745→0.785 (WCAG AA), `--border` 14→18%, `--input` 18→22%, `--sidebar-border` 12→16%.
 - *Em-dash sweep:* all em-dashes removed from `ui/src`. Verified: `grep -rln "—" ui/src` → 0.
 
-**Phase 6 ([`601b113`](https://github.com/VidhyadharanSS/Dashboard-2/commit/601b113))** — Documentation update for phase 5 (this file).
+**Phase 6 ([`601b113`](https://github.com/VidhyadharanSS/Dashboard-2/commit/601b113)).** Documentation update for phase 5 (this file).
 
 ## Permitted vs. excluded fields
 
@@ -140,4 +140,4 @@ pnpm build             # ok
 cd .. && go build .    # ./kite
 ```
 
-Both remotes are in sync — see HEAD link at the top of this file.
+Both remotes are in sync; see the HEAD link at the top of this file.
