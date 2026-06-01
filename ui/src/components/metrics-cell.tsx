@@ -116,7 +116,7 @@ export function MetricCell({
               <div className={`px-3 py-1.5 ${tier.bg} border-b border-border/50`}>
                 <div className="flex items-center justify-between">
                   <span className={`text-[10px] font-bold uppercase tracking-wider ${tier.text}`}>
-                    {type.toUpperCase()} — {tier.label}
+                    {type.toUpperCase()} - {tier.label}
                   </span>
                   <span className={`text-sm font-bold tabular-nums ${tier.text}`}>
                     {percentage.toFixed(0)}%

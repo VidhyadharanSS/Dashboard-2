@@ -38,7 +38,7 @@ async function syncFavoritesToBackend(favoritesJson: string) {
   try {
     await apiClient.post('/users/favorites', { favorites: favoritesJson })
   } catch {
-    // Silently fail — localStorage is the primary store
+    // Silently fail - localStorage is the primary store
   }
 }
 

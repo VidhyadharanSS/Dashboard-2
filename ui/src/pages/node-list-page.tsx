@@ -277,7 +277,7 @@ export function NodeListPage() {
         cell: ({ row }) => {
           const metrics = row.original.metrics
           if (!metrics?.gpuLimit || metrics.gpuLimit === 0) {
-            return <span className="text-muted-foreground/40 text-xs">—</span>
+            return <span className="text-muted-foreground/40 text-xs">-</span>
           }
           return (
             <MetricCell

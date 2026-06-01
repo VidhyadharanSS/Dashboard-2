@@ -67,7 +67,7 @@ export function VolumeTable({
       )
     }
     if (volume.secret) {
-      // Secret resources are not browsable via the dashboard — render the
+      // Secret resources are not browsable via the dashboard - render the
       // referenced name as inert text so that no link to /secrets/* leaks
       // out of the UI (security hardening).
       return (

@@ -102,7 +102,7 @@ function RestartBar({ restarts, maxRestarts }: { restarts: number; maxRestarts: 
                     </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="text-xs">
-                    {restarts} restarts — {severity.label}
+                    {restarts} restarts - {severity.label}
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>

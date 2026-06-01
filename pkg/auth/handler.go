@@ -185,6 +185,10 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		klog.Warningf("OAuth Callback - provider returned error: %s (%s)", providerErr, providerErrDesc)
 		setCookieSecure(c, "oauth_state", "", -1)
 		setCookieSecure(c, "oauth_provider", "", -1)
+		success := false
+		logger.Audit("", "LoginFailed", "User", "", "",
+			fmt.Sprintf("OAuth provider returned error: %s (%s)", providerErr, providerErrDesc),
+			logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Success: &success})
 		c.Redirect(http.StatusFound, base+loginPath+"?error=provider_error&reason=provider_error")
 		return
 	}
@@ -212,6 +216,10 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		// Clear oauth cookies
 		setCookieSecure(c, "oauth_state", "", -1)
 		setCookieSecure(c, "oauth_provider", "", -1)
+		success := false
+		logger.Audit("", "LoginFailed", "User", "", "",
+			fmt.Sprintf("OAuth state mismatch / CSRF check failure (provider=%s)", provider),
+			logger.AuditOpts{Severity: logger.AuditCritical, SourceIP: c.ClientIP(), Success: &success})
 		c.Redirect(http.StatusFound, base+loginPath+"?error=session_expired&reason=state_mismatch")
 		return
 	}
@@ -297,10 +305,18 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	if len(role) == 0 {
 		klog.Warningf("OAuth Callback - Access denied for user: %s (provider: %s), Username: %s, Name: %s, Sub: %s, OIDCGroups: %v",
 			user.Key(), provider, user.Username, user.Name, user.Sub, user.OIDCGroups)
+		success := false
+		logger.Audit(user.Key(), "LoginDenied", "User", "", "",
+			fmt.Sprintf("OAuth login denied - no roles assigned (provider=%s, groups=%v)", provider, user.OIDCGroups),
+			logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Success: &success})
 		c.Redirect(http.StatusFound, base+loginPath+"?error=insufficient_permissions&reason=insufficient_permissions&user="+user.Key()+"&provider="+provider)
 		return
 	}
 	if !user.Enabled {
+		success := false
+		logger.Audit(user.Key(), "LoginDenied", "User", "", "",
+			fmt.Sprintf("OAuth login denied - account disabled (provider=%s)", provider),
+			logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP(), Success: &success})
 		c.Redirect(http.StatusFound, base+loginPath+"?error=user_disabled&reason=user_disabled")
 		return
 	}
@@ -333,6 +349,12 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
+	if u, ok := c.Get("user"); ok {
+		if mu, ok := u.(model.User); ok {
+			logger.Audit(mu.Key(), "Logout", "User", "", "", "User logged out",
+				logger.AuditOpts{Severity: logger.AuditInfo, SourceIP: c.ClientIP()})
+		}
+	}
 	setCookieSecure(c, "auth_token", "", -1)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

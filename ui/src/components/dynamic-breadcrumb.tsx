@@ -34,7 +34,7 @@ export function DynamicBreadcrumb() {
       deployments: t('nav.deployments'),
       services: t('nav.services'),
       configmaps: t('nav.configMaps'),
-      // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+      // secrets removed - secret data must not be accessible via the dashboard (security hardening)
       ingresses: t('nav.ingresses'),
       gateways: t('nav.gateways'),
       httproutes: t('nav.httproutes'),

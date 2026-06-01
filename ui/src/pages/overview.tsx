@@ -59,7 +59,7 @@ export function Overview() {
         </p>
       </div>
 
-      {/* Cluster stats cards — always visible */}
+      {/* Cluster stats cards - always visible */}
       <ClusterStatsCards stats={overview} isLoading={isLoading} />
 
       {!isDismissed &&
@@ -85,7 +85,7 @@ export function Overview() {
       </div>
 
       {/* Row 3 (namespace health + recent deployments) and Row 4 (rollback +
-          quick actions) were removed — they duplicated information already
+          quick actions) were removed - they duplicated information already
           surfaced on dedicated pages and cluttered the home overview. */}
 
       {/* ─── Row 5: Live System Logs ─── */}

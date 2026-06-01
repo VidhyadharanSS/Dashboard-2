@@ -68,7 +68,7 @@ const RESOURCE_CONFIG: Record<
   gateways: { label: 'nav.gateways', displayLabel: 'Gateway', icon: IconLoadBalancer, group: 'Networking', color: 'text-purple-400', badgeColor: 'bg-purple-400/10 text-purple-500 border-purple-400/30 dark:text-purple-300' },
   httproutes: { label: 'nav.httproutes', displayLabel: 'HTTPRoute', icon: IconRoute, group: 'Networking', color: 'text-purple-300', badgeColor: 'bg-purple-300/10 text-purple-400 border-purple-300/30 dark:text-purple-200' },
   configmaps: { label: 'nav.configMaps', displayLabel: 'ConfigMap', icon: IconMap, group: 'Config', color: 'text-orange-500', badgeColor: 'bg-orange-500/10 text-orange-600 border-orange-500/30 dark:text-orange-400' },
-  // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+  // secrets removed - secret data must not be accessible via the dashboard (security hardening)
   namespaces: { label: 'nav.namespaces', displayLabel: 'Namespace', icon: IconBoxMultiple, group: 'Cluster', color: 'text-cyan-500', badgeColor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30 dark:text-cyan-400' },
   nodes: { label: 'nav.nodes', displayLabel: 'Node', icon: IconServer2, group: 'Cluster', color: 'text-cyan-400', badgeColor: 'bg-cyan-400/10 text-cyan-500 border-cyan-400/30 dark:text-cyan-300' },
   horizontalpodautoscalers: { label: 'nav.horizontalpodautoscalers', displayLabel: 'HPA', icon: IconArrowsHorizontal, group: 'Scaling', color: 'text-teal-500', badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-500/30 dark:text-teal-400' },
@@ -324,7 +324,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     toggleFavorite: toggleResourceFavorite,
   } = useFavorites()
 
-  // Handle item selection — declared early so actionItems can reference it
+  // Handle item selection - declared early so actionItems can reference it
   const handleSelect = useCallback(
     (path: string) => {
       navigate(path)
@@ -335,7 +335,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     [navigate, onOpenChange]
   )
 
-  // Detect kubectl-style commands — declared early so actionResults can reference it
+  // Detect kubectl-style commands - declared early so actionResults can reference it
   const isKubectlQuery = useMemo(() => {
     const trimmed = query.trim().toLowerCase()
     return trimmed.startsWith('kubectl ') || trimmed.startsWith('k get ') || trimmed.startsWith('k describe ')
@@ -496,7 +496,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     }
   }, [])
 
-  // Helper for action selection — also used by the Enter key handler below
+  // Helper for action selection - also used by the Enter key handler below
   const actionOptionOnSelect = useCallback((action: ActionSearchItem) => {
     action.onSelect()
     onOpenChange(false)
@@ -538,7 +538,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       }
       return
     }
-    // Don't run API search for kubectl commands — the action item will handle it
+    // Don't run API search for kubectl commands - the action item will handle it
     if (isKubectlQuery) {
       setIsLoading(false)
       setResults([])
@@ -635,7 +635,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             >
               Advanced Search
             </button>
-            {' '}— supports <code className="bg-muted px-1 rounded text-[9px] font-mono">kubectl get pods -n default</code>,
+            {' '}- supports <code className="bg-muted px-1 rounded text-[9px] font-mono">kubectl get pods -n default</code>,
             {' '}<code className="bg-muted px-1 rounded text-[9px] font-mono">jsonpath</code>,
             {' '}expressions & RBAC-scoped queries
           </span>
@@ -727,7 +727,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           const isFavoriteView = query.length < 2
 
           if (isFavoriteView) {
-            // Favorites view — flat list
+            // Favorites view - flat list
             return (
               <CommandGroup heading={t('globalSearch.favorites')}>
                 {filtered.map((result) => {
@@ -745,7 +745,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                         <span className="font-medium text-sm truncate">{result.name}</span>
                         {result.namespace && <div className="text-xs text-muted-foreground"><span className="opacity-60">ns/</span>{result.namespace}</div>}
                       </div>
-                      {/* Resource type badge — always visible */}
+                      {/* Resource type badge - always visible */}
                       <Badge
                         variant="outline"
                         className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
@@ -816,7 +816,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                           )}
                         </div>
 
-                        {/* ── Resource type badge — always visible, colour-coded per type ── */}
+                        {/* ── Resource type badge - always visible, colour-coded per type ── */}
                         <Badge
                           variant="outline"
                           className={`text-[10px] h-5 px-1.5 font-semibold shrink-0 border ${badgeColor}`}
@@ -824,7 +824,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                           {displayLabel}
                         </Badge>
 
-                        {/* ── Action buttons (shell / logs / yaml) — appear on hover ── */}
+                        {/* ── Action buttons (shell / logs / yaml) - appear on hover ── */}
                         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
                           {canExec && (
                             <button

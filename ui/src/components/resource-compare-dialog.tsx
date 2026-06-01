@@ -46,7 +46,7 @@ const COMPARABLE_TYPES: { value: ResourceType; label: string }[] = [
     { value: 'daemonsets', label: 'DaemonSets' },
     { value: 'services', label: 'Services' },
     { value: 'configmaps', label: 'ConfigMaps' },
-    // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    // secrets removed - secret data must not be accessible via the dashboard (security hardening)
     { value: 'pods', label: 'Pods' },
     { value: 'ingresses', label: 'Ingresses' },
     { value: 'cronjobs', label: 'CronJobs' },

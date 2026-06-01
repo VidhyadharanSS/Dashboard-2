@@ -13,7 +13,7 @@ import { LanguageToggle } from '@/components/language-toggle'
 // (e.g. user landed on the callback with a missing or mismatched state cookie
 // because they navigated back, opened a stale tab, or their browser dropped
 // the cookie). For these we transparently re-trigger the OAuth flow ONCE
-// before falling back to showing an error — this eliminates the "first
+// before falling back to showing an error - this eliminates the "first
 // login attempt fails, second one works" UX issue.
 const RECOVERABLE_REASONS = new Set([
   'no_provider_in_cookie',
@@ -41,7 +41,7 @@ export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
-  // ✅ All hooks declared at the top — before any conditional returns
+  // ✅ All hooks declared at the top - before any conditional returns
   const [mounted, setMounted] = useState(false)
   const [autoRetrying, setAutoRetrying] = useState(false)
   const autoRetryAttempted = useRef(false)
@@ -321,7 +321,7 @@ export function LoginPage() {
         <LanguageToggle />
       </div>
 
-      {/* Main content — centered single form */}
+      {/* Main content - centered single form */}
       <div className="flex-1 flex items-center justify-center relative z-10 px-4 py-8">
         <div className="w-full max-w-[360px]">
 

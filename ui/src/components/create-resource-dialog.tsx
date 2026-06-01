@@ -146,7 +146,7 @@ export function CreateResourceDialog({
     }
   }
 
-  // Validate & Preview — parse YAML and show identified objects before applying
+  // Validate & Preview - parse YAML and show identified objects before applying
   const handlePreview = useCallback(async () => {
     if (!yamlContent.trim()) return
     setIsValidating(true)
@@ -211,7 +211,7 @@ export function CreateResourceDialog({
 
   const handleCopyResults = useCallback(() => {
     const text = applyResults.map(r =>
-      `${r.status.toUpperCase()} ${r.kind}/${r.name}${r.namespace ? ` (ns: ${r.namespace})` : ''}${r.error ? ` — ${r.error}` : ''}`
+      `${r.status.toUpperCase()} ${r.kind}/${r.name}${r.namespace ? ` (ns: ${r.namespace})` : ''}${r.error ? ` - ${r.error}` : ''}`
     ).join('\n')
     navigator.clipboard.writeText(text)
     toast.success('Results copied to clipboard')
@@ -337,7 +337,7 @@ export function CreateResourceDialog({
                 </span>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Supports multi-document YAML — separate resources with <code className="bg-muted px-1 py-0.5 rounded text-[10px]">---</code>
+                Supports multi-document YAML - separate resources with <code className="bg-muted px-1 py-0.5 rounded text-[10px]">---</code>
               </p>
               <div className="min-h-[300px] border rounded-md">
                 <SimpleYamlEditor
@@ -350,7 +350,7 @@ export function CreateResourceDialog({
           </div>
         )}
 
-        {/* ─── Preview View — Identified Objects ─── */}
+        {/* ─── Preview View - Identified Objects ─── */}
         {view === 'preview' && (
           <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
             {/* Summary bar */}
@@ -436,7 +436,7 @@ export function CreateResourceDialog({
           </div>
         )}
 
-        {/* ─── Results View — Per-Object Apply Status ─── */}
+        {/* ─── Results View - Per-Object Apply Status ─── */}
         {view === 'results' && (
           <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
             {/* Summary bar */}
@@ -458,7 +458,7 @@ export function CreateResourceDialog({
                     <div className="flex items-center gap-1.5 mt-1">
                       <IconSparkles className="h-3 w-3 text-blue-500" />
                       <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
-                        Dry-run — no changes were made to the cluster. Click "Apply for Real" to commit.
+                        Dry-run - no changes were made to the cluster. Click "Apply for Real" to commit.
                       </p>
                     </div>
                   )}

@@ -98,3 +98,29 @@ func SyncRolesConfig() {
 		}
 	}
 }
+
+// SubjectsForRole returns all DB-side subjects (usernames/emails) currently
+// assigned to the role with the given name, plus the OIDC groups mapped to
+// that role. Returns nil if the role does not exist in the in-memory
+// snapshot.
+//
+// This is the unified read path used by code that needs to answer
+// "which users are in role X right now?" — it matches exactly what
+// GetUserRoles() returns when iterating users.
+func SubjectsForRole(name string) (users []string, oidcGroups []string, ok bool) {
+	rwlock.RLock()
+	defer rwlock.RUnlock()
+	if RBACConfig == nil {
+		return nil, nil, false
+	}
+	for _, rm := range RBACConfig.RoleMapping {
+		if rm.Name == name {
+			u := make([]string, len(rm.Users))
+			copy(u, rm.Users)
+			g := make([]string, len(rm.OIDCGroups))
+			copy(g, rm.OIDCGroups)
+			return u, g, true
+		}
+	}
+	return nil, nil, false
+}

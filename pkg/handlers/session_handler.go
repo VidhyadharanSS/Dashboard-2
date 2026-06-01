@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zxh326/kite/pkg/logger"
 	"github.com/zxh326/kite/pkg/model"
 )
 
@@ -63,6 +65,9 @@ func DeleteUserSession(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete session"})
 		return
 	}
+	logger.Audit(user.Key(), "RevokeSession", "sessions", "", "",
+		fmt.Sprintf("User revoked own session #%d", id),
+		logger.AuditOpts{Severity: logger.AuditInfo, SourceIP: c.ClientIP()})
 	c.JSON(http.StatusOK, gin.H{"message": "session removed"})
 }
 
@@ -77,6 +82,9 @@ func RevokeAllUserSessions(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to revoke sessions"})
 		return
 	}
+	logger.Audit(user.Key(), "RevokeAllSessions", "sessions", "", "",
+		fmt.Sprintf("User revoked %d other session(s)", result.RowsAffected),
+		logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP()})
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "All other sessions have been revoked",
 		"revoked":  result.RowsAffected,
@@ -135,5 +143,9 @@ func AdminDeleteSession(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete session"})
 		return
 	}
+	admin := c.MustGet("user").(model.User)
+	logger.Audit(admin.Key(), "AdminRevokeSession", "sessions", "", "",
+		fmt.Sprintf("Admin forcefully revoked session #%d", id),
+		logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: c.ClientIP()})
 	c.JSON(http.StatusOK, gin.H{"message": "session revoked"})
 }

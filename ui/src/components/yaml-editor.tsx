@@ -98,7 +98,7 @@ export function YamlEditor<T extends ResourceType>({
     return formatHex(card) || (actualTheme === 'dark' ? '#18181b' : '#ffffff')
   }
 
-  // Update editor value when value prop changes — but ONLY when the user
+  // Update editor value when value prop changes - but ONLY when the user
   // has not started editing. Without this guard the YamlEditor's own internal
   // state would also get reset by background polls, even after the parent-level
   // isDirty flag is set.
@@ -143,7 +143,7 @@ export function YamlEditor<T extends ResourceType>({
   const handleEditorChange = (value: string | undefined) => {
     const newValue = value || ''
     setEditorValue(newValue)
-    // Clear any prior policy-violation banner — the user is now editing again
+    // Clear any prior policy-violation banner - the user is now editing again
     // and should get a fresh re-check on the next Save click.
     if (policyViolations.length > 0) setPolicyViolations([])
     onChange?.(newValue)
@@ -196,7 +196,7 @@ export function YamlEditor<T extends ResourceType>({
             {title}
             {unsaved && (
               <span className="inline-flex items-center gap-1 text-xs font-normal text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-0.5">
-                ● Unsaved edits — live updates paused
+                ● Unsaved edits - live updates paused
               </span>
             )}
           </CardTitle>
@@ -263,7 +263,7 @@ export function YamlEditor<T extends ResourceType>({
             <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs text-amber-700 dark:text-amber-300">
               <div className="flex items-center gap-2 font-medium mb-1">
                 <IconLock className="w-3.5 h-3.5" />
-                Read-only fields (security policy — applies to all roles):
+                Read-only fields (security policy - applies to all roles):
               </div>
               <ul className="list-disc pl-5 leading-relaxed">
                 {LOCKED_WORKLOAD_FIELD_LABELS.map((p) => (

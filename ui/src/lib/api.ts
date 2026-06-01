@@ -318,7 +318,7 @@ export const deleteResource = async <T extends ResourceType>(
   await apiClient.delete(endpoint)
 }
 
-// Apply resource from YAML — supports multi-document YAML (--- separated)
+// Apply resource from YAML - supports multi-document YAML (--- separated)
 export interface ApplyResourceRequest {
   yaml: string
   dryRun?: boolean
@@ -354,7 +354,7 @@ export const applyResource = async (
   })
 }
 
-// Validate YAML — parse without applying, returns identified objects
+// Validate YAML - parse without applying, returns identified objects
 export interface ValidateObjectInfo {
   index: number
   kind: string
@@ -1750,7 +1750,7 @@ export const unassignRole = async (
   )
 }
 
-// RBAC Metadata — available verbs and resource types for role editor dropdowns
+// RBAC Metadata - available verbs and resource types for role editor dropdowns
 export interface RBACMetadata {
   verbs: string[]
   resources: string[]
@@ -1764,7 +1764,7 @@ export const useRBACMetadata = () => {
   return useQuery({
     queryKey: ['rbac-metadata'],
     queryFn: fetchRBACMetadata,
-    staleTime: 600000, // Cache for 10 minutes — rarely changes
+    staleTime: 600000, // Cache for 10 minutes - rarely changes
   })
 }
 
@@ -2114,9 +2114,9 @@ export const useAuditStats = (options?: { enabled?: boolean; refetchInterval?: n
   })
 }
 
-// Export audit logs (admin only) — downloads as a CSV file via fetch to avoid popup blockers.
+// Export audit logs (admin only) - downloads as a CSV file via fetch to avoid popup blockers.
 // NOTE: The export endpoint streams ALL matching rows with no page/size limit, so we must
-// NOT send a `size` parameter — the backend export handler ignores pagination entirely.
+// NOT send a `size` parameter - the backend export handler ignores pagination entirely.
 export const exportAuditLogs = async (params?: {
   operation?: string
   cluster?: string
@@ -2129,7 +2129,7 @@ export const exportAuditLogs = async (params?: {
   endDate?: string
 }) => {
   const searchParams = new URLSearchParams()
-  // Do NOT include page/size — the export endpoint streams unbounded rows
+  // Do NOT include page/size - the export endpoint streams unbounded rows
   if (params?.operation) searchParams.set('operation', params.operation)
   if (params?.cluster) searchParams.set('cluster', params.cluster)
   if (params?.operatorId) searchParams.set('operatorId', String(params.operatorId))
@@ -2165,7 +2165,7 @@ export const exportAuditLogs = async (params?: {
   }
 }
 
-// Audit resource activity — per-resource change history for detail pages
+// Audit resource activity - per-resource change history for detail pages
 export const fetchAuditResourceActivity = async (
   resourceType: string,
   namespace: string,
@@ -2193,7 +2193,7 @@ export const useAuditResourceActivity = (
   })
 }
 
-// Audit summary — top operators for a cluster
+// Audit summary - top operators for a cluster
 export interface AuditOperatorActivity {
   operatorId: number
   operatorName: string

@@ -5,7 +5,7 @@
  * Its child `.xterm-viewport` uses `position: absolute; inset: 0` relative to
  * `.xterm`, so it collapses when `.xterm` has no height.
  *
- * The container `[data-terminal-container]` is our sizing authority — it is
+ * The container `[data-terminal-container]` is our sizing authority - it is
  * positioned via `absolute inset-0` to fill the flex-1 terminal area.
  * Inside it, `.xterm` must ALSO use `absolute inset-0` (not `height: 100%`)
  * because `height: 100%` can fail to resolve when the parent's height comes
@@ -308,7 +308,7 @@ table tbody tr {
   transition: background-color 0.15s ease;
 }
 
-/* Ensure table layout is fixed — prevents column overlapping and content bleeding */
+/* Ensure table layout is fixed - prevents column overlapping and content bleeding */
 table[data-slot="table"] {
   table-layout: fixed;
 }
@@ -1006,7 +1006,7 @@ button[data-state="open"] > svg:first-child {
   color: var(--primary);
 }
 
-/* Badge chip remove button — smoother hit target */
+/* Badge chip remove button - smoother hit target */
 .group\/chip button {
   min-width: 16px;
   min-height: 16px;

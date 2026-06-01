@@ -36,7 +36,7 @@ export function WorkloadSummaryCard({ namespace }: { namespace: string }) {
         { kind: 'services', label: 'Services', icon: IconNetwork, path: '/services', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
         { kind: 'ingresses', label: 'Ingresses', icon: IconCloud, path: '/ingresses', color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
         { kind: 'configmaps', label: 'ConfigMaps', icon: IconSettings, path: '/configmaps', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
-        // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+        // secrets removed - secret data must not be accessible via the dashboard (security hardening)
     ]
 
     return (

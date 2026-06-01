@@ -1,5 +1,5 @@
 /**
- * RolloutMonitor — Real-time deployment rollout progress panel.
+ * RolloutMonitor - Real-time deployment rollout progress panel.
  *
  * Opens as a Sheet after any deployment operation (restart, scale, image update, YAML save).
  * Shows per-pod phase badges, a readyReplicas progress bar, and auto-closes once stable.
@@ -54,7 +54,7 @@ function podStatusLabel(pod: Pod): string {
     const reasons = pod.status?.containerStatuses?.flatMap(c =>
         [c.state?.waiting?.reason, c.state?.terminated?.reason]
     ).filter(Boolean)
-    return reasons?.length ? `${phase} — ${reasons[0]}` : phase
+    return reasons?.length ? `${phase} - ${reasons[0]}` : phase
 }
 
 export function RolloutMonitor({ deploymentName, namespace, open, onOpenChange }: RolloutMonitorProps) {
@@ -119,7 +119,7 @@ export function RolloutMonitor({ deploymentName, namespace, open, onOpenChange }
                                 : <IconLoader className="h-4 w-4 animate-spin text-primary" />
                             }
                             Rollout Monitor
-                            <span className="font-mono text-muted-foreground text-xs">— {deploymentName}</span>
+                            <span className="font-mono text-muted-foreground text-xs">- {deploymentName}</span>
                         </SheetTitle>
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onOpenChange(false)}>
                             <IconX className="h-3.5 w-3.5" />
@@ -153,8 +153,8 @@ export function RolloutMonitor({ deploymentName, namespace, open, onOpenChange }
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                         <span>
                             {isStable
-                                ? '✓ Rollout complete — closing in 8s'
-                                : `${progressPct}% ready — rollout in progress…`
+                                ? '✓ Rollout complete - closing in 8s'
+                                : `${progressPct}% ready - rollout in progress…`
                             }
                         </span>
                         <span>Started {formatDistanceToNow(startTime, { addSuffix: true })}</span>

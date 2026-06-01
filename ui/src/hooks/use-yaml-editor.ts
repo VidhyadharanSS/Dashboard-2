@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as yaml from 'js-yaml'
 
 /**
- * useYamlEditor — Safely manages YAML editor state for Kubernetes resource detail pages.
+ * useYamlEditor - Safely manages YAML editor state for Kubernetes resource detail pages.
  *
  * ### Problem solved
  * All detail pages poll server state every N seconds via `useResource`. Without this hook
  * the `useEffect([data])` that seeds the YAML editor would fire on every background refetch,
- * silently overwriting any in-progress user edits — making the editor unusable during high
+ * silently overwriting any in-progress user edits - making the editor unusable during high
  * pod-churn scenarios (OOM storms, CrashLoopBackOff cascades, rollouts).
  *
  * ### How it works

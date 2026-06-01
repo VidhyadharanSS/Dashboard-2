@@ -71,7 +71,7 @@ function ArchDiagram() {
     )
 }
 
-// ─── FAQ data — user focused ──────────────────────────────────────────────────
+// ─── FAQ data - user focused ──────────────────────────────────────────────────
 
 const FAQ: { q: string; a: string }[] = [
     {

@@ -135,7 +135,7 @@ function RollbackDialog({
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base">
                             <IconHistory className="h-5 w-5" />
-                            Rollback — {name}
+                            Rollback - {name}
                             <Badge variant="secondary" className="text-xs font-normal">
                                 {namespace}
                             </Badge>

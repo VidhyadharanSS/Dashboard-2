@@ -1,12 +1,12 @@
 /**
- * useNamespaceContext — Global namespace context switcher.
+ * useNamespaceContext - Global namespace context switcher.
  *
  * Provides a single source of truth for the "active namespace" across all list pages.
  * Pinned namespaces always appear first in the switcher, accessible from the header.
  * Any list page can call `useNamespaceContext()` to read/set the active namespace.
  *
  * The active namespace is stored in sessionStorage (survives page refresh within same tab,
- * but not across tabs — intentional: each tab can track different workspaces).
+ * but not across tabs - intentional: each tab can track different workspaces).
  */
 import { useCallback, useEffect, useState } from 'react'
 import { usePinnedNamespaces } from './use-pinned-namespaces'

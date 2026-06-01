@@ -116,14 +116,14 @@ export function KeyboardShortcutsDialog() {
             // Don't trigger in inputs
             if (isInputFocused()) return
 
-            // ? key — open shortcuts dialog
+            // ? key - open shortcuts dialog
             if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault()
                 setOpen(prev => !prev)
                 return
             }
 
-            // Ctrl+Shift+E — toggle Live Events drawer
+            // Ctrl+Shift+E - toggle Live Events drawer
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E') {
                 e.preventDefault()
                 // Dispatch custom event for the LiveEventDrawer
@@ -131,14 +131,14 @@ export function KeyboardShortcutsDialog() {
                 return
             }
 
-            // Ctrl+Shift+A — toggle Audit Log drawer
+            // Ctrl+Shift+A - toggle Audit Log drawer
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
                 e.preventDefault()
                 window.dispatchEvent(new CustomEvent('toggle-audit-drawer'))
                 return
             }
 
-            // G key — start navigation sequence
+            // G key - start navigation sequence
             if (e.key === 'g' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
                 if (!waitingForNav) {
                     setWaitingForNav(true)

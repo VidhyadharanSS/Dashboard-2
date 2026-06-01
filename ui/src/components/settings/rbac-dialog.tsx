@@ -158,7 +158,7 @@ export function RBACDialog({
             )
           })}
           {items.length === 0 && (
-            <span className="text-[10px] text-muted-foreground italic py-1">No items — type below to add</span>
+            <span className="text-[10px] text-muted-foreground italic py-1">No items - type below to add</span>
           )}
         </div>
         <div className="relative">
@@ -264,7 +264,7 @@ export function RBACDialog({
             />
           </div>
 
-          {/* Quick presets — only show for new roles */}
+          {/* Quick presets - only show for new roles */}
           {!isEdit && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">

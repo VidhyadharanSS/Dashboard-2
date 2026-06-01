@@ -170,7 +170,7 @@ const defaultMenus: DefaultMenus = {
   ],
   'sidebar.groups.config': [
     { titleKey: 'nav.configMaps', url: '/configmaps', icon: IconMap },
-    // secrets nav entry removed — secret data must not be accessible via the dashboard (security hardening)
+    // secrets nav entry removed - secret data must not be accessible via the dashboard (security hardening)
     {
       titleKey: 'nav.horizontalpodautoscalers',
       url: '/horizontalpodautoscalers',

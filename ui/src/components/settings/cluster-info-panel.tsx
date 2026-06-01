@@ -1,5 +1,5 @@
 /**
- * ClusterInfoPanel — draggable floating panel showing cluster details.
+ * ClusterInfoPanel - draggable floating panel showing cluster details.
  * Replaces the side-sheet approach so no content gets clipped.
  */
 import { useCallback, useRef, useState } from 'react'
@@ -50,13 +50,13 @@ function InfoRow({
 }
 
 function safeAgo(s: string | undefined): string {
-    if (!s || s === '' || s.startsWith('0001-01-01')) return '—'
+    if (!s || s === '' || s.startsWith('0001-01-01')) return '-'
     try {
         const d = new Date(s)
-        if (isNaN(d.getTime())) return '—'
+        if (isNaN(d.getTime())) return '-'
         return formatDistanceToNow(d, { addSuffix: true })
     } catch {
-        return '—'
+        return '-'
     }
 }
 
@@ -183,7 +183,7 @@ export function ClusterInfoPanel({
                                 cluster.error ? (
                                     <span className="text-destructive text-xs break-all">{cluster.error}</span>
                                 ) : (
-                                    <Badge variant="secondary" className="font-mono">{cluster.version || '—'}</Badge>
+                                    <Badge variant="secondary" className="font-mono">{cluster.version || '-'}</Badge>
                                 )
                             }
                         />

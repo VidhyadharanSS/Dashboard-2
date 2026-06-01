@@ -170,7 +170,15 @@ func GetUserByIdentifier(identifier string) (*User, error) {
 }
 
 // ListUsers returns users with pagination. If limit is 0, defaults to 20.
-func ListUsers(limit int, offset int, search string, sortBy string, sortOrder string, role string) (users []User, total int64, err error) {
+//
+// roleSubjects, when non-empty, restricts results to users whose username OR
+// email appears in the slice. Pass nil/empty to disable the role-based
+// constraint. The legacy `role` parameter (a role name resolved via SQL JOIN
+// against role_assignments) is retained for backward compatibility but is
+// expected to be empty in new call sites — callers should pre-resolve the
+// role to a subject list via rbac.SubjectsForRole so that the filter matches
+// the in-memory snapshot used to render role badges.
+func ListUsers(limit int, offset int, search string, sortBy string, sortOrder string, role string, roleSubjects []string) (users []User, total int64, err error) {
 	if limit <= 0 {
 		limit = 20
 	}
@@ -182,6 +190,9 @@ func ListUsers(limit int, offset int, search string, sortBy string, sortOrder st
 			"JOIN role_assignments ra ON (ra.subject = users.username OR ra.subject = users.email) AND ra.subject_type = ?",
 			SubjectTypeUser,
 		).Joins("JOIN roles r ON r.id = ra.role_id").Where("r.name = ?", role)
+	}
+	if len(roleSubjects) > 0 {
+		query = query.Where("users.username IN ? OR users.email IN ?", roleSubjects, roleSubjects)
 	}
 	if search != "" {
 		likeQuery := "%" + search + "%"

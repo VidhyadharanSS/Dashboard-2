@@ -55,7 +55,7 @@ export function ResourceList() {
       return <DaemonSetListPage />
     case 'configmaps':
       return <ConfigMapListPage />
-    // case 'secrets' removed — secret data must not be accessible via the dashboard (security hardening)
+    // case 'secrets' removed - secret data must not be accessible via the dashboard (security hardening)
     case 'persistentvolumeclaims':
       return <PVCListPage />
     case 'persistentvolumes':

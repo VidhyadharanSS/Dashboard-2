@@ -346,10 +346,10 @@ export function LogViewer({
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
       } else {
-        toast.info('No text selected — highlight text in the editor first')
+        toast.info('No text selected - highlight text in the editor first')
       }
     } else {
-      toast.info('No text selected — highlight text in the editor first')
+      toast.info('No text selected - highlight text in the editor first')
     }
   }, [])
 
@@ -376,7 +376,7 @@ export function LogViewer({
       }
       toast.success(selection && !selection.isEmpty() ? 'Selection copied' : 'Logs copied to clipboard')
     } catch {
-      toast.error('Failed to copy — try selecting text and using Ctrl+C')
+      toast.error('Failed to copy - try selecting text and using Ctrl+C')
     }
   }, [fallbackCopyToClipboard])
 

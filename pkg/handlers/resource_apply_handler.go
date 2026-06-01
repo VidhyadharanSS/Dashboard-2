@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	gopath "path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -646,6 +647,13 @@ func validateWorkloadFields(obj *unstructured.Unstructured) string {
 				if _, has := envEntry["value"]; has && isSensitiveEnvKey(envName) {
 					return fmt.Sprintf("%s: container %q env %q matches a sensitive-key pattern (passwords/secrets/tokens/credentials/api keys/private keys/passphrases must not be set via Apply; provision them through a separate secret-management path)", kind, cName, envName)
 				}
+				if vRaw, has := envEntry["value"]; has {
+					if vStr, ok := vRaw.(string); ok {
+						if why := checkSensitiveEnvValue(vStr); why != "" {
+							return fmt.Sprintf("%s: container %q env %q value carries credential material (%s); credential material must not be set via Apply; provision it through a separate secret-management path", kind, cName, envName, why)
+						}
+					}
+				}
 			}
 		}
 
@@ -826,4 +834,39 @@ func isSensitiveEnvKey(name string) bool {
 		}
 	}
 	return false
+}
+
+// sensitiveValuePatterns detects credential material embedded inside an env
+// VALUE (regardless of the env name). Catches cases like proxy URLs that
+// embed user:password@host, JDBC strings with credentials, JAVA_TOOL_OPTIONS
+// with -Dhttp.proxyPassword=..., explicit password=/token=/secret= fragments,
+// and HTTP Authorization headers. The list is deliberately narrow to avoid
+// false positives on benign config values.
+var sensitiveValuePatterns = []*regexp.Regexp{
+	// scheme://[user]:password@host  (proxy URLs, redis://:pwd@, jdbc:postgresql://user:pwd@, etc.)
+	regexp.MustCompile(`(?i)\b[a-z][a-z0-9+.-]*://[^\s/:@]*:[^\s/@]+@`),
+	// Standalone credential fragments:  password=xxx, passwd=xxx, secret=xxx,
+	// token=xxx, apikey=xxx, api_key=xxx, credential=xxx, passphrase=xxx,
+	// privatekey=xxx, privkey=xxx, proxypassword=xxx, proxyuser=xxx.
+	// Match key chars include "." so JAVA_TOOL_OPTIONS style
+	// "-Dhttp.proxyPassword=..." is caught.
+	regexp.MustCompile(`(?i)(?:^|[\s,;'"\-])(?:[a-z_.]*)?(?:password|passwd|secret|token|apikey|api_key|credential|passphrase|privatekey|privkey|proxypassword|proxyuser)\s*[:=]\s*\S+`),
+	// HTTP Authorization style: "Bearer eyJ..." / "Basic dXNlcjpwYXNz"
+	regexp.MustCompile(`(?i)\b(?:Bearer|Basic)\s+[A-Za-z0-9+/_\-=.]{8,}`),
+}
+
+// checkSensitiveEnvValue inspects a literal env value for credential
+// material. Returns a short reason string on hit; empty string otherwise.
+// Values shorter than 8 chars are skipped to avoid false positives on
+// trivial flags such as "no_proxy=1,2,3".
+func checkSensitiveEnvValue(v string) string {
+	if len(v) < 8 {
+		return ""
+	}
+	for _, re := range sensitiveValuePatterns {
+		if re.MatchString(v) {
+			return "matches credential pattern " + re.String()
+		}
+	}
+	return ""
 }

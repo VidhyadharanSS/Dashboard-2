@@ -56,7 +56,7 @@ const ALL_RESOURCE_DEFS: ResourceDef[] = [
     { type: 'jobs', label: 'Jobs', Icon: IconPlayerPlay },
     { type: 'services', label: 'Services', Icon: IconNetwork },
     { type: 'configmaps', label: 'ConfigMaps', Icon: IconMap },
-    // secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    // secrets removed - secret data must not be accessible via the dashboard (security hardening)
     { type: 'ingresses', label: 'Ingresses', Icon: IconRouter },
     { type: 'namespaces', label: 'Namespaces', Icon: IconBoxMultiple, clusterScope: true },
     { type: 'nodes', label: 'Nodes', Icon: IconServer2, clusterScope: true },
@@ -70,7 +70,7 @@ const ALL_RESOURCE_DEFS: ResourceDef[] = [
 
 const DEFAULT_RESOURCE_TYPES: ResourceType[] = [
     'pods', 'deployments', 'statefulsets', 'daemonsets', 'jobs', 'services', 'configmaps',
-    // 'secrets' removed — secret data must not be accessible via the dashboard (security hardening)
+    // 'secrets' removed - secret data must not be accessible via the dashboard (security hardening)
 ]
 
 // ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ interface SearchResultItem {
 }
 
 // ---------------------------------------------------------------------------
-// kubectl command parser — maps `kubectl get <resource> -n <ns> [-l label]`
+// kubectl command parser - maps `kubectl get <resource> -n <ns> [-l label]`
 // to a resource type + namespace + optional label filter expression
 // ---------------------------------------------------------------------------
 interface KubectlParsedCommand {
@@ -107,7 +107,7 @@ const KUBECTL_RESOURCE_MAP: Record<string, ResourceType> = {
     job: 'jobs', jobs: 'jobs',
     cj: 'cronjobs', cronjob: 'cronjobs', cronjobs: 'cronjobs',
     cm: 'configmaps', configmap: 'configmaps', configmaps: 'configmaps',
-    // secret/secrets removed — secret data must not be accessible via the dashboard (security hardening)
+    // secret/secrets removed - secret data must not be accessible via the dashboard (security hardening)
     ing: 'ingresses', ingress: 'ingresses', ingresses: 'ingresses',
     no: 'nodes', node: 'nodes', nodes: 'nodes',
     ns: 'namespaces', namespace: 'namespaces', namespaces: 'namespaces',
@@ -199,7 +199,7 @@ function parseKubectlCommand(input: string): KubectlParsedCommand {
 }
 
 // ---------------------------------------------------------------------------
-// Stable permission helper — avoids re-creating canAccess on every render
+// Stable permission helper - avoids re-creating canAccess on every render
 // ---------------------------------------------------------------------------
 function useStableCanAccess() {
     const { user } = useAuth()
@@ -223,7 +223,7 @@ function useStableCanAccess() {
         }
     }, [])
 
-    // Stable reference — reads from refs so it never changes identity
+    // Stable reference - reads from refs so it never changes identity
     const canAccess = useCallback(
         (resource: string, verb = 'list', namespace = '*'): boolean => {
             const u = userRef.current
@@ -260,7 +260,7 @@ export function ExpressionSearchPage() {
     const [searchParams] = useSearchParams()
     const inputRef = useRef<HTMLInputElement>(null)
 
-    // Stable canAccess — won't cause re-render cascades
+    // Stable canAccess - won't cause re-render cascades
     const canAccess = useStableCanAccess()
 
     // Accept ?q= parameter from global search redirect
@@ -269,7 +269,7 @@ export function ExpressionSearchPage() {
     const [selectedNamespace, setSelectedNamespace] = useState('default')
     const [kubectlParsed, setKubectlParsed] = useState<KubectlParsedCommand>({ isKubectl: false })
 
-    // Compute authorized resource defs — only depends on selectedNamespace + canAccess (stable ref)
+    // Compute authorized resource defs - only depends on selectedNamespace + canAccess (stable ref)
     const authorizedResourceDefs = useMemo(() => {
         return ALL_RESOURCE_DEFS.filter(def =>
             canAccess(def.type, 'list', def.clusterScope ? '*' : selectedNamespace)
@@ -319,7 +319,7 @@ export function ExpressionSearchPage() {
     const [loadedAt, setLoadedAt] = useState<Date | null>(null)
     const [expressionError, setExpressionError] = useState<string | null>(null)
 
-    // Staleness guard — incremented on every new fetch so old in-flight fetches are discarded
+    // Staleness guard - incremented on every new fetch so old in-flight fetches are discarded
     const fetchGenRef = useRef(0)
 
     // Parse kubectl commands on expression change
@@ -348,7 +348,7 @@ export function ExpressionSearchPage() {
         inputRef.current?.focus()
     }, [])
 
-    // Stable set of types to fetch — prevent identity churn
+    // Stable set of types to fetch - prevent identity churn
     const selectedTypesKey = selectedTypes.join(',')
 
     // Load resources when selected types or namespace changes
@@ -396,7 +396,7 @@ export function ExpressionSearchPage() {
                         })
                     }
                 } catch {
-                    // Ignore per-resource errors — the resource type may not exist in this cluster
+                    // Ignore per-resource errors - the resource type may not exist in this cluster
                 }
             })
         )
@@ -415,7 +415,7 @@ export function ExpressionSearchPage() {
         loadResources()
     }, [loadResources])
 
-    // Evaluate expression against items — supports both expressions and kubectl commands.
+    // Evaluate expression against items - supports both expressions and kubectl commands.
     // While loading, show the PREVIOUS results so the table doesn't flash empty.
     const filterResult = useMemo(() => {
         // Use stale items if a new fetch is in-flight and we haven't gotten results yet
@@ -426,7 +426,7 @@ export function ExpressionSearchPage() {
         const expr = expression.trim()
         if (!expr) return { items, error: null }
 
-        // kubectl command mode — filter by parsed resource type & labels
+        // kubectl command mode - filter by parsed resource type & labels
         if (kubectlParsed.isKubectl && !kubectlParsed.error && kubectlParsed.resourceType) {
             let results = items.filter(item => item.resourceType === kubectlParsed.resourceType)
 
@@ -450,7 +450,7 @@ export function ExpressionSearchPage() {
                             const val = sel.slice(separatorIdx + 1).trim()
                             return labels[key] === val
                         }
-                        // Bare key — existence check
+                        // Bare key - existence check
                         return sel in labels
                     })
                 })
@@ -570,7 +570,7 @@ export function ExpressionSearchPage() {
                 </h1>
                 <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-3xl">
                     Filter Kubernetes resources using expression-based queries or{' '}
-                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono border border-border/40">kubectl</code> commands — supports{' '}
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono border border-border/40">kubectl</code> commands - supports{' '}
                     <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono border border-border/40">kubectl get pods -n default -l app=web</code>,{' '}
                     <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono border border-border/40">jsonpath</code>,{' '}
                     <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono border border-border/40">in</code>,{' '}
@@ -737,7 +737,7 @@ export function ExpressionSearchPage() {
                             <span className="font-mono">{kubectlParsed.error}</span>
                         ) : (
                             <span className="font-mono">
-                                kubectl mode — {kubectlParsed.verb} {kubectlParsed.resourceType}
+                                kubectl mode - {kubectlParsed.verb} {kubectlParsed.resourceType}
                                 {kubectlParsed.namespace ? ` -n ${kubectlParsed.namespace}` : ''}
                                 {kubectlParsed.name ? ` ${kubectlParsed.name}` : ''}
                                 {kubectlParsed.labelSelector ? ` -l ${kubectlParsed.labelSelector}` : ''}
@@ -836,7 +836,7 @@ function ResultsTable({
                 <IconSearch className="h-8 w-8 opacity-30" />
                 <p className="text-sm">
                     {totalLoaded === 0
-                        ? 'No resources loaded — check resource types and namespace selection'
+                        ? 'No resources loaded - check resource types and namespace selection'
                         : 'No resources matched the expression'}
                 </p>
             </div>
@@ -893,11 +893,11 @@ function ResultsTable({
                                             {item.namespace}
                                         </Badge>
                                     ) : (
-                                        <span className="text-muted-foreground text-xs">—</span>
+                                        <span className="text-muted-foreground text-xs">-</span>
                                     )}
                                 </td>
                                 <td className="px-4 py-3 text-xs text-muted-foreground font-mono tabular-nums hidden lg:table-cell">
-                                    {age || '—'}
+                                    {age || '-'}
                                 </td>
                                 <td className="px-4 py-3">
                                     <IconChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-150" />

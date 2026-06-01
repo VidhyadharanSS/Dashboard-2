@@ -33,7 +33,7 @@ function get(obj: unknown, path: (string | number)[]): unknown {
   return cur
 }
 
-// Stable structural equality — JSON.stringify of normalised input.
+// Stable structural equality - JSON.stringify of normalised input.
 // undefined / null / missing are treated as equal so that "field absent" in
 // both sides does not register as a change.
 function deepEqual(a: unknown, b: unknown): boolean {
@@ -158,6 +158,26 @@ export function diffForbiddenWorkloadFields(
         }
       }
 
+      // Sensitive env name / value gating on the new env entries. Mirrors the
+      // server-side isSensitiveEnvKey + checkSensitiveEnvValue checks so the
+      // editor refuses to save credential material even when the env entry
+      // was previously absent (i.e. a newly added env line).
+      for (const e of nArr) {
+        const en = typeof e?.name === 'string' ? e.name : ''
+        if (!en) continue
+        if (isSensitiveEnvKey(en) && e.value !== undefined) {
+          violations.push(
+            `spec.template.spec.${collection}[name=${n}].env[name=${en}] (sensitive credential name)`
+          )
+          continue
+        }
+        if (typeof e.value === 'string' && containsSensitiveEnvValue(e.value)) {
+          violations.push(
+            `spec.template.spec.${collection}[name=${n}].env[name=${en}] (value carries credential material)`
+          )
+        }
+      }
+
       // volumeMounts[]: the security-sensitive sub-fields are frozen and
       // cannot be added/removed/changed via Apply. mountPath is also
       // additionally checked against a deny-list of sensitive container
@@ -242,7 +262,7 @@ function cleanPosixPath(p: string): string {
 
 /**
  * Convenience wrapper that parses two YAML strings and runs the diff.
- * Returns [] on parse failure — YAML-syntax errors are surfaced separately
+ * Returns [] on parse failure - YAML-syntax errors are surfaced separately
  * by the editor's own YAML validation.
  */
 export function diffForbiddenInYaml(
@@ -271,9 +291,35 @@ export const LOCKED_WORKLOAD_FIELD_LABELS = [
   'spec.template.spec.volumes[].secret',
   'spec.template.spec.{containers,initContainers}[].command / args / securityContext / envFrom',
   'spec.template.spec.{containers,initContainers}[].env[].valueFrom',
-  'spec.template.spec.{containers,initContainers}[].volumeMounts[].{mountPath, readOnly, subPath, subPathExpr, mountPropagation} — and mountPath must not be a sensitive container path (/etc, /bin, /sbin, /usr/{bin,sbin,local/bin,local/sbin,lib,lib64}, /lib, /lib64, /boot, /root, /proc, /sys, /var/run, /var/lib/{kubelet,docker,containerd}, /dev except /dev/shm)',
+  'spec.template.spec.{containers,initContainers}[].env[] (env names matching PASSWORD/SECRET/TOKEN/APIKEY/CREDENTIAL/PRIVATE_KEY/PASSPHRASE patterns, and env values that embed credentials such as proxy URLs with user:password@host or password=/token=/Bearer fragments)',
+  'spec.template.spec.{containers,initContainers}[].volumeMounts[].{mountPath, readOnly, subPath, subPathExpr, mountPropagation} - mountPath must be under /home/sas and must not be a sensitive container path (/etc, /bin, /sbin, /usr/{bin,sbin,local/bin,local/sbin,lib,lib64}, /lib, /lib64, /boot, /root, /proc, /sys, /var/run, /var/lib/{kubelet,docker,containerd}, /dev except /dev/shm)',
   'status',
 ]
+
+const SENSITIVE_ENV_KEY_SUBSTRINGS = [
+  'PASSWORD', 'PASSWD', 'SECRET', 'TOKEN', 'APIKEY', 'API_KEY',
+  'CREDENTIAL', 'PRIVATE_KEY', 'PRIVKEY', 'PASSPHRASE',
+]
+
+export function isSensitiveEnvKey(name: string): boolean {
+  if (!name) return false
+  const up = name.toUpperCase()
+  return SENSITIVE_ENV_KEY_SUBSTRINGS.some((s) => up.includes(s))
+}
+
+const SENSITIVE_VALUE_PATTERNS: RegExp[] = [
+  // scheme://[user]:password@host
+  /\b[a-z][a-z0-9+.-]*:\/\/[^\s/:@]*:[^\s/@]+@/i,
+  // password=, token=, secret=, api_key=, proxyPassword=, etc.
+  /(?:^|[\s,;'"-])(?:[a-z_.]*)?(?:password|passwd|secret|token|apikey|api_key|credential|passphrase|privatekey|privkey|proxypassword|proxyuser)\s*[:=]\s*\S+/i,
+  // Authorization: Bearer / Basic header values
+  /\b(?:Bearer|Basic)\s+[A-Za-z0-9+/_\-=.]{8,}/i,
+]
+
+export function containsSensitiveEnvValue(v: string): boolean {
+  if (!v || v.length < 8) return false
+  return SENSITIVE_VALUE_PATTERNS.some((re) => re.test(v))
+}
 
 export function isWorkloadKind(doc: unknown): boolean {
   if (!doc || typeof doc !== 'object') return false

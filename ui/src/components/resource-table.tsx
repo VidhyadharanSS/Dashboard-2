@@ -989,7 +989,7 @@ export function ResourceTable<T>({
                 const filterValue = (column.getFilterValue() as string) || ''
                 const headerLabel =
                   typeof columnDef.header === 'string' ? columnDef.header : 'Column'
-                // Smart pluralization — avoid "Statuss", "Addresss" etc.
+                // Smart pluralization - avoid "Statuss", "Addresss" etc.
                 const pluralLabel = headerLabel.endsWith('s') || headerLabel.endsWith('x') || headerLabel.endsWith('z') || headerLabel.endsWith('sh') || headerLabel.endsWith('ch')
                   ? `${headerLabel}es`
                   : headerLabel.endsWith('y') && !['a', 'e', 'i', 'o', 'u'].includes(headerLabel.charAt(headerLabel.length - 2).toLowerCase())

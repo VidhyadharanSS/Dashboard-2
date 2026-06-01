@@ -28,7 +28,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DeploymentStatusIcon } from '@/components/deployment-status-icon'
-// DeploymentCreateDialog import removed — workload creation via dashboard is disabled (security hardening)
+// DeploymentCreateDialog import removed - workload creation via dashboard is disabled (security hardening)
 import { DescribeDialog } from '@/components/describe-dialog'
 import { ResourceTable } from '@/components/resource-table'
 import { FilterBar, FilterGroup } from '@/components/ui/filter-bar'
@@ -56,7 +56,7 @@ function fallbackCopy(text: string) {
 
 export function DeploymentListPage() {
   const { t } = useTranslation()
-  // isCreateDialogOpen removed — workload creation via dashboard is disabled (security hardening)
+  // isCreateDialogOpen removed - workload creation via dashboard is disabled (security hardening)
   const [selectedLabels, setSelectedLabels] = useSessionState<string>('deployments-selectedLabels', '')
   const [querySelector, setQuerySelector] = useSessionState<string>('deployments-querySelector', '')
   const [rollbackTarget, setRollbackTarget] = useState<{ ns: string; name: string } | null>(null)
@@ -230,7 +230,7 @@ export function DeploymentListPage() {
     []
   )
 
-  // handleCreateClick and handleCreateSuccess removed — workload creation via dashboard is disabled (security hardening)
+  // handleCreateClick and handleCreateSuccess removed - workload creation via dashboard is disabled (security hardening)
 
   const handleBatchRestart = useCallback(async (rows: Deployment[]) => {
     const promises = rows.map((row) => {
@@ -292,7 +292,7 @@ export function DeploymentListPage() {
         enableMultiNamespace
       />
 
-      {/* DeploymentCreateDialog removed — workload creation via dashboard is disabled (security hardening) */}
+      {/* DeploymentCreateDialog removed - workload creation via dashboard is disabled (security hardening) */}
 
       {/* Rollback Confirmation Dialog */}
       <Dialog open={!!rollbackTarget} onOpenChange={(open) => { if (!open) setRollbackTarget(null) }}>

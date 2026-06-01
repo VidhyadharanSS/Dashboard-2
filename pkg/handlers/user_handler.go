@@ -200,13 +200,36 @@ func ListUsers(c *gin.Context) {
 	}
 	offset := (page - 1) * size
 
+	// Resolve role filter via the same in-memory RBAC snapshot used to
+	// display each user's roles in the UI. The legacy SQL JOIN against
+	// role_assignments could miss users whose role was assigned via OIDC
+	// group mapping or whose subject identifier (username vs. email vs.
+	// OAuth sub) did not exactly match what the JOIN looked for, producing
+	// a "No users found" view even though the role badge was clearly
+	// visible on the same user row. Using rbac.SubjectsForRole here
+	// guarantees the filter and the badge agree.
+	var roleSubjects []string
+	roleFilterActive := role != ""
+	if roleFilterActive {
+		if subs, _, ok := rbac.SubjectsForRole(role); ok {
+			roleSubjects = subs
+		}
+		// If the role exists with zero subjects, or does not exist in the
+		// snapshot at all, the filter result must be empty — pass an
+		// impossible subject so the DB query returns no rows.
+		if len(roleSubjects) == 0 {
+			roleSubjects = []string{"__kite_no_match__"}
+		}
+	}
+
 	users, total, err := model.ListUsers(
 		size,
 		offset,
 		search,
 		sortBy,
 		sortOrder,
-		role,
+		"",            // role filter handled in-memory below via roleSubjects
+		roleSubjects,  // empty => no constraint
 	)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "failed to list users"})
@@ -308,12 +331,29 @@ func BatchDeleteUsers(c *gin.Context) {
 	var deleted []uint
 	var errors []string
 
+	admin := c.MustGet("user").(model.User)
+	ip := c.ClientIP()
 	for _, id := range req.IDs {
+		// Resolve identity before deletion so the audit entry names a
+		// user, not a numeric id, which is what the operator needs to
+		// answer "what got removed in this batch?".
+		var targetName string
+		if t, _ := model.GetUserByID(uint64(id)); t != nil {
+			targetName = t.Key()
+		} else {
+			targetName = fmt.Sprintf("user#%d", id)
+		}
 		if err := model.DeleteUserByID(id); err != nil {
 			errors = append(errors, fmt.Sprintf("failed to delete user %d: %v", id, err))
+			logger.Audit(admin.Key(), "DeleteUser", "users", "", "",
+				fmt.Sprintf("Batch delete FAILED for user %s: %v", targetName, err),
+				logger.AuditOpts{Severity: logger.AuditError, SourceIP: ip, Name: targetName})
 			continue
 		}
 		deleted = append(deleted, id)
+		logger.Audit(admin.Key(), "DeleteUser", "users", "", "",
+			fmt.Sprintf("Batch deleted user %s", targetName),
+			logger.AuditOpts{Severity: logger.AuditWarning, SourceIP: ip, Name: targetName})
 	}
 
 	c.JSON(http.StatusOK, gin.H{

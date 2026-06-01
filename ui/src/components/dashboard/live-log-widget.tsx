@@ -85,7 +85,7 @@ export function LiveLogWidget() {
     esRef.current = es
 
     // onopen fires once the server returns HTTP 200 and starts the SSE stream.
-    // We can safely mark the connection as "connected" here — even if no log
+    // We can safely mark the connection as "connected" here - even if no log
     // lines have been emitted yet (e.g. empty file, slow server).
     es.onopen = () => {
       setConnState('connected')
@@ -127,25 +127,25 @@ export function LiveLogWidget() {
        *   CONNECTING (0) → server closed a valid stream; browser is auto-retrying.
        *
        * Only show the error state on permanent failures when we've never
-       * received data — avoids false alarms from stream-end / log rotation.
+       * received data - avoids false alarms from stream-end / log rotation.
        */
       if (es.readyState === EventSource.CLOSED) {
         esRef.current = null
         if (hasReceivedDataRef.current) {
-          // Clean close after receiving data — auto-reconnect (log rotation, restart)
+          // Clean close after receiving data - auto-reconnect (log rotation, restart)
           setConnState('closed')
           retryTimeoutRef.current = setTimeout(() => {
             setRetryCount(c => c + 1)
           }, 3000)
         } else {
-          // Never received data — file may not exist yet or access denied
+          // Never received data - file may not exist yet or access denied
           setConnState('error')
           setErrorMsg(
             'Could not connect to log stream. The log file may not exist yet or access was denied.'
           )
         }
       } else {
-        // CONNECTING — browser is auto-retrying after a clean server close
+        // CONNECTING - browser is auto-retrying after a clean server close
         setConnState('connecting')
       }
     }
@@ -387,7 +387,7 @@ export function LiveLogWidget() {
           onClick={handlePauseResume}
         >
           <span>
-            Paused — {pendingCount} new line{pendingCount !== 1 ? 's' : ''} buffered
+            Paused - {pendingCount} new line{pendingCount !== 1 ? 's' : ''} buffered
           </span>
           <span className="underline">Resume</span>
         </div>

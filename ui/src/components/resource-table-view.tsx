@@ -90,7 +90,7 @@ function getColumnWidth(column: any, _totalColumns: number): React.CSSProperties
   if (id === 'select') return { width: '40px' }
   if (id === 'actions') return { width: '100px' }
 
-  // No explicit width — let table-fixed distribute evenly
+  // No explicit width - let table-fixed distribute evenly
   return {}
 }
 
@@ -329,7 +329,7 @@ export function ResourceTableView<T>({
                 Showing {filteredRowCount} of {totalRowCount} row(s)
                 {searchQuery && (
                   <span className="ml-1">
-                    (filtered by "{searchQuery}" — <strong>{matchCount}</strong> match{matchCount !== 1 ? 'es' : ''} found)
+                    (filtered by "{searchQuery}" - <strong>{matchCount}</strong> match{matchCount !== 1 ? 'es' : ''} found)
                   </span>
                 )}
               </>

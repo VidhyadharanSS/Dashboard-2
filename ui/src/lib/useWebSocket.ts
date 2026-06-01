@@ -45,7 +45,7 @@ export interface WebSocketActions {
 
 const defaultOptions: Required<WebSocketOptions> = {
   enabled: true,
-  pingInterval: 15000, // 15s — must be < shortest proxy idle timeout in the chain (ZGS ~30s, nginx 60s)
+  pingInterval: 15000, // 15s - must be < shortest proxy idle timeout in the chain (ZGS ~30s, nginx 60s)
   speedUpdateInterval: 500,
   speedResetInterval: 3000,
   reconnectOnClose: false,
@@ -311,10 +311,10 @@ export function useWebSocket(
 
           // Handle internal message types
           if (message.type === 'pong') {
-            return // Response to our ping — no action needed
+            return // Response to our ping - no action needed
           }
 
-          // Server-side keepalive ping — reply with pong so the server knows
+          // Server-side keepalive ping - reply with pong so the server knows
           // we're alive AND so that the upstream data frame resets the
           // proxy_read_timeout counter in ingress-nginx.
           if (message.type === 'ping') {

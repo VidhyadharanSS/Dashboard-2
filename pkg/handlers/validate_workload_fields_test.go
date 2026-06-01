@@ -811,3 +811,120 @@ func TestIsSensitiveEnvKey_Table(t *testing.T) {
 		assert.False(t, isSensitiveEnvKey(n), "expected %q to be non-sensitive", n)
 	}
 }
+
+func TestValidateWorkloadFields_RejectsCredentialBearingEnvValue_ProxyURL(t *testing.T) {
+	// http_proxy=http://user:password@host:8090 carries credentials in the URL.
+	// Name is benign (http_proxy is operationally common), but the VALUE leaks
+	// a password, so it must be rejected.
+	obj := deployObj()
+	_ = unstructured.SetNestedSlice(obj.Object, []interface{}{
+		map[string]interface{}{
+			"name":  "kites",
+			"image": "img:1",
+			"env": []interface{}{
+				map[string]interface{}{"name": "http_proxy", "value": "http://kites:ct1kites-8090@172.20.95.189:8090"},
+			},
+		},
+	}, "spec", "template", "spec", "containers")
+	msg := validateWorkloadFields(obj)
+	assert.Contains(t, msg, "carries credential material")
+	assert.Contains(t, msg, "http_proxy")
+}
+
+func TestValidateWorkloadFields_RejectsCredentialBearingEnvValue_JavaToolOptions(t *testing.T) {
+	// JAVA_TOOL_OPTIONS often carries -Dhttp.proxyPassword=... which must be
+	// blocked even though the env NAME (JAVA_TOOL_OPTIONS) is benign.
+	obj := deployObj()
+	_ = unstructured.SetNestedSlice(obj.Object, []interface{}{
+		map[string]interface{}{
+			"name":  "kites",
+			"image": "img:1",
+			"env": []interface{}{
+				map[string]interface{}{
+					"name":  "JAVA_TOOL_OPTIONS",
+					"value": "-Dhttp.proxyHost=172.20.95.189 -Dhttp.proxyPort=8090 -Dhttp.proxyUser=kites -Dhttp.proxyPassword=ct1kites-8090",
+				},
+			},
+		},
+	}, "spec", "template", "spec", "containers")
+	msg := validateWorkloadFields(obj)
+	assert.Contains(t, msg, "carries credential material")
+	assert.Contains(t, msg, "JAVA_TOOL_OPTIONS")
+}
+
+func TestValidateWorkloadFields_RejectsCredentialBearingEnvValue_BearerToken(t *testing.T) {
+	obj := deployObj()
+	_ = unstructured.SetNestedSlice(obj.Object, []interface{}{
+		map[string]interface{}{
+			"name":  "kites",
+			"image": "img:1",
+			"env": []interface{}{
+				map[string]interface{}{
+					"name":  "UPSTREAM_AUTH_HEADER",
+					"value": "Bearer eyJhbGciOiJIUzI1NiJ9.payload.signature",
+				},
+			},
+		},
+	}, "spec", "template", "spec", "containers")
+	msg := validateWorkloadFields(obj)
+	assert.Contains(t, msg, "carries credential material")
+}
+
+func TestValidateWorkloadFields_AllowsBenignEnvValues(t *testing.T) {
+	// These mirror the operationally-valid env entries from the same workload
+	// that should NOT be flagged.
+	obj := deployObj()
+	_ = unstructured.SetNestedSlice(obj.Object, []interface{}{
+		map[string]interface{}{
+			"name":  "kites",
+			"image": "img:1",
+			"env": []interface{}{
+				map[string]interface{}{"name": "no_proxy", "value": "0,1,2,3,4,5,6,7,8,9"},
+				map[string]interface{}{"name": "NO_PROXY", "value": "0,1,2,3,4,5,6,7,8,9"},
+				map[string]interface{}{"name": "APP_UID", "value": "5a9eb469-d789-44f8-b9a4-08f0e1636289"},
+				map[string]interface{}{"name": "NVIDIA_VISIBLE_DEVICES", "value": "1"},
+				map[string]interface{}{"name": "CACHE_KEY_PREFIX", "value": "kites-cache"},
+				map[string]interface{}{"name": "TLS_CA_FILE", "value": "/etc/ssl/certs/ca.pem"},
+			},
+		},
+	}, "spec", "template", "spec", "containers")
+	assert.Empty(t, validateWorkloadFields(obj))
+}
+
+func TestCheckSensitiveEnvValue_Table(t *testing.T) {
+	deny := []string{
+		"http://kites:ct1kites-8090@172.20.95.189:8090",
+		"https://user:pass@example.com/path",
+		"jdbc:postgresql://admin:s3cret@db.host:5432/app",
+		"redis://:pa55word@redis.host:6379/0",
+		"-Dhttp.proxyPassword=ct1kites-8090",
+		"-Dhttps.proxyPassword=ct1kites-8090",
+		"password=hunter2",
+		"PASSWORD=hunter2",
+		"db_password: hunter2",
+		"client_secret=abcdef0123",
+		"token=abcdef0123456789",
+		"api_key=AKIA0123456789",
+		"Bearer eyJhbGciOiJIUzI1NiJ9.payload.signature",
+		"Basic dXNlcjpwYXNzd29yZA==",
+	}
+	for _, v := range deny {
+		assert.NotEmpty(t, checkSensitiveEnvValue(v), "expected value to be flagged: %q", v)
+	}
+	allow := []string{
+		"",
+		"1",
+		"0,1,2,3,4,5,6,7,8,9",
+		"5a9eb469-d789-44f8-b9a4-08f0e1636289",
+		"http://172.20.95.189:8090",
+		"https://example.com/path",
+		"jdbc:postgresql://db.host:5432/app",
+		"/etc/ssl/certs/ca.pem",
+		"kites-cache",
+		"INFO",
+		"true",
+	}
+	for _, v := range allow {
+		assert.Empty(t, checkSensitiveEnvValue(v), "expected value NOT to be flagged: %q", v)
+	}
+}

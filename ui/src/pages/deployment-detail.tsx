@@ -601,9 +601,9 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                     </CardContent>
                   </Card>
 
-                  {/* Resource Topology Link — moved to right column */}
+                  {/* Resource Topology Link - moved to right column */}
 
-                  {/* Conditions — moved to right column */}
+                  {/* Conditions - moved to right column */}
                 </div>
 
                 {/* ── Right Column (2/5) ── */}
@@ -1119,7 +1119,7 @@ export function DeploymentDetail(props: { namespace: string; name: string }) {
                 <span className="text-muted-foreground">Replica Set</span>
                 <span className="font-mono text-xs break-all">{viewingRevision.replicaName}</span>
                 <span className="text-muted-foreground">Image</span>
-                <span className="font-mono text-xs break-all">{viewingRevision.image || '—'}</span>
+                <span className="font-mono text-xs break-all">{viewingRevision.image || '-'}</span>
                 <span className="text-muted-foreground">Replicas</span>
                 <span>{viewingRevision.replicas}</span>
                 <span className="text-muted-foreground">Created</span>

@@ -238,7 +238,7 @@ export function WorkloadLabelSelector({
         </PopoverContent>
       </Popover>
 
-      {/* Selected label chips — visible inline */}
+      {/* Selected label chips - visible inline */}
       {hasActive && (
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0">
           {selectedLabels.slice(0, 3).map((label) => (

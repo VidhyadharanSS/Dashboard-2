@@ -132,7 +132,7 @@ export function YamlDiffViewer({
 
   const { original: leftContent, modified: rightContent } = getDiffContent()
 
-  // Handle rollback button clicks — open confirmation dialog
+  // Handle rollback button clicks - open confirmation dialog
   const handleRollbackClick = (yamlContent: string, label: string) => {
     if (onRollback) {
       setPendingRollbackYaml(yamlContent)

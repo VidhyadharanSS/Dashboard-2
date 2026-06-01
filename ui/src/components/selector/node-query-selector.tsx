@@ -36,12 +36,12 @@ interface QueryRule {
 }
 
 const OPERATORS: { value: Operator; label: string; description: string; needsValue: boolean }[] = [
-  { value: '=', label: '=', description: 'Equals — label value must match exactly', needsValue: true },
-  { value: '!=', label: '≠', description: 'Not equals — label value must not match', needsValue: true },
-  { value: 'in', label: 'in', description: 'In set — value is one of the listed values', needsValue: true },
-  { value: 'notin', label: 'not in', description: 'Not in set — value is not any of the listed', needsValue: true },
-  { value: 'exists', label: 'exists', description: 'Key exists — label key is present (any value)', needsValue: false },
-  { value: '!exists', label: '! exists', description: 'Not exists — label key is not present', needsValue: false },
+  { value: '=', label: '=', description: 'Equals - label value must match exactly', needsValue: true },
+  { value: '!=', label: '≠', description: 'Not equals - label value must not match', needsValue: true },
+  { value: 'in', label: 'in', description: 'In set - value is one of the listed values', needsValue: true },
+  { value: 'notin', label: 'not in', description: 'Not in set - value is not any of the listed', needsValue: true },
+  { value: 'exists', label: 'exists', description: 'Key exists - label key is present (any value)', needsValue: false },
+  { value: '!exists', label: '! exists', description: 'Not exists - label key is not present', needsValue: false },
 ]
 
 // Convert rules to Kubernetes label selector string
@@ -449,7 +449,7 @@ export function NodeQuerySelector({ onSelectorChange, initialSelector = '' }: No
                               <SelectItem key={op.value} value={op.value} className="text-xs">
                                 <div className="flex items-center gap-2">
                                   <span className="font-mono font-bold w-12">{op.label}</span>
-                                  <span className="text-muted-foreground text-[10px]">{op.description.split('—')[0]}</span>
+                                  <span className="text-muted-foreground text-[10px]">{op.description.split('-')[0]}</span>
                                 </div>
                               </SelectItem>
                             ))}

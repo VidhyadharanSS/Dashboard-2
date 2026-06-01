@@ -1,5 +1,5 @@
 /**
- * ImageUpdateDialog — One-click container image tag update.
+ * ImageUpdateDialog - One-click container image tag update.
  *
  * Triggered from ContainerTable via an "Update Image" button.
  * Shows the current image, validates the new tag, previews the diff,
@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label'
 interface ImageUpdateDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    /** Resource type — deployments, statefulsets, daemonsets */
+    /** Resource type - deployments, statefulsets, daemonsets */
     resourceType: 'deployments' | 'statefulsets' | 'daemonsets'
     resourceName: string
     namespace: string

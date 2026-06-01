@@ -372,7 +372,7 @@ export function PodDetail(props: { namespace: string; name: string }) {
                                       <DialogHeader className="px-4 py-3 border-b shrink-0">
                                         <DialogTitle className="flex items-center gap-2 text-sm">
                                           <IconBox className="w-4 h-4" />
-                                          Port Proxy — {pod.metadata?.name}:{port.containerPort}
+                                          Port Proxy - {pod.metadata?.name}:{port.containerPort}
                                           {port.name && <span className="text-muted-foreground font-normal">({port.name})</span>}
                                         </DialogTitle>
                                       </DialogHeader>

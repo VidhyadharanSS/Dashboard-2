@@ -277,7 +277,7 @@ export function Terminal({
       }
       toast.success(selection ? 'Selection copied to clipboard' : 'Buffer copied to clipboard')
     } catch {
-      toast.error('Failed to copy — try selecting text and using Ctrl+C')
+      toast.error('Failed to copy - try selecting text and using Ctrl+C')
     }
   }, [])
 

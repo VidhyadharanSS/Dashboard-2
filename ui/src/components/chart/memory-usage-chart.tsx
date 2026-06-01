@@ -73,7 +73,7 @@ const MemoryUsageChart = React.memo((prop: MemoryUsageChartProps) => {
     [useGB]
   )
 
-  // ALL hooks must be called before any early returns — Rules of Hooks
+  // ALL hooks must be called before any early returns - Rules of Hooks
   const maxVal = React.useMemo(
     () => Math.max(...processedMemoryChartData.map((d) => d.memory), 0.001),
     [processedMemoryChartData]

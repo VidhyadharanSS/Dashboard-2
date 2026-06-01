@@ -506,7 +506,7 @@ function evalFull(tokens: Token[], pos: number, obj: unknown): { result: boolean
 /**
  * Evaluate an expression string against a Kubernetes resource object.
  * Returns true if the resource matches, false otherwise.
- * Never throws — parse/eval errors return false.
+ * Never throws - parse/eval errors return false.
  */
 export function evaluate(expr: string, resource: unknown): boolean {
     try {

@@ -287,7 +287,7 @@ export function ResourceTopology({
             const dateStr = new Date().toISOString().slice(0, 10)
 
             if (format === 'png') {
-                // Direct canvas rendering — avoids foreignObject CORS issues entirely
+                // Direct canvas rendering - avoids foreignObject CORS issues entirely
                 const scale = 2
                 const canvas = document.createElement('canvas')
                 canvas.width = rect.width * scale
@@ -454,7 +454,7 @@ export function ResourceTopology({
                 ctx.fillStyle = actualTheme === 'dark' ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.15)'
                 ctx.font = '10px system-ui, -apple-system, sans-serif'
                 ctx.textAlign = 'right'
-                ctx.fillText(`Kites Topology — ${name} — ${dateStr}`, rect.width - 12, rect.height - 8)
+                ctx.fillText(`Kites Topology - ${name} - ${dateStr}`, rect.width - 12, rect.height - 8)
 
                 // Export as PNG blob
                 canvas.toBlob((blob) => {
@@ -701,7 +701,7 @@ export function ResourceTopology({
                     <DialogHeader className="px-4 py-3 border-b shrink-0">
                         <DialogTitle className="flex items-center gap-2 text-sm">
                             <IconServer2 size={16} />
-                            Resource Topology — {name}
+                            Resource Topology - {name}
                             <Badge variant="secondary" className="text-[10px] ml-2">
                                 {totalNodes} resource{totalNodes !== 1 ? 's' : ''} · {related?.links?.length || 0} link{(related?.links?.length || 0) !== 1 ? 's' : ''}
                             </Badge>

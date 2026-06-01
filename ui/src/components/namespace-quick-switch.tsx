@@ -1,5 +1,5 @@
 /**
- * NamespaceQuickSwitch — Pinned namespaces shown as quick-access pills in the header.
+ * NamespaceQuickSwitch - Pinned namespaces shown as quick-access pills in the header.
  * Enhanced with inline unpin buttons, active state glow, and keyboard accessibility.
  */
 import { useCallback, useMemo } from 'react'
@@ -45,7 +45,7 @@ export function NamespaceQuickSwitch() {
                 {/* Pinned label */}
                 <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-semibold mr-0.5 select-none">ns</span>
 
-                {/* Reset Pill — only when a namespace is active */}
+                {/* Reset Pill - only when a namespace is active */}
                 {activeNamespace !== '_all' && (
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -57,7 +57,7 @@ export function NamespaceQuickSwitch() {
                                 <IconX className="h-3 w-3" />
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">Clear filter — show all namespaces</TooltipContent>
+                        <TooltipContent side="bottom" className="text-xs">Clear filter - show all namespaces</TooltipContent>
                     </Tooltip>
                 )}
 
@@ -84,7 +84,7 @@ export function NamespaceQuickSwitch() {
                                             isActive ? "text-primary-foreground/70" : "text-amber-500/60"
                                         )} />
                                         <span className="max-w-[80px] truncate">{ns}</span>
-                                        {/* Inline unpin button — visible on hover or when active */}
+                                        {/* Inline unpin button - visible on hover or when active */}
                                         {isActive && (
                                             <span
                                                 role="button"
@@ -107,7 +107,7 @@ export function NamespaceQuickSwitch() {
                                     <div className="flex flex-col gap-0.5">
                                         <span className="font-semibold">{ns}</span>
                                         <span className="text-muted-foreground">
-                                            {isActive ? 'Active — click to clear' : 'Click to filter'}
+                                            {isActive ? 'Active - click to clear' : 'Click to filter'}
                                         </span>
                                     </div>
                                 </TooltipContent>

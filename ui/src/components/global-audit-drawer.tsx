@@ -1,8 +1,8 @@
 /**
- * GlobalAuditDrawer — Cluster-wide activity feed accessible from the site header.
+ * GlobalAuditDrawer - Cluster-wide activity feed accessible from the site header.
  *
  * Uses the user-level /api/v1/audit-logs endpoint (RBAC-filtered) so all users
- * see audit entries they have permission for — not just admins.
+ * see audit entries they have permission for - not just admins.
  *
  * Features:
  *  1. Operation type filter (create/update/patch/delete/apply)
@@ -925,7 +925,7 @@ export function GlobalAuditDrawer() {
                                                         </span>
                                                     </div>
 
-                                                    {/* Resource name — clickable for navigation */}
+                                                    {/* Resource name - clickable for navigation */}
                                                     <button
                                                         onClick={() => url && handleNavigate(url)}
                                                         className={`flex items-center gap-1 text-xs w-full text-left ${url ? 'cursor-pointer hover:underline' : 'cursor-default'}`}
@@ -953,7 +953,7 @@ export function GlobalAuditDrawer() {
                                                             </div>
                                                         )}
 
-                                                        {/* Action buttons — show on hover */}
+                                                        {/* Action buttons - show on hover */}
                                                         <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <TooltipProvider>
                                                                 <Tooltip>

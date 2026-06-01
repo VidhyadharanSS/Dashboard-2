@@ -12,7 +12,7 @@ export function ContainerTable(props: {
   container: Container
   onContainerUpdate?: (updatedContainer: Container) => void
   init?: boolean
-  /** For the Image Update dialog — pass these from the detail page */
+  /** For the Image Update dialog - pass these from the detail page */
   resourceType?: 'deployments' | 'statefulsets' | 'daemonsets'
   resourceName?: string
   namespace?: string

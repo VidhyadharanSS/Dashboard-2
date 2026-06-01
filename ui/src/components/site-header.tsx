@@ -26,7 +26,7 @@ export function SiteHeader() {
   const { user } = useAuth()
   const [compareOpen, setCompareOpen] = useState(false)
 
-  // Ctrl+J shortcut removed — workload creation via dashboard is disabled (security hardening)
+  // Ctrl+J shortcut removed - workload creation via dashboard is disabled (security hardening)
 
   return (
     <>
@@ -51,7 +51,7 @@ export function SiteHeader() {
             {/* Live cluster event drawer */}
             <LiveEventDrawer />
 
-            {/* Plus / create button removed — workload creation via dashboard is disabled (security hardening) */}
+            {/* Plus / create button removed - workload creation via dashboard is disabled (security hardening) */}
 
             {!isMobile && (
               <>
@@ -79,9 +79,9 @@ export function SiteHeader() {
         </div>
       </header>
 
-      {/* CreateResourceDialog removed — workload creation via dashboard is disabled (security hardening) */}
+      {/* CreateResourceDialog removed - workload creation via dashboard is disabled (security hardening) */}
 
-      {/* Keyboard shortcuts dialog — global */}
+      {/* Keyboard shortcuts dialog - global */}
       <KeyboardShortcutsDialog />
 
       {/* Resource comparison dialog */}

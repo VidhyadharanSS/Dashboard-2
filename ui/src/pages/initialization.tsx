@@ -271,7 +271,7 @@ export function InitializationPage() {
                 </Alert>
               )}
 
-              {/* Step 1: Create Admin — Password mode or OAuth bootstrap mode */}
+              {/* Step 1: Create Admin - Password mode or OAuth bootstrap mode */}
               <InitStep
                 step={1}
                 currentStep={actualCurrentStep}

@@ -470,7 +470,7 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
                           <div>
                             <Label className="text-xs text-muted-foreground">Capacity</Label>
                             <p className="font-medium font-mono">
-                              {pvc?.status?.capacity?.storage || pvc?.spec?.resources?.requests?.storage || '—'}
+                              {pvc?.status?.capacity?.storage || pvc?.spec?.resources?.requests?.storage || '-'}
                             </p>
                           </div>
                           <div>
@@ -479,7 +479,7 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
                               <Link to={`/storageclasses/${pvc.spec.storageClassName}`} className="text-blue-500 hover:underline text-sm">
                                 {pvc.spec.storageClassName}
                               </Link>
-                            ) : <p className="text-muted-foreground">—</p>}
+                            ) : <p className="text-muted-foreground">-</p>}
                           </div>
                           <div>
                             <Label className="text-xs text-muted-foreground">Bound Volume</Label>
@@ -487,7 +487,7 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
                               <Link to={`/persistentvolumes/${pvc.spec.volumeName}`} className="text-blue-500 hover:underline text-sm">
                                 {pvc.spec.volumeName}
                               </Link>
-                            ) : <p className="text-muted-foreground">—</p>}
+                            ) : <p className="text-muted-foreground">-</p>}
                           </div>
                           <div>
                             <Label className="text-xs text-muted-foreground">Access Modes</Label>
@@ -530,7 +530,7 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
                           </div>
                           <div>
                             <Label className="text-xs text-muted-foreground">Capacity</Label>
-                            <p className="font-medium font-mono">{pv?.spec?.capacity?.storage || '—'}</p>
+                            <p className="font-medium font-mono">{pv?.spec?.capacity?.storage || '-'}</p>
                           </div>
                           <div>
                             <Label className="text-xs text-muted-foreground">Storage Class</Label>
@@ -538,11 +538,11 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
                               <Link to={`/storageclasses/${pv.spec.storageClassName}`} className="text-blue-500 hover:underline text-sm">
                                 {pv.spec.storageClassName}
                               </Link>
-                            ) : <p className="text-muted-foreground">—</p>}
+                            ) : <p className="text-muted-foreground">-</p>}
                           </div>
                           <div>
                             <Label className="text-xs text-muted-foreground">Reclaim Policy</Label>
-                            <p className="font-medium">{pv?.spec?.persistentVolumeReclaimPolicy || '—'}</p>
+                            <p className="font-medium">{pv?.spec?.persistentVolumeReclaimPolicy || '-'}</p>
                           </div>
                           <div>
                             <Label className="text-xs text-muted-foreground">Access Modes</Label>
@@ -561,7 +561,7 @@ export function SimpleResourceDetail<T extends ResourceType>(props: {
                               >
                                 {claimRef.namespace}/{claimRef.name}
                               </Link>
-                            ) : <p className="text-muted-foreground">—</p>}
+                            ) : <p className="text-muted-foreground">-</p>}
                           </div>
                         </div>
                       </CardContent>
