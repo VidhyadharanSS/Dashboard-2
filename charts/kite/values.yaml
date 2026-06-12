@@ -147,11 +147,82 @@ serviceAccount:
 rbac:
   create: true
   rules:
-    - apiGroups: ["*"]
-      resources: ["*"]
-      verbs: ["*"]
-    - nonResourceURLs: ["*"]
-      verbs: ["*"]
+    - apiGroups: [""]
+      resources:
+        - configmaps
+        - endpoints
+        - events
+        - namespaces
+        - nodes
+        - persistentvolumeclaims
+        - persistentvolumes
+        - pods
+        - serviceaccounts
+        - services
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: [""]
+      resources:
+        - pods/log
+        - pods/proxy
+        - services/proxy
+      verbs: ["get"]
+    - apiGroups: [""]
+      resources:
+        - pods/exec
+      verbs: ["create"]
+    - apiGroups: [""]
+      resources:
+        - pods/resize
+      verbs: ["update", "patch"]
+    - apiGroups: ["apps"]
+      resources:
+        - daemonsets
+        - deployments
+        - replicasets
+        - statefulsets
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["batch"]
+      resources:
+        - cronjobs
+        - jobs
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["networking.k8s.io"]
+      resources:
+        - ingresses
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["discovery.k8s.io"]
+      resources:
+        - endpointslices
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["autoscaling"]
+      resources:
+        - horizontalpodautoscalers
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["storage.k8s.io"]
+      resources:
+        - storageclasses
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["rbac.authorization.k8s.io"]
+      resources:
+        - clusterrolebindings
+        - clusterroles
+        - rolebindings
+        - roles
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
+    - apiGroups: ["apiextensions.k8s.io"]
+      resources:
+        - customresourcedefinitions
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["metrics.k8s.io"]
+      resources:
+        - nodes
+        - pods
+      verbs: ["get", "list"]
+    - apiGroups: ["gateway.networking.k8s.io"]
+      resources:
+        - gateways
+        - httproutes
+      verbs: ["get", "list", "watch", "update", "patch", "delete"]
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
